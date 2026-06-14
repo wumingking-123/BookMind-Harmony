@@ -264,7 +264,7 @@ export default struct shareWorksBook {
           Image($r('app.media.legado_icon')).width(32).height(20)
           Image($r('app.media.legado')).width(65).height(15)
         }
-        Text('扫描二维码下载 开源阅读').fontSize(10).fontWeight(400).lineHeight(18).textAlign(TextAlign.Center)
+        Text('扫描二维码下载 鸿蒙阅读').fontSize(10).fontWeight(400).lineHeight(18).textAlign(TextAlign.Center)
       }
       Image($r('app.media.QR_Code')).width(46).height(46)
     }

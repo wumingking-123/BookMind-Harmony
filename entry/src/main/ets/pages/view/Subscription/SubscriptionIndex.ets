@@ -1,12 +1,4 @@
-/**
- * @author 2008
- * @datetime 2024/7/11 21:33
- * @className: Subscription
- * 新版订阅页面
- */
 import CommonConstants from '../../../common/constants/CommonConstants'
-import ImageConstants from '../../../common/constants/ImageConstants'
-import PaddingConstants from '../../../common/constants/PaddingConstants'
 import { IconTitleVo } from '../../../componetsmodel/IconTitleVo'
 import { router } from '@kit.ArkUI'
 import SubscriptionContent from './components/SubscriptionContent'
@@ -23,8 +15,10 @@ import { rssSourcesHistory } from '../../../database/entities/rssSourcesHistory'
 import { FileHandler } from 'ets/common/utils/FileHandler'
 import { ThemeItem } from '../../../common/model/Theme'
 import { ThemeStorageKey } from '../../../common/constants/Theme'
-import addBookTypeDialog from '../../../componets/common/addBookTypeDialog'
 import rssSourcesUtils from '../../../common/utils/rssSourcesUtils'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkMotion
+} from '../../../common/constants/DesignTokens'
 
 @Component
 export default struct SubscriptionIndex {
@@ -33,14 +27,12 @@ export default struct SubscriptionIndex {
   @Prop @Watch('currentTabIndexChange') currentTabIndex: number
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @StorageLink(CommonConstants.RSS_SOURCES_REFRESHING) @Watch('getList') refreshing: number = 0
-  @State
-  moreList: IconTitleVo[] = [
+  @State moreList: IconTitleVo[] = [
     new IconTitleVo($r('app.media.icon_rule_paste'), '粘贴导入'),
     new IconTitleVo($r('app.media.icon_rule_export'), '本地导入'),
     new IconTitleVo($r('app.media.icon_rule_add'), '新建订阅'),
     new IconTitleVo($r('app.media.icon_rule_batch'), '批量管理'),
   ]
-  //批量管理选中内容存储
   @Provide('batchList') batchList: Record<number, boolean> = {}
   @State RecentlyUsed: rssSourcesHistory[] = []
   @State loading: boolean = false
@@ -48,12 +40,10 @@ export default struct SubscriptionIndex {
   @State rssSourcesList: rssSources[] = []
   @State groupList: rssGroupList[] = []
   @State batchEdit: boolean = false
-  @State newGroupType:string = ''
-  //全选
+  @State newGroupType: string = ''
   @Provide('batchAll') batchAll: boolean = false
-  // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
-  //刷新
+
   refresh = () => {
     this.resetState()
     this.getList()
@@ -76,33 +66,26 @@ export default struct SubscriptionIndex {
   getList() {
     subscriptionDao.search().then(data => {
       const rssSources = data ?? []
-      console.info('TagInfo', JSON.stringify(rssSources.slice(0, 3)))
       this.rssSourcesList = rssSources
-      //将rssSources的id存放进batchList值默认为false
       rssSources.forEach((item: rssSources) => {
         if (item.id) {
           this.batchList[item.id] = false
         }
       })
       this.getGroupList()
-    }).catch(() => {
-
-    })
+    }).catch(() => {})
   }
 
   getGroupList() {
-    const groupMap: Record<string, rssGroupList> = {};
+    const groupMap: Record<string, rssGroupList> = {}
     this.rssSourcesList.forEach((item: rssSources) => {
-      const title = item.sourceGroup;
+      const title = item.sourceGroup
       if (title) {
-        // 如果groupMap中还没有这个group，则创建一个新的GroupList对象
         if (!groupMap[title]) {
-          groupMap[title] = { title: title, list: [] };
+          groupMap[title] = { title: title, list: [] }
         }
-        // 向当前group的list中添加BookSource对象
-        groupMap[title].list.push(item);
+        groupMap[title].list.push(item)
       }
-
     })
     this.groupList = Object.values(groupMap)
   }
@@ -110,309 +93,291 @@ export default struct SubscriptionIndex {
   build() {
     Column() {
       Column() {
-        //搜索Start
-        Flex(
-          {
-            direction: FlexDirection.Row,
-            alignItems: ItemAlign.Center,
-            justifyContent: FlexAlign.SpaceBetween
-          }
-        ) {
-          Row({
-            space: CommonConstants.SPACE_16
-          }) {
-            if (this.batchEdit === false) {
-              Image($r('app.media.icon_subscription_index'))
-                .width(CommonConstants.COMMON_WIDTH_45_36)
-                .height(CommonConstants.COMMON_HEIGHT_21_6)
-              Search({ placeholder: '搜索订阅', icon: "/common/images/search.svg" })
-                .layoutWeight(1)
-                .height(CommonConstants.COMMON_HEIGHT_40)
-                .backgroundColor(Color.White)
-                .onClick(() => {
-                  router.pushUrl({
-                    url: 'pages/view/Subscription/components/SubscriptionSearch'
-                  })
-                })
-                .focusOnTouch(false) //不可获取焦点
+        // 搜索栏
+        Row({ space: InkSpacing.MD }) {
+          if (!this.batchEdit) {
+            // Logo
+            Image($r('app.media.icon_subscription_index'))
+              .width(40)
+              .height(20)
 
+            // 搜索框 — 墨韵风格
+            Search({ placeholder: '搜索订阅', icon: '/common/images/search.svg' })
+              .layoutWeight(1)
+              .height(44)
+              .backgroundColor(InkPalette.PAPER_PURE)
+              .borderRadius(InkRadius.SEARCH)
+              .shadow(InkShadow.SUBTLE)
+              .onClick(() => {
+                router.pushUrl({ url: 'pages/view/Subscription/components/SubscriptionSearch' })
+              })
+              .focusOnTouch(false)
+
+            // 添加按钮
+            Row() {
               Image($r('app.media.addSubscription'))
-                .width(ImageConstants.IMG_WIDTH_24)
-                .height(ImageConstants.IMG_HEIGHT_24)
-                .bindMenu(this.MenuBuilder)
-            } else {
-              Text(`${this.batchAll?'取消全选':'全选'}`)
-                .width('33%')
-                .onClick(()=>{
-                  this.batchAll = !this.batchAll
-                  Object.keys(this.batchList).forEach((key: string) => {
-                    this.batchList[key] = this.batchAll
-                  })
-                })
-              Blank(1)
-              //获取选中项数量
-              Text(`已选${Object.values(this.batchList).filter(value => value === true).length}项`).width('33%')
-              Blank(1)
-              Text('完成')
-                .width('33%')
-                .onClick(() => {
-                  this.batchAll = false
-                  this.batchEdit = false
-                  Object.keys(this.batchList).forEach((key: string) => {
-                    this.batchList[key] = false
-                  })
-                  getContext(this).eventHub.emit('SubscriptionBatchEdit', true);
-                })
+                .width(20)
+                .height(20)
+                .fillColor(InkPalette.INK_FAINT)
             }
+            .width(36)
+            .height(36)
+            .borderRadius(InkRadius.FULL)
+            .backgroundColor(InkPalette.OVERLAY_LIGHT)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .bindMenu(this.MenuBuilder)
+          } else {
+            Text(this.batchAll ? '取消全选' : '全选')
+              .fontSize(InkTypography.BODY)
+              .fontColor(InkPalette.INK)
+              .width('33%')
+              .onClick(() => {
+                this.batchAll = !this.batchAll
+                Object.keys(this.batchList).forEach((key: string) => {
+                  this.batchList[key] = this.batchAll
+                })
+              })
+
+            Blank(1)
+
+            Text(`已选 ${Object.values(this.batchList).filter(value => value === true).length} 项`)
+              .fontSize(InkTypography.BODY)
+              .fontColor(InkPalette.INK_GHOST)
+              .width('33%')
+
+            Blank(1)
+
+            Text('完成')
+              .fontSize(InkTypography.BODY)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.theme.mainColor)
+              .width('33%')
+              .textAlign(TextAlign.End)
+              .onClick(() => {
+                this.batchAll = false
+                this.batchEdit = false
+                Object.keys(this.batchList).forEach((key: string) => {
+                  this.batchList[key] = false
+                })
+                getContext(this).eventHub.emit('SubscriptionBatchEdit', true)
+              })
           }
-          .width('100%')
         }
-        .height('8%')
+        .width('100%')
+        .padding({ top: this.topRectHeight + InkSpacing.LG, bottom: InkSpacing.MD })
 
-        //搜索End
-        //最近使用Start
-        if (this.batchEdit === false) {
-          RssSourcesHistory({
-            RecentlyUsed: this.RecentlyUsed
-          })
+        // 最近使用
+        if (!this.batchEdit) {
+          RssSourcesHistory({ RecentlyUsed: this.RecentlyUsed })
         }
 
+        // 内容区
         if (this.loading) {
           Column() {
             LoadingProgress()
               .color(this.theme.mainColor)
-              .width('50%')
+              .width(48)
             Text('加载中...')
+              .fontSize(InkTypography.BODY)
+              .fontColor(InkPalette.INK_MIST)
+              .margin({ top: InkSpacing.MD })
           }
           .justifyContent(FlexAlign.Center)
           .layoutWeight(1)
         } else if (!this.groupList.length) {
           SubscriptionContent({
             subscriptionTitle: '收藏',
-            batchEdit:this.batchEdit,
-            showAddDialog: () => {
-              this.isShowNewSources = true
-            }
+            batchEdit: this.batchEdit,
+            showAddDialog: () => { this.isShowNewSources = true }
           })
         } else {
           Scroll() {
-            Column() {
+            Column({ space: InkSpacing.MD }) {
               ForEach(this.groupList, (item: rssGroupList) => {
                 SubscriptionContent({
                   subscriptionTitle: item.title,
                   contentList: item.list,
-                  batchEdit:this.batchEdit,
+                  batchEdit: this.batchEdit,
                   refresh: this.refresh
                 })
               })
             }
           }
           .align(Alignment.Top)
-          .padding({ bottom: 20 })
+          .padding({ bottom: InkSpacing.XL })
           .layoutWeight(1)
           .scrollBar(BarState.Off)
           .scrollable(ScrollDirection.Vertical)
         }
-        Blank(1)
       }
-      .padding({
-        top: this.topRectHeight,
-        left: PaddingConstants.PADDING_20,
-        right: PaddingConstants.PADDING_20
-      })
+      .padding({ left: InkSpacing.PAGE_HORIZONTAL, right: InkSpacing.PAGE_HORIZONTAL })
       .layoutWeight(1)
 
+      // 批量操作栏
       if (this.batchEdit) {
-        Grid() {
-          GridItem() {
-            Column({ space: 4 }) {
-              Image($r('app.media.folder'))
-                .height(24)
-                .fillColor(Color.Black) // 黑色好像渲染不上去
-
-              Text("移动至")
-                .fontSize(10)
-                .lineHeight(18)
-                .fontColor('rgba(0, 0, 0, 0.88)')
-            }
-            .onClick(() => {
-              showMessage('功能开发中,暂未开放')
-            })
+        Row() {
+          Column({ space: InkSpacing.XS }) {
+            Image($r('app.media.folder'))
+              .width(20)
+              .height(20)
+              .fillColor(InkPalette.INK_FAINT)
+            Text('移动至')
+              .fontSize(InkTypography.MICRO)
+              .fontColor(InkPalette.INK)
           }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+          .onClick(() => { showMessage('功能开发中，暂未开放') })
 
-          GridItem() {
-            Column({ space: 4 }) {
-              Image($r('app.media.edit_share'))
-                .height(24)
-
-              Text("分享")
-                .fontSize(10)
-                .lineHeight(18)
-                .fontColor('rgba(0, 0, 0, 0.88)')
-            }
-            .onClick(() => {
-              showMessage('功能开发中,暂未开放')
-            })
+          Column({ space: InkSpacing.XS }) {
+            Image($r('app.media.edit_share'))
+              .width(20)
+              .height(20)
+              .fillColor(InkPalette.INK_FAINT)
+            Text('分享')
+              .fontSize(InkTypography.MICRO)
+              .fontColor(InkPalette.INK)
           }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+          .onClick(() => { showMessage('功能开发中，暂未开放') })
 
-          GridItem() {
-            Column({ space: 4 }) {
-              Image($r('app.media.export_1'))
-                .height(24)
-
-              Text("导出")
-                .fontSize(10)
-                .lineHeight(18)
-                .fontColor('rgba(0, 0, 0, 0.88)')
-            }
-            .onClick(() => {
-              showMessage('功能开发中,暂未开放')
-            })
+          Column({ space: InkSpacing.XS }) {
+            Image($r('app.media.export_1'))
+              .width(20)
+              .height(20)
+              .fillColor(InkPalette.INK_FAINT)
+            Text('导出')
+              .fontSize(InkTypography.MICRO)
+              .fontColor(InkPalette.INK)
           }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+          .onClick(() => { showMessage('功能开发中，暂未开放') })
 
-          GridItem() {
-            Column({ space: 4 }) {
-              Image($r('app.media.delete'))
-                .height(24)
-
-              Text("删除")
-                .fontSize(10)
-                .lineHeight(18)
-                .fontColor('rgba(0, 0, 0, 0.88)')
-            }
-            .onClick(() => {
-              let checkRssSources = Object.values(this.batchList).filter(value => value === true).length
-              if (checkRssSources <= 0){
-                showMessage('请选择要删除的订阅源');
-                return;
-              }
-
-              Object.keys(this.batchList).forEach((key: string) => {
-              if (this.batchList[key]) {
-                subscriptionDao.deleteRssSourcesById({
-                  id: Number(key)
+          Column({ space: InkSpacing.XS }) {
+            Image($r('app.media.delete'))
+              .width(20)
+              .height(20)
+              .fillColor(InkPalette.INK_FAINT)
+            Text('删除')
+              .fontSize(InkTypography.MICRO)
+              .fontColor(InkPalette.INK)
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+          .onClick(() => {
+                let checkRssSources = Object.values(this.batchList).filter(value => value === true).length
+                if (checkRssSources <= 0) {
+                  showMessage('请选择要删除的订阅源')
+                  return
+                }
+                Object.keys(this.batchList).forEach((key: string) => {
+                  if (this.batchList[key]) {
+                    subscriptionDao.deleteRssSourcesById({ id: Number(key) })
+                    this.batchList[key] = false
+                  }
                 })
-                this.batchList[key] = false
-              }
-              })
-              setTimeout(()=>{this.refresh()},200)
-              showMessage('删除成功!')
-            })
-          }
+                setTimeout(() => { this.refresh() }, 200)
+                showMessage('删除成功!')
+          })
         }
-        .height(68)
-        .width("100%")
-        .columnsTemplate("1fr 1fr 1fr 1fr")
-        .backgroundColor('white')
-        .padding({
-          top: 12,
-          bottom: 10
-        })
+        .height(64)
+        .width('100%')
+        .backgroundColor(InkPalette.PAPER)
+        .shadow(InkShadow.SOFT)
+        .padding({ top: InkSpacing.SM })
       }
 
-      Flex()
+      Flex().width(0).height(0)
         .bindSheet($$this.isShowImport, this.dialogImportFunction(), {
           detents: [SheetSize.FIT_CONTENT, SheetSize.LARGE, 200],
           dragBar: true,
           showClose: false,
-          onDisappear: () => {
-            this.isShowImport = false
-          }
+          onDisappear: () => { this.isShowImport = false }
         })
 
-      Flex()
+      Flex().width(0).height(0)
         .bindSheet($$this.isShowNewSources, this.dialogNewSourcesFunction(), {
           height: 200,
           dragBar: true,
           showClose: false,
-          onDisappear: () => {
-            this.isShowNewSources = false
-          }
+          onDisappear: () => { this.isShowNewSources = false }
         })
     }
-    .linearGradient({
-      direction: GradientDirection.Bottom, // 渐变方向
-      colors: [[this.theme.mainColor, 0], [this.theme.secondColor, 0.2]] // 数组末尾元素占比小于1时满足重复着色效果
-    })
     .height('100%')
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [[this.theme.mainColor, 0], [this.theme.secondColor, 0.15]]
+    })
   }
 
   @Builder
   dialogImportFunction() {
     Flex() {
-      SubscriptionImport({
-        subscriptionList: this.subscriptionList
-      , show: this.isShowImport
-      }).onDisAppear(() => {
-        this.refresh()
-      })
+      SubscriptionImport({ subscriptionList: this.subscriptionList, show: this.isShowImport })
+        .onDisAppear(() => { this.refresh() })
     }
   }
 
   @Builder
   dialogNewSourcesFunction() {
     Column() {
-      dialogNewSources({
-        btnClick: () => {
-          this.isShowNewSources = false
-        }
-      }).onDisAppear(() => {
-        this.refresh()
-      })
-
+      dialogNewSources({ btnClick: () => { this.isShowNewSources = false } })
+        .onDisAppear(() => { this.refresh() })
     }
   }
 
   @Builder
   MenuBuilder() {
-    Flex({ direction: FlexDirection.Column }) {
+    Column() {
       ForEach(this.moreList, (item: IconTitleVo, index) => {
         Column() {
-          Row() {
+          Row({ space: InkSpacing.SM }) {
             Image(item.icon)
-              .width(24)
-              .height(24)
-              .margin({
-                right: 5
-              })
-            Text(`${item.title}`).fontSize(14)
+              .width(20)
+              .height(20)
+              .fillColor(InkPalette.INK_FAINT)
+            Text(item.title)
+              .fontSize(InkTypography.BODY)
+              .fontColor(InkPalette.INK)
           }
-          .height(40)
-          .justifyContent(FlexAlign.Center)
-          .align(Alignment.Center)
-          .onClick(() => {
-            this.MenuOnclick(index)
-          })
+          .height(44)
+          .width('100%')
+          .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+          .onClick(() => { this.MenuOnclick(index) })
 
-          if (index !== 5) {
+          if (index < this.moreList.length - 1) {
             Divider()
+              .color(InkPalette.PAPER_DEEP)
+              .margin({ left: 44 })
           }
         }
-        .padding(5)
-        .height(40)
-        .margin({ bottom: 20 })
       })
     }
-    .width(100)
+    .width(160)
+    .backgroundColor(InkPalette.PAPER)
+    .borderRadius(InkRadius.MD)
+    .shadow(InkShadow.MEDIUM)
+    .padding({ top: InkSpacing.XS, bottom: InkSpacing.XS })
   }
 
   async MenuOnclick(value: number | string) {
     switch (value) {
       case 0:
-        // 粘贴导入
-        this.pasteAnalyze();
-        break;
+        this.pasteAnalyze()
+        break
       case 1:
-        // 本地导入
         showMessage('请选择本地json文件导入')
         this.localImport()
         break
       case 2:
         this.isShowNewSources = true
-        break;
+        break
       case 3:
         this.batchEdit = true
-        getContext(this).eventHub.emit('SubscriptionBatchEdit', false);
+        getContext(this).eventHub.emit('SubscriptionBatchEdit', false)
         break
     }
   }
@@ -420,9 +385,8 @@ export default struct SubscriptionIndex {
   async localImport() {
     let FileResult = await FileHandler.documentPickerFile(1, ['.json'])
     FileHandler.ReadJSONFile(FileResult[0]).then(result => {
-      // console.log('result:' + result)
       this.subscriptionList = JSON.parse(result) as rssSources[]
-      this.isShowImport = true;
+      this.isShowImport = true
     })
   }
 
@@ -432,21 +396,18 @@ export default struct SubscriptionIndex {
       if (!url) {
         showMessage('未获取到粘贴信息，请求默认数据')
         await sleep()
-        // return
       }
       if (!isNetworkUrl(url ?? '')) {
         showMessage('复制的链接不正确')
         await sleep()
         url = undefined
-        // return
       }
       const res: AxiosResponse = await axios
-        .get(url ?? 'http://yuedu.miaogongzi.net/shuyuan/miaogongziDY.json');
-      console.log('res', JSON.stringify(res))
-      this.subscriptionList = res.data;
-      this.isShowImport = true;
+        .get(url ?? 'http://yuedu.miaogongzi.net/shuyuan/miaogongziDY.json')
+      this.subscriptionList = res.data
+      this.isShowImport = true
     } catch (err) {
-      console.error('错误 ' + err);
+      console.error('错误 ' + err)
     }
   }
 }

@@ -1,12 +1,30 @@
-import { PromptAction, router } from '@kit.ArkUI'
-import { ThemeColor, ThemeStorageKey } from '../../../common/constants/Theme'
-import { ThemeColorItem, ThemeItem } from '../../../common/model/Theme'
+import { promptAction, router } from '@kit.ArkUI'
+import { ThemeStorageKey, SplashStyle as SplashStyleEnum } from '../../../common/constants/Theme'
+import { ThemeItem } from '../../../common/model/Theme'
 import { MyThemeConfigComp } from './MyThemeConfigComp'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkMotion, InkLayout, InkShadow
+} from '../../../common/constants/DesignTokens'
+import { pickerAvatar } from '../../../common/utils/photoViewPicker'
+import picker from '@ohos.file.picker'
 
 // 中间导航区需要渲染的元素列表
-interface NavItem {
+interface NavItemType {
   text: string
   img: ResourceStr
+}
+
+// 桌面图标样式
+interface IconStyleType {
+  name: string
+  icon: Resource
+  bgColor: string
+}
+
+// 启动页样式
+interface SplashStyleType {
+  name: string
+  desc: string
 }
 
 @Entry
@@ -14,132 +32,221 @@ interface NavItem {
 struct MyThemeConfig {
   @StorageLink('topRectHeight') topRectHeight: number = 0
   // 中间导航区需要渲染的元素列表
-  navList: NavItem[] = [
-    {text: '个性主题', img: $r('app.media.my_theme_config_theme')},
-    {text: '桌面图标', img: $r('app.media.my_theme_config_desktop')},
-    {text: '启动页', img: $r('app.media.my_theme_config_welcome')},
+  navList: NavItemType[] = [
+    { text: '个性主题', img: $r('app.media.my_theme_config_theme') },
+    { text: '启动页', img: $r('app.media.my_theme_config_welcome') },
   ]
-  @State activeNavIndex: number = 0 // 标记当前激活的导航元素 [个性主题 / 桌面图标 / 启动页] 0 1 2
+  @State activeNavIndex: number = 0
+  @StorageLink(ThemeStorageKey.SPLASH_INDEX) activeSplashIndex: number = 0
+  @StorageLink(ThemeStorageKey.SPLASH_CUSTOM_IMAGE) splashCustomImage: string = ''
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
+  // 启动页样式列表 — 与 welcomePage 中的样式对应
+  splashStyles: SplashStyleType[] = [
+    { name: '默认', desc: '琥珀暖光，宣纸质感' },
+    { name: '水墨', desc: '深色墨韵，沉静内敛' },
+    { name: '素笺', desc: '纯白纸感，清新淡雅' },
+    { name: '丹青', desc: '主题色渐变，灵动飘逸' },
+    { name: '青瓷', desc: '淡雅青瓷，极简素雅' },
+    { name: '自定义图片', desc: '上传相册图片作为背景' },
+  ]
+
   // 构建中间导航区TabBar元素
   @Builder
-  tabBarBuilder(item: NavItem, index: number) {
-    // 最外层包一层Column(用于设置左右间距), 然后设置左右padding
-    // 如果不包这一层, 直接用第二层的Column的左右margin设置左右间距好像无效
-    Column() {
-      Column() {
+  tabBarBuilder(item: NavItemType, index: number) {
+    Column({ space: InkSpacing.SM }) {
+      Row() {
         Image(item.img)
-          .width(24)
-          .aspectRatio(1)
-          .fillColor(this.activeNavIndex == index ? Color.White : this.theme.mainColor)
-          .margin({bottom: 8})
-        Text(item.text)
-          .lineHeight(20)
-          .fontSize(12)
-          .fontColor(this.activeNavIndex == index ? Color.White : '#978b83')
-        // 选中的tab底部会有三角形的效果
-        if (this.activeNavIndex == index) {
-          // 边缘光滑版三角形
-          // Path()
-          //   .width(vp2px(18))
-          //   .height(vp2px(6))
-          //   .commands('M0 0 L' + vp2px(18) + ' 0 S' + vp2px(9) + ' ' + vp2px(6) + ' 0 0 Z')
-          //   .fill('#ff6600')
-          //   .stroke('#ff6600')
-          //   .position({left: '50%', bottom: 0})
-          //   .translate({x: -9, y: '100%'})
-
-          // 正常边缘三角形
-          Polygon({ width: 18, height: 6 })
-            .points([[0, 0], [9, 6], [18, 0]])
-            .fill(Color.Green)
-            .fill(this.theme.mainColor)
-            .position({left: '50%', bottom: 0})
-            .translate({x: '-50%', y: '100%'})
-        }
+          .width(22)
+          .height(22)
+          .fillColor(this.activeNavIndex === index ? InkPalette.PAPER : this.theme.mainColor)
       }
-      .padding({left: 24, right: 24, top: 12})
-      .backgroundColor(this.activeNavIndex == index ? this.theme.mainColor : this.theme.secondColor)
-      .borderRadius(8)
-      .width(96)
-      .height(78)
-      .margin({bottom: 10})
+      .width(44)
+      .height(44)
+      .borderRadius(InkRadius.MD)
+      .backgroundColor(this.activeNavIndex === index ? this.theme.mainColor : this.theme.secondColor)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .animation({ duration: InkMotion.FAST, curve: Curve.EaseOut })
+
+      Text(item.text)
+        .fontSize(InkTypography.CAPTION)
+        .fontColor(this.activeNavIndex === index ? InkPalette.INK : InkPalette.INK_MIST)
+        .fontWeight(this.activeNavIndex === index ? FontWeight.Medium : FontWeight.Normal)
     }
     .padding({
-      left: index == 0 ? 20 : 0,
-      right: index == this.navList.length - 1 ? 20 : 0
+      left: index === 0 ? InkSpacing.MD : 0,
+      right: index === this.navList.length - 1 ? InkSpacing.MD : 0
     })
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  // 启动页配置
+  @Builder
+  SplashConfigPanel() {
+    Column({ space: InkSpacing.XL }) {
+      Text('选择启动页风格')
+        .fontSize(InkTypography.BODY)
+        .fontColor(InkPalette.INK_GHOST)
+
+      // 启动页预览列表
+      ForEach(this.splashStyles, (item: SplashStyleType, index: number) => {
+        Row({ space: InkSpacing.LG }) {
+          // 预览图 — 模拟启动页效果
+          Stack({ alignContent: Alignment.Center }) {
+            if (index === SplashStyleEnum.CUSTOM && this.splashCustomImage) {
+              Image(this.splashCustomImage)
+                .width(64)
+                .height(114)
+                .borderRadius(InkRadius.SM)
+                .objectFit(ImageFit.Cover)
+            } else {
+              Column()
+                .width(64)
+                .height(114)
+                .borderRadius(InkRadius.SM)
+                .backgroundColor(index === SplashStyleEnum.INK ? InkPalette.INK : (
+                  index === SplashStyleEnum.PAPER ? InkPalette.PAPER_WARM : (
+                    index === SplashStyleEnum.PAINTING ? this.theme.mainColor : (
+                      index === SplashStyleEnum.CELADON ? InkPalette.CELADON_MIST : InkPalette.AMBER_GLOW
+                    )
+                  )
+                ))
+            }
+ 
+            Text('卷')
+              .fontSize(20)
+              .fontColor(index === SplashStyleEnum.INK ? InkPalette.PAPER : InkPalette.INK)
+              .fontWeight(FontWeight.Lighter)
+          }
+          .width(64)
+          .height(114)
+          .borderRadius(InkRadius.SM)
+          .shadow(InkShadow.SOFT)
+ 
+          // 信息
+          Column({ space: InkSpacing.XS }) {
+            Text(item.name)
+              .fontSize(InkTypography.BODY)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.activeSplashIndex === index ? this.theme.mainColor : InkPalette.INK)
+ 
+            Text(item.desc)
+              .fontSize(InkTypography.CAPTION)
+              .fontColor(InkPalette.INK_MIST)
+ 
+            if (index === SplashStyleEnum.CUSTOM) {
+              Button(this.splashCustomImage ? '更换图片' : '上传图片')
+                .fontSize(InkTypography.MICRO + 1)
+                .height(24)
+                .padding({ left: InkSpacing.SM, right: InkSpacing.SM })
+                .backgroundColor(this.theme.mainColor)
+                .fontColor(Color.White)
+                .borderRadius(InkRadius.SM)
+                .margin({ top: InkSpacing.XS })
+                .onClick(async () => {
+                  let res: picker.PhotoSelectResult | undefined = await pickerAvatar()
+                  if (res && res.photoUris && res.photoUris.length > 0) {
+                    this.splashCustomImage = res.photoUris[0]
+                    this.activeSplashIndex = index
+                    this.getUIContext().getPromptAction().showToast({ message: '自定义图片设置成功，下次启动生效' })
+                  }
+                })
+            }
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+
+          // 选中指示
+          if (this.activeSplashIndex === index) {
+            Image($r('app.media.ic_public_confirm'))
+              .width(20)
+              .height(20)
+              .fillColor(this.theme.mainColor)
+          }
+        }
+        .width('100%')
+        .height(120)
+        .padding(InkSpacing.MD)
+        .borderRadius(InkRadius.CARD)
+        .backgroundColor(this.activeSplashIndex === index ? this.theme.secondColor : InkPalette.PAPER)
+        .shadow(this.activeSplashIndex === index ? InkShadow.MEDIUM : InkShadow.SUBTLE)
+        .onClick(() => {
+          this.activeSplashIndex = index
+          this.getUIContext().getPromptAction().showToast({ message: `已切换为「${item.name}」启动页，下次启动生效` })
+        })
+      })
+    }
+    .width('100%')
+    .padding({ bottom: InkSpacing.XXL + InkSpacing.XL })
   }
 
   build() {
     Column() {
       // 头部标题栏
-      RelativeContainer() {
-        Image($r('sys.media.ohos_ic_public_arrow_left'))
-          .width(24)
-          .aspectRatio(1)
-          .alignRules({
-            center: {anchor: '__container__', align: VerticalAlign.Center},
-            left: {anchor: '__container__', align: HorizontalAlign.Start}
-          })
-          .onClick(() => {
-            router.back()
-          })
+      Row() {
+        Row() {
+          Image($r('sys.media.ohos_ic_public_arrow_left'))
+            .width(24)
+            .height(24)
+            .fillColor(InkPalette.INK)
+        }
+        .width(InkLayout.MIN_TOUCH_TARGET)
+        .height(InkLayout.MIN_TOUCH_TARGET)
+        .borderRadius(InkRadius.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => { router.back() })
+
         Text('主题')
-          .fontWeight(FontWeight.Bold)
-          .alignRules({
-            center: {anchor: '__container__', align: VerticalAlign.Center},
-            middle: {anchor: '__container__', align: HorizontalAlign.Center}
-          })
+          .fontSize(InkTypography.TITLE)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK)
+          .position({ left: '50%' })
+          .translate({ x: '-50%' })
       }
-      .padding({left: 20, right: 20, top: 12, bottom: 12})
+      .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
       .width('100%')
-      .height(48)
+      .height(InkLayout.HEADER_HEIGHT)
+      .margin({ top: this.topRectHeight })
 
       // 中间导航区
-      Tabs({barPosition: BarPosition.Start}) {
-       ForEach(this.navList, (item: NavItem, index) => {
-         TabContent() {
+      Tabs({ barPosition: BarPosition.Start }) {
+        ForEach(this.navList, (item: NavItemType, index) => {
+          TabContent() {
             Column() {
-              // 如果选中个性主题
-              if (index == 0) {
+              if (index === 0) {
                 MyThemeConfigComp()
-              }
-              // 如果选中桌面图标
-              else if (index == 1) {
-
-              }
-              // 如果选中启动页
-              else {
-
+              } else {
+                Scroll() {
+                  this.SplashConfigPanel()
+                }
+                .scrollBar(BarState.Off)
+                .edgeEffect(EdgeEffect.Spring)
+                .width('100%')
+                .height('100%')
               }
             }
-            .padding({left: 20, right: 20, top: 24})
-            .borderRadius({
-              topLeft: 12,
-              topRight: 12
-            })
-           .backgroundColor('#fff')
-           .width('100%')
-         }
-         .tabBar(this.tabBarBuilder(item, index))
-       })
+            .padding({ left: InkSpacing.XL, right: InkSpacing.XL, top: InkSpacing.XXL })
+            .borderRadius({ topLeft: InkRadius.LG, topRight: InkRadius.LG })
+            .backgroundColor(InkPalette.PAPER)
+            .width('100%')
+            .height('100%')
+          }
+          .tabBar(this.tabBarBuilder(item, index))
+        })
       }
-      // 处理点击tab切换逻辑
       .onTabBarClick((index) => {
         this.activeNavIndex = index
       })
       .scrollable(false)
       .width('100%')
-      .barHeight(98)
-      .backgroundColor('#f5f5f5')
+      .barHeight(80)
+      .layoutWeight(1)
     }
     .height('100%')
     .width('100%')
-    .padding({top: this.topRectHeight})
-    .backgroundColor('#f5f5f5')
-
+    .backgroundColor(InkPalette.PAPER_EMBEDDED)
   }
 }

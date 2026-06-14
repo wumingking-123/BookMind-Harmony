@@ -452,7 +452,7 @@ class BooksDao {
       'latestChapterTitle', 'latestChapterTime', 'lastCheckTime',
       'lastCheckCount', 'totalChapterNum', 'durChapterTitle',
       'durChapterIndex', 'durChapterPos', 'durChapterTime',
-      'wordCount', 'syncTime', 'updateTime'
+      'wordCount', 'updateTime'
     ]);
   }
 }

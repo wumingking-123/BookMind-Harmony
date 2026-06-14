@@ -1,5 +1,6 @@
 /**
- * 上次阅读弹窗
+ * 上次阅读弹窗 — 檀木风格浮层
+ * 使用暖棕色系，营造书香氛围
  */
 import booksUtil from '../../common/utils/booksUtils'
 import bookHistoryDao from '../../database/dao/BookHistoryDao'
@@ -9,12 +10,15 @@ import { router } from '@kit.ArkUI'
 import clickUtil from '../../common/utils/ClickUtils'
 import { ThemeStorageKey } from '../../common/constants/Theme'
 import { ThemeItem } from '../../common/model/Theme'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow
+} from '../../common/constants/DesignTokens'
 
 @Component
 export default struct ReadShow {
-  @Link showReadShow:boolean
-  @State bookHistory:BookHistory[] = []
-  @State book:Books = new Books()
+  @Link showReadShow: boolean
+  @State bookHistory: BookHistory[] = []
+  @State book: Books = new Books()
 
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
@@ -22,8 +26,9 @@ export default struct ReadShow {
   aboutToAppear(): void {
     this.getBookHistoryList()
   }
-  async getBookHistoryList(){
-   this.bookHistory =  await bookHistoryDao.searchLimit()
+
+  async getBookHistoryList() {
+    this.bookHistory = await bookHistoryDao.searchLimit()
     if (this.bookHistory.length >= 1 && this.bookHistory[0].id) {
       let bookInfo = await booksUtil.getBookByIds(this.bookHistory[0].id)
       if (bookInfo && bookInfo[0]) {
@@ -31,51 +36,47 @@ export default struct ReadShow {
       }
     }
   }
+
   build() {
-    if (this.bookHistory[0] && this.book){
-      Column(){
-        Flex(
-          {
-            alignItems:ItemAlign.Center,
-            alignContent:FlexAlign.SpaceBetween
-          }
-        ) {
-          Image(this.bookHistory[0].coverUrl??'')
-            .draggable(false)
-            .alt($r('app.media.icon_book_default_cover_one')).width(40).height(52)
-          Column({
-            space:24
-          })
-          {
-            Text(this.bookHistory[0].bookName)
-              .fontSize(12)
-              .fontColor(Color.White)
-            Column(){
-              Text(this.bookHistory[0].durChapterTitle).fontSize(12).fontColor(Color.White)
-                .textOverflow({
-                  overflow:TextOverflow.Ellipsis
-                })
-                .ellipsisMode(EllipsisMode.END)
-                .fontWeight(500)
-                .maxLines(1)
-            }
-            .alignItems(HorizontalAlign.Start)
-          }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Start)
-          .padding({left:15})
-          Column(){
-            Text('继续阅读')
-              .fontSize(12)
-              .fontWeight(600)
-              .padding(10)
-              .borderRadius(20)
-              .fontColor(this.theme.mainColor)
-              .backgroundColor(Color.White)
-          }
-          .padding({left:55,right:30})
-          .onClick(()=>{
-            clickUtil.preventClick(()=>{
+    if (this.bookHistory[0] && this.book) {
+      Row({ space: InkSpacing.MD }) {
+        // 封面 — 带微阴影
+        Image(this.bookHistory[0].coverUrl ?? '')
+          .alt($r('app.media.icon_book_default_cover_one'))
+          .width(40)
+          .height(53)
+          .borderRadius(InkRadius.SM)
+          .shadow(InkShadow.SUBTLE)
+          .draggable(false)
+
+        // 信息 — 书名 + 章节
+        Column({ space: 3 }) {
+          Text(this.bookHistory[0].bookName)
+            .fontSize(InkTypography.BODY_SMALL)
+            .fontColor(InkPalette.PAPER)
+            .fontWeight(FontWeight.Medium)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Text(this.bookHistory[0].durChapterTitle)
+            .fontSize(InkTypography.MICRO)
+            .fontColor(InkPalette.PAPER_SAND)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        // 继续阅读按钮 — 圆角胶囊
+        Text('继续阅读')
+          .fontSize(InkTypography.CAPTION)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.theme.mainColor)
+          .padding({ left: InkSpacing.LG, right: InkSpacing.LG, top: InkSpacing.SM, bottom: InkSpacing.SM })
+          .borderRadius(InkRadius.BUTTON_LARGE)
+          .backgroundColor(InkPalette.PAPER)
+          .onClick(() => {
+            clickUtil.preventClick(() => {
               router.pushUrl({
                 url: 'pages/view/BookDetailPage',
                 params: this.book
@@ -83,19 +84,23 @@ export default struct ReadShow {
             })
           })
 
-          Image($r('app.media.Outlined')).width(15).height(15)
-            .onClick(() => {
-              this.showReadShow = !this.showReadShow
-              console.log(this.showReadShow + '')
-            })
-        }
-        .borderRadius(10)
+        // 关闭按钮
+        Image($r('app.media.close'))
+          .width(16)
+          .height(16)
+          .fillColor(InkPalette.PAPER_SAND)
+          .onClick(() => {
+            this.showReadShow = !this.showReadShow
+            console.log(this.showReadShow + '')
+          })
       }
-      .alignItems(HorizontalAlign.Start)
-      .borderRadius(10)
-      .padding(10)
-      .width('95%')
-      .backgroundColor('rgb(182,134,102)')
+      .width('92%')
+      .height(68)
+      .padding({ left: InkSpacing.MD, right: InkSpacing.LG })
+      .borderRadius(InkRadius.LG)
+      .backgroundColor(InkPalette.SANDALWOOD)
+      .shadow(InkShadow.DEEP)
+      .alignItems(VerticalAlign.Center)
     }
   }
 }

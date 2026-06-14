@@ -91,6 +91,10 @@
     {
       "name": "clear_recently_used",
       "value": "清除最近使用"
+    },
+    {
+      "name": "read_pasteboard_reason",
+      "value": "读取剪贴板链接用于快捷导入订阅源和书源"
     }
   ]
 }

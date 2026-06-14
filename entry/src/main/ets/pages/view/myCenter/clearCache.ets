@@ -2,53 +2,99 @@ import { PublicConstants } from '../../../common/constants/PublicConstants'
 import { ColumnModifier } from '../../../common/utils/ComponetModifier'
 import { dataItem } from '../../../componets/dataList/dataItem'
 import { MyCenterTitle } from '../../../componets/myCenter/MyCenterTitle'
-import { serviceDialog } from '../../../componets/webDavService/serviceDialog'
+import { ThemeStorageKey } from '../../../common/constants/Theme'
+import { ThemeItem } from '../../../common/model/Theme'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../../common/constants/DesignTokens'
 
 @Entry
 @Component
-struct clearCache{
-  @State clearList:dataItem[]=[
-    new dataItem("系统缓存",34.35),
-    new dataItem("小说缓存",34.35),
-    new dataItem("漫画缓存",34.35),
-    new dataItem("听书缓存",34.35),
-    new dataItem("字体缓存",34.35),
+struct clearCache {
+  @State clearList: dataItem[] = [
+    new dataItem("系统缓存", 34.35),
+    new dataItem("小说缓存", 34.35),
+    new dataItem("漫画缓存", 34.35),
+    new dataItem("听书缓存", 34.35),
+    new dataItem("字体缓存", 34.35),
   ]
-  @State @Watch("ClearChange") clearDialogStatus:boolean=false
-  @State index:number=0
-  Column = new ColumnModifier().setCustom({left:20,right:20})
-  build() {
-    Column({space:12}){
-      //标题栏
-      MyCenterTitle({title:"清理缓存"})
-      Column(){
-        ForEach(this.clearList,(item:dataItem,index:number)=>{
-          Row({space:10}){
-            Text(item.title).width("65%").fontSize(14).lineHeight(22)
-            Text(item.value+"MB").fontSize(12).lineHeight(20).fontColor("rgba(0, 0, 0, 0.45)")
-            Image($r("app.media.right"))
-              .size({width:24,height:24})
-              .clickEffect({level:ClickEffectLevel.LIGHT, scale: 0.5})
-          }.width("100%").padding({top:12,bottom:12})
-          .justifyContent(FlexAlign.End)
-          .onClick(()=>{
-            this.index=index
-            this.clearDialogStatus=true
-          })
+  @State @Watch("ClearChange") clearDialogStatus: boolean = false
+  @State index: number = 0
+  
+  // 主题颜色
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
-        })
-      }
-      .backgroundColor(PublicConstants.THEME_COLOR_WHITE)
-      .padding({ left:20,right:20 })
-      .borderRadius(15)
-
-    }.width("100%")
-    .height("100%")
-    .attributeModifier(this.Column)
+  getMainColor(): string {
+    return this.theme?.mainColor || InkPalette.CINNABAR;
   }
 
+  getSecondColor(): string {
+    return this.theme?.secondColor || InkPalette.PAPER_WARM;
+  }
 
-  //弹窗关闭
+  build() {
+    Column() {
+      // 标题栏
+      MyCenterTitle({ title: "清理缓存" })
+
+      Scroll() {
+        Column({ space: InkSpacing.LG }) {
+          Column() {
+            ForEach(this.clearList, (item: dataItem, index: number) => {
+              Column() {
+                Row() {
+                  Text(item.title)
+                    .fontSize(InkTypography.BODY)
+                    .fontColor(InkPalette.INK)
+                    .layoutWeight(1)
+                  
+                  Text(item.value + " MB")
+                    .fontSize(InkTypography.BODY_SMALL)
+                    .fontColor(InkPalette.INK_MIST)
+                    .margin({ right: InkSpacing.SM })
+
+                  Image($r("app.media.ic_public_right"))
+                    .size({ width: 18, height: 18 })
+                    .fillColor(InkPalette.INK_WHISPER)
+                }
+                .width("100%")
+                .height(InkLayout.MIN_TOUCH_TARGET)
+                .onClick(() => {
+                  this.index = index
+                  this.clearDialogStatus = true
+                })
+
+                if (index < this.clearList.length - 1) {
+                  Divider()
+                    .color(InkPalette.PAPER_WARM)
+                    .strokeWidth(0.5)
+                }
+              }
+            })
+          }
+          .backgroundColor(Color.White)
+          .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+          .borderRadius(InkRadius.CARD)
+          .shadow(InkShadow.SUBTLE)
+          .width("100%")
+        }
+        .padding({
+          left: InkSpacing.PAGE_HORIZONTAL,
+          right: InkSpacing.PAGE_HORIZONTAL,
+          top: InkSpacing.LG,
+          bottom: InkSpacing.XXL
+        })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+    }
+    .width("100%")
+    .height("100%")
+    .backgroundColor(InkPalette.PAPER_EMBEDDED)
+  }
+
+  // 弹窗关闭
   exitApp() {
     this.clearDialogStatus = false
   }
@@ -56,54 +102,86 @@ struct clearCache{
     this.clearDialogStatus = false
   }
 
-  onAccept(index:number) {
+  onAccept(index: number) {
     console.log(index.toString());
     this.clear(index)
     this.clearDialogStatus = false
   }
-  ClearChange(){
+  
+  ClearChange() {
     if (this.clearDialogStatus) {
       this.clearInfoDel?.open()
     }
   }
+
+  @Builder
+  confirmDialogBuilder() {
+    Column({ space: InkSpacing.XL }) {
+      Text('确认清除缓存吗？')
+        .fontSize(InkTypography.TITLE_SMALL)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(InkPalette.INK)
+
+      Text('清除缓存后可能需要重新加载部分内容。')
+        .fontSize(InkTypography.BODY)
+        .fontColor(InkPalette.INK_GHOST)
+
+      Row({ space: InkSpacing.MD }) {
+        Button('取消')
+          .fontSize(InkTypography.BODY)
+          .fontColor(this.getMainColor())
+          .backgroundColor(this.getSecondColor())
+          .onClick(() => { this.onCancel() })
+          .width(112)
+          .height(40)
+          .borderRadius(InkRadius.BUTTON_LARGE)
+
+        Button('确认')
+          .fontSize(InkTypography.BODY)
+          .fontColor(Color.White)
+          .backgroundColor(this.getMainColor())
+          .onClick(() => { this.onAccept(this.index) })
+          .width(112)
+          .height(40)
+          .borderRadius(InkRadius.BUTTON_LARGE)
+      }
+      .justifyContent(FlexAlign.Center)
+    }
+    .padding(InkSpacing.XXL)
+    .width(280)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(InkPalette.PAPER)
+    .borderRadius(InkRadius.DIALOG)
+    .shadow(InkShadow.FLOATING)
+  }
+
   clearInfoDel: CustomDialogController | null = new CustomDialogController({
-    builder: serviceDialog({
-      title:"确认清除小说缓存吗？",
-      value:"",
-      cancel: ()=> { this.onCancel() },
-      confirm: ()=> { this.onAccept(this.index) }
-    }),
+    builder: this.confirmDialogBuilder(),
     cancel: this.exitApp,
     autoCancel: true,
     alignment: DialogAlignment.Center,
-    offset:{dx:0,dy:20},
     customStyle: true
   })
-  //清楚方法
-  clear(index:number){
-    switch (index){
+
+  // 清除方法
+  clear(index: number) {
+    switch (index) {
       case 0:
-      //系统缓存
         console.log("系统缓存");
         break;
       case 1:
-      //小说缓存
         console.log("小说缓存");
         break;
       case 2:
-      //漫画缓存
         console.log("漫画缓存");
         break;
       case 3:
-      //听书缓存
         console.log("听书缓存");
         break;
       case 4:
-      //字体缓存
         console.log("字体缓存");
         break;
     }
-
-
   }
 }

@@ -1,13 +1,14 @@
-import ReadShow from '../../componets/common/ReadShow'
 import IndexShelf from './bookShelf/IndexShelf'
+import { InkPalette } from '../../common/constants/DesignTokens'
 
 @Component
 export default struct BookShelf {
-  @State bookShelf: string = '书架'
-  build(){
-    Column(){
+  build() {
+    Column() {
       IndexShelf()
     }
-    .backgroundColor('rgba(255, 255, 255, 0.8)')
+    .width('100%')
+    .height('100%')
+    .backgroundColor(InkPalette.PAPER)
   }
 }

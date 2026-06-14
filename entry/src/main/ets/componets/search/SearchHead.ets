@@ -2,38 +2,65 @@ import { router } from '@kit.ArkUI';
 import taskSearchBooks from '../../common/model/taskSearchBook';
 import { SearchBook } from '../../database/entities/SearchBook';
 import { showMessage } from '../common/promptShow';
-
+import { ThemeStorageKey } from '../../common/constants/Theme';
+import { ThemeItem } from '../../common/model/Theme';
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../common/constants/DesignTokens';
 
 @Component
-export struct SearchHead{
+export struct SearchHead {
   @Consume SearchValue: string
   @Consume SearchStatus: number
-  @Consume('searchBookList') books:SearchBook[]
-  @State lastSearch:string = ''
-  @Consume('isSearch') isSearch:boolean
-  // @State bookIndex:number = 0
+  @Consume('searchBookList') books: SearchBook[]
+  @State lastSearch: string = ''
+  @Consume('isSearch') isSearch: boolean
+  
+  @StorageProp('topRectHeight') topRectHeight: number = 0
+  // 主题颜色
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
+  getMainColor(): string {
+    return this.theme?.mainColor || InkPalette.CINNABAR;
+  }
+
   build() {
-    Flex({
-      alignItems:ItemAlign.End,
-      justifyContent:FlexAlign.SpaceBetween
-    }){
-      Row({ space: 15 }) {
-        Image($r('app.media.return_left'))
-          .width(25)
-          .height(25)
-          .onClick(()=>{
-            router.back()
-            if (this.isSearch) {
-              taskSearchBooks.cancelAllTasks()
-            }
-          })
-        Search({ value: this.SearchValue, placeholder: '搜索书名或作者', icon: "/common/images/search.svg" })
-          .width("70%")
-          .height(40)
+    Row() {
+      Row({ space: InkSpacing.MD }) {
+        Row() {
+          Image($r('sys.media.ohos_ic_public_arrow_left'))
+            .width(24)
+            .height(24)
+            .fillColor(InkPalette.INK)
+        }
+        .width(InkLayout.MIN_TOUCH_TARGET)
+        .height(InkLayout.MIN_TOUCH_TARGET)
+        .borderRadius(InkRadius.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => {
+          router.back()
+          if (this.isSearch) {
+            taskSearchBooks.cancelAllTasks()
+          }
+        })
+
+        Search({ value: this.SearchValue, placeholder: '搜索书名或作者' })
+          .layoutWeight(1)
+          .height(36)
+          .backgroundColor(InkPalette.PAPER_WARM)
+          .placeholderColor(InkPalette.INK_GHOST)
+          .borderRadius(InkRadius.SEARCH)
           .onChange(this.onChange)
-          .onSubmit(this.onSubmit);
-        Text(this.isSearch?"取消":"搜索").width("10%").height(40).fontWeight(600)
-          .onClick(()=>{
+          .onSubmit(this.onSubmit)
+
+        Text(this.isSearch ? "取消" : "搜索")
+          .fontSize(InkTypography.BODY)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.isSearch ? this.getMainColor() : InkPalette.INK_LIGHT)
+          .height(InkLayout.MIN_TOUCH_TARGET)
+          .textAlign(TextAlign.Center)
+          .onClick(() => {
             if (this.isSearch) {
               taskSearchBooks.cancelAllTasks()
               console.log(`取消搜索${this.books.length}`)
@@ -42,20 +69,28 @@ export struct SearchHead{
               this.onSubmit(this.SearchValue)
             }
           })
-      }.margin({left:5}).width("100%")
+      }
+      .width("100%")
+      .alignItems(VerticalAlign.Center)
     }
-    .borderRadius({ bottomRight:5 ,bottomLeft:5})
-    .backgroundImage($r('app.media.backgroundimage'))
-    .backgroundImageSize({width:'100%'})
-    .height('11%')
+    .padding({
+      top: this.topRectHeight,
+      left: InkSpacing.PAGE_HORIZONTAL,
+      right: InkSpacing.PAGE_HORIZONTAL
+    })
+    .backgroundColor(InkPalette.PAPER)
+    .shadow(InkShadow.SUBTLE)
+    .height(InkLayout.HEADER_HEIGHT + this.topRectHeight)
+    .width("100%")
   }
 
-  onChange=(value: string)=> {
+  onChange = (value: string) => {
     this.lastSearch = this.SearchValue
-    this.SearchValue=value;
+    this.SearchValue = value;
   }
-  onSubmit= async (value: string)=>{
-    this.SearchValue=value;
+  
+  onSubmit = async (value: string) => {
+    this.SearchValue = value;
     if (!this.SearchValue) {
       showMessage('搜索内容不能为空')
       return
@@ -67,7 +102,7 @@ export struct SearchHead{
     this.books = []
     taskSearchBooks.search(this.SearchValue, (newUrls: SearchBook[]) => {
       this.setBookList(newUrls)
-    },()=>{
+    }, () => {
       this.SearchStatus = 2
       this.isSearch = false
     })
@@ -77,13 +112,11 @@ export struct SearchHead{
     if (books.length === 0) return
     books.forEach((book: SearchBook) => {
       let found = false;
-      if(!book.name) return
+      if (!book.name) return
       for (let item of this.books) {
         if (item.name === book.name && item.author === book.author) {
           item.belongCount++;
-          //源来的books的source源 id和 books的source源 id相同不添加
           if (item.source?.bookSourceUrl !== book.source?.bookSourceUrl && book.source) {
-            // 确保 sourceList 已经存在并且是一个数组
             if (!item.sourceList) {
               item.sourceList = [];
             }
@@ -93,7 +126,6 @@ export struct SearchHead{
           break;
         }
       }
-
 
       if (!found) {
         book.belongCount = 1
@@ -120,7 +152,7 @@ export struct SearchHead{
     });
   }
 
-  getSimilarity(str1: string, str2: string){
+  getSimilarity(str1: string, str2: string) {
     const lengthDifference = Math.abs(str1.length - str2.length);
     const commonLength = Math.min(str1.length, str2.length);
     let similarity = 0;
@@ -134,25 +166,20 @@ export struct SearchHead{
     return similarity - lengthDifference;
   }
 
-
-  countMatchingChars(last:string, current:string){
-    // 创建一个对象来存储字符串 a 中的字符及其出现次数
+  countMatchingChars(last: string, current: string) {
     const charsInA: Record<string, number> = {};
-    // 填充对象
     for (const char of last) {
       charsInA[char] = (charsInA[char] || 0) + 1;
     }
-    // 初始化计数器
     let count = 0;
-    // 遍历字符串 b 中的每个字符
     for (const char of current) {
-      // 如果字符存在于 a 中，则计数器加一
       if (charsInA[char]) {
         count++;
       }
     }
     return count;
   }
+  
   aboutToAppear(): void {
     console.log(this.SearchStatus.toString());
   }

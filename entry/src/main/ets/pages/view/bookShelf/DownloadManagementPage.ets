@@ -383,7 +383,6 @@ struct DownloadManagementPage {
       this.ExportSettingSwitchItem(1, "TXT不导出章节名")
       this.ExportSettingSwitchItem(2, "TXT导出图片")
       this.ExportSettingSwitchItem(3, "多线程导出TXT")
-      this.ExportSettingSwitchItem(4, "导出同时上传一份至云盘")
 
       this.ExportSettingClickItem(5, "导出格式", "TXT")
       this.ExportSettingClickItem(6, "导出路径", "/storage/emulated/阅读")

@@ -11,15 +11,14 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
  * @date 2024/5/22 14:33
  */
 
-// 书架/更多/书籍导入/网盘导入/文件列表/开源阅读
+// 书架/更多/书籍导入/文件列表
 
 PersistentStorage.persistProp('onSelect', 0);
-PersistentStorage.persistProp('webDavTitle', "坚果云");
 
 @Entry
 @Component
 struct FileManagement {
-    @State title: string = AppStorage.get("webDavTitle") || "坚果云"
+    @State title: string = '文件管理'
 
     @State fileList: FolderFileDataSource = new FolderFileDataSource()
 
@@ -27,7 +26,7 @@ struct FileManagement {
 
     dialogController: CustomDialogController | null = new CustomDialogController({
         builder: RenameDialog({
-            oldName: "坚果云",
+            oldName: "文件管理",
             confirm: this.confirm
         }),
         //autoCancel: true,

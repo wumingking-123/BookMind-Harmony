@@ -5,6 +5,11 @@ import { common, Want } from '@kit.AbilityKit';
 import { BusinessError } from '@ohos.base';
 import hilog from '@ohos.hilog';
 import { productViewManager } from '@kit.StoreKit';
+import { ThemeStorageKey } from '../../../../common/constants/Theme';
+import { ThemeItem } from '../../../../common/model/Theme';
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../../../common/constants/DesignTokens';
 
 @Entry
 @Component
@@ -24,24 +29,32 @@ struct AboutUsPage {
     new dataItem("免责声明", 3),
     new dataItem("崩溃日志", 4),
   ]
+  
+  // 主题颜色
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
   // 升级弹窗
   dialogController: CustomDialogController = new CustomDialogController({
     builder: VersionUpdateCustomDialog({}),
-    cornerRadius: 16,
+    cornerRadius: InkRadius.DIALOG,
     gridCount: 3,
     alignment: DialogAlignment.Center,
   })
   @State qqList: Array<string> = [
     'Beta群:887615035'
-
   ]
+
+  getMainColor(): string {
+    return this.theme?.mainColor || InkPalette.CINNABAR;
+  }
+
+  getSecondColor(): string {
+    return this.theme?.secondColor || InkPalette.PAPER_WARM;
+  }
 
   firstUrl_list(value: number | string) {
     switch (value) {
       case 0:
-      // 升级弹窗
-      //   this.dialogController.open()
-      // 跳转到应用市场
         try {
           const request: Want = {
             parameters: {
@@ -54,17 +67,16 @@ struct AboutUsPage {
             }
           });
         } catch (err) {
-          hilog.error(0, 'TAG', `loadProduct failed. code is ${err.code}, message is ${err.message}`);
+          const error = err as BusinessError;
+          hilog.error(0, 'TAG', `loadProduct failed. code is ${error.code}, message is ${error.message}`);
         }
         break
       case 1:
-      // 更新日志
         router.pushUrl({
           url: "pages/view/myCenter/aboutUs/versionLogPage"
         })
         break
       case 2:
-      //todo 开发人员
         break
     }
   }
@@ -72,131 +84,145 @@ struct AboutUsPage {
   endUrl_list(value: number | string) {
     switch (value) {
       case 0:
-      //用户隐私与协议
         router.pushUrl({
           url: "pages/view/myCenter/aboutUs/PrivacyAgreementPage"
         })
         break
       case 1:
-      //开源许可
         router.pushUrl({
           url: "pages/view/myCenter/aboutUs/OpenSourceLicensePage"
         })
         break
       case 2:
-      //免责声明
         router.pushUrl({
           url: "pages/view/myCenter/aboutUs/DisclaimerPage"
         })
         break
       case 3:
-      //todo 崩溃日志
         break
     }
   }
 
   build() {
-    Scroll() {
-      Column({ space: 16 }) {
-        Flex() {
-          Column() {
-            Image($r("app.media.return_left"))
-              .size({ width: 24, height: 24 })
-              .interpolation(ImageInterpolation.Medium)
-              .onClick(() => {
-                router.back()
-              })
-          }
-          .alignItems(HorizontalAlign.Start)
-          .width('33%')
+    Column() {
+      // 头部标题栏
+      Row() {
+        Row() {
+          Image($r('sys.media.ohos_ic_public_arrow_left'))
+            .width(24)
+            .height(24)
+            .fillColor(InkPalette.INK)
+        }
+        .width(InkLayout.MIN_TOUCH_TARGET)
+        .height(InkLayout.MIN_TOUCH_TARGET)
+        .borderRadius(InkRadius.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => { router.back() })
 
-          Column() {
-            Text(`关于我们`)
-              .lineHeight(24)
-              .font({
-                family: "PingFang SC",
-                size: 16,
-                weight: 500,
-                style: FontStyle.Normal,
-              })
-          }.width('33%')
+        Text('关于我们')
+          .fontSize(InkTypography.TITLE)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK)
+          .position({ left: '50%' })
+          .translate({ x: '-50%' })
+      }
+      .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+      .width('100%')
+      .height(InkLayout.HEADER_HEIGHT)
+      .margin({ top: this.topRectHeight })
+
+      Scroll() {
+        Column({ space: InkSpacing.LG }) {
+          // Logo/应用图标及版本信息
+          Column({ space: InkSpacing.SM }) {
+            Image($r('app.media.app_icon'))
+              .width(72)
+              .height(72)
+              .borderRadius(InkRadius.LG)
+              .shadow(InkShadow.SOFT)
+            Text('鸿蒙阅读')
+              .fontSize(InkTypography.TITLE)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(InkPalette.INK)
+            Text(`版本号: ${this.version}`)
+              .fontSize(InkTypography.CAPTION)
+              .fontColor(InkPalette.INK_MIST)
+          }
+          .width('100%')
+          .padding({ top: InkSpacing.XL, bottom: InkSpacing.LG })
+          .alignItems(HorizontalAlign.Center)
+
+          // 第一组设置
+          this.middleClick(this.first_list, "app.media.ic_public_right", this.version, "first")
+
+          // 社交媒体等卡片网格
+          Grid() {
+            GridItem() {
+              this.middleBox(0, "app.media.official_website", "官网")
+            }
+
+            GridItem() {
+              this.middleBox(1, "app.media.wechat_public_account", "公众号")
+            }
+
+            GridItem() {
+              this.middleBox(2, "app.media.channel", "QQ频道")
+            }
+
+            GridItem() {
+              this.middleBox(3, "app.media.QQ", "QQ群")
+            }
+          }
+          .columnsTemplate('1fr 1fr 1fr 1fr')
+          .columnsGap(InkSpacing.MD)
+          .height(84)
+          .width('100%')
+          .bindSheet($$this.isShowQQ, this.QQDialog(), {
+            height: 280,
+            showClose: false,
+            dragBar: false,
+            backgroundColor: InkPalette.PAPER
+          })
+
+          // 第二组设置
+          this.middleClick(this.end_list, "app.media.ic_public_right", null, "end")
+
+          Blank(InkSpacing.MASSIVE)
         }
         .padding({
-          top: 12,
-          bottom: 12,
+          left: InkSpacing.PAGE_HORIZONTAL,
+          right: InkSpacing.PAGE_HORIZONTAL,
+          bottom: this.bottomRectHeight + InkSpacing.XXL
         })
-        .height(48)
-        .width("100%")
-
-        this.middleClick(this.first_list, "app.media.right", this.version, "first")
-
-        Grid() {
-          GridItem() {
-            this.middleBox(0, "app.media.official_website", "官网")
-          }
-
-          GridItem() {
-            this.middleBox(1, "app.media.wechat_public_account", "公众号")
-          }
-
-          GridItem() {
-            this.middleBox(2, "app.media.channel", "QQ频道")
-          }
-
-          GridItem() {
-            this.middleBox(3, "app.media.QQ", "QQ群")
-          }
-        }
-        .columnsTemplate('1fr 1fr 1fr 1fr')
-        .columnsGap(16)
-        .height(80)
-        // QQ群的半模态框 不知道绑定在哪里，鸿蒙官方怎么想的，非要绑定一个元素？
-        .bindSheet($$this.isShowQQ, this.QQDialog(), {
-          height: 300,
-          showClose: false,
-          dragBar: false,
-          blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
-          onDisappear: () => {
-            // this.clickBookType = ''
-          }
-        })
-
-        this.middleClick(this.end_list, "app.media.right", null, "end")
       }
-      .padding({
-        left: 20,
-        right: 20,
-        top: this.topRectHeight,
-        bottom: this.bottomRectHeight
-      })
-      .height("100%")
-      .backgroundColor("rgb(245, 245, 245)")
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+      .layoutWeight(1)
     }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(InkPalette.PAPER_EMBEDDED)
   }
 
   @Builder
   middleBox(index: number, image: string, text: string) {
-    Column({ space: 2 }) {
-      Image($r(`${image}`)).size({ width: 24, height: 24 })
+    Column({ space: InkSpacing.XS }) {
+      Image($r(`${image}`))
+        .size({ width: 24, height: 24 })
+        .fillColor(this.getMainColor())
       Text(text)
         .maxLines(1)
-        .lineHeight(20)
-        .font({
-          // family: "PingFang SC",
-          size: 12,
-          weight: 400,
-          style: FontStyle.Normal,
-        })
-        .opacity(0.45)
+        .fontSize(InkTypography.CAPTION)
+        .fontColor(InkPalette.INK_LIGHT)
     }
-    .padding({
-      top: 12,
-      bottom: 12
-    })
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
     .width("100%")
-    .height(70)
-    .borderRadius(12)
+    .height(72)
+    .borderRadius(InkRadius.CARD)
     .backgroundColor(Color.White)
+    .shadow(InkShadow.SUBTLE)
     .onClick(() => {
       switch (index) {
         case 0:
@@ -216,132 +242,106 @@ struct AboutUsPage {
   middleClick(list: Array<dataItem>, image: string, version: string | null, urlList: string) {
     Column() {
       ForEach(list, (item: dataItem, index) => {
-        Row() {
-          Text(item.title)
-            .lineHeight(22)
-            .font({
-              // family: "PingFang SC",
-              size: 16,
-              weight: 400,
-              style: FontStyle.Normal,
-            })
-          Blank(20)
-          if (version && index === 0) {
-            Text(version)
-              .lineHeight(20)
-              .font({
-                // family: "PingFang SC",
-                size: 12,
-                weight: 400,
-                style: FontStyle.Normal,
-              })
-              .baselineOffset(4)
-              .opacity(0.45)
-              .margin({
-                right: 4
-              })
+        Column() {
+          Row() {
+            Text(item.title)
+              .fontSize(InkTypography.BODY)
+              .fontColor(InkPalette.INK)
+            Blank()
+            if (version && index === 0) {
+              Text(version)
+                .fontSize(InkTypography.BODY_SMALL)
+                .fontColor(InkPalette.INK_MIST)
+                .margin({ right: InkSpacing.XS })
+            }
+            Image($r(`${image}`))
+              .size({ width: 18, height: 18 })
+              .fillColor(InkPalette.INK_WHISPER)
           }
-          Image($r(`${image}`)).size({ width: 24, height: 24 })
+          .width("100%")
+          .height(InkLayout.MIN_TOUCH_TARGET)
+          .onClick(() => {
+            switch (urlList) {
+              case 'first':
+                this.firstUrl_list(index)
+                break
+              case 'end':
+                this.endUrl_list(index)
+                break
+            }
+          })
+
+          if (index < list.length - 1) {
+            Divider()
+              .color(InkPalette.PAPER_WARM)
+              .strokeWidth(0.5)
+          }
         }
-        .width("100%")
-        .height(48)
-        .onClick(() => {
-          switch (urlList) {
-            case 'first':
-              this.firstUrl_list(index)
-              break
-            case 'end':
-              this.endUrl_list(index)
-              break
-          }
-        })
       })
     }
-
-    .padding({
-      top: 12,
-      bottom: 12,
-      left: 20,
-      right: 20
-    })
+    .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
     .backgroundColor(Color.White)
-    .borderRadius(10)
+    .borderRadius(InkRadius.CARD)
+    .shadow(InkShadow.SUBTLE)
   }
 
   @Builder
   QQDialog() {
     Column() {
-      Column() {
-        Row() {
-          Text("QQ群")
-            .lineHeight(24)
-            .font({
-              family: "PingFang SC",
-              size: 16,
-              style: FontStyle.Normal,
-              weight: 500,
-            })
-        }
-        .justifyContent(FlexAlign.Center)
-        .height(48)
+      Row()
+        .width(32)
+        .height(4)
+        .borderRadius(2)
+        .backgroundColor(InkPalette.INK_MIST)
+        .margin({ top: InkSpacing.MD })
+
+      Text("QQ群")
+        .fontSize(InkTypography.TITLE_SMALL)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(InkPalette.INK)
         .width("100%")
+        .textAlign(TextAlign.Center)
+        .padding({ top: InkSpacing.LG, bottom: InkSpacing.MD })
 
-        Scroll() {
-          Column() {
-            ForEach(this.qqList, (item: string) => {
-              Row() {
-                Text(item)
-                  .lineHeight(22)
-                  .fontColor("#000000")
-                  .font({
-                    family: "PingFang SC",
-                    size: 14,
-                    style: FontStyle.Normal,
-                    weight: 400,
-                  })
-                Blank(20)
-                Image($r('app.media.right'))
-                  .width(24)
-                  .height(24)
-                  .margin({
-                    right: 5
-                  })
-              }
-              .margin({
-                top: 12,
-                bottom: 12
-              })
-              .width('100%')
-            })
+      List() {
+        ForEach(this.qqList, (item: string) => {
+          ListItem() {
+            Row() {
+              Text(item)
+                .fontSize(InkTypography.BODY)
+                .fontColor(InkPalette.INK)
+              Blank()
+              Image($r('app.media.ic_public_right'))
+                .width(18)
+                .height(18)
+                .fillColor(InkPalette.INK_WHISPER)
+            }
+            .width('100%')
+            .height(InkLayout.MIN_TOUCH_TARGET)
+            .padding({ left: InkSpacing.XL, right: InkSpacing.XL })
           }
-        }
-        .height('60%')
-        .scrollBar(BarState.Off)
+        })
       }
-      .padding({
-        left: 20,
-        right: 20
-      })
-
+      .width('100%')
+      .layoutWeight(1)
 
       Divider()
+        .color(InkPalette.PAPER_WARM)
 
-      Column() {
-        Text('取消').fontSize(16).fontWeight(400)
-          .lineHeight(24)
-      }
-      .onClick(() => {
-        this.isShowQQ = true
-      })
-      .alignItems(HorizontalAlign.Center)
-      .padding({
-        left: 32,
-        right: 32,
-        top: 16
-      })
+      Text('取消')
+        .fontSize(InkTypography.BODY)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(InkPalette.INK_GHOST)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+        .height(InkLayout.MIN_TOUCH_TARGET)
+        .alignSelf(ItemAlign.Center)
+        .onClick(() => {
+          this.isShowQQ = false
+        })
     }
-
-    // .width(CommonConstants.FULL_WIDTH)
-    // .height(CommonConstants.FULL_HEIGHT)
+    .width("100%")
+    .height(280)
+    .backgroundColor(InkPalette.PAPER)
   }
 }

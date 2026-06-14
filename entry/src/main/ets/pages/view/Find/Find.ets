@@ -1,13 +1,15 @@
 import IndexFind from './IndexFind'
+import { InkPalette } from '../../../common/constants/DesignTokens'
 
 @ComponentV2
 @Preview
 export default struct Find {
-
-  build(){
-    Column(){
+  build() {
+    Column() {
       IndexFind()
     }
-    .backgroundColor($r('app.string.color_black_88'))
+    .width('100%')
+    .height('100%')
+    .backgroundColor(InkPalette.PAPER)
   }
 }

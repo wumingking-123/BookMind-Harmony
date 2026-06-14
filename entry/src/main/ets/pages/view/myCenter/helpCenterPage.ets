@@ -1,6 +1,9 @@
 import { router } from '@kit.ArkUI';
 import { ThemeStorageKey } from '../../../common/constants/Theme';
 import { ThemeItem } from '../../../common/model/Theme';
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../../common/constants/DesignTokens';
 
 @Entry
 @Component
@@ -10,17 +13,12 @@ struct HelpCenterPage {
   @State SearchValue: string = ""
   @State MoreQuestionsIndex: number = 0
   @State MoreQuestionsRightWidth: number | string = 0
-  @State questionsList: Array<string> = ["热门问题", "校验问题", "书源问题", "订阅问题", "xx问题"]
+  @State questionsList: Array<string> = ["热门问题", "校验问题", "书源问题", "订阅问题", "备份恢复"]
   @State questionsShowList: Array<string> = [
     "1、为什么第一次安装好后什么都没有？",
     "2、遇到目录为空怎么办？",
     "3、替换净化是什么？",
   ]
-  // @State tutorialQuestionsList: Array<string> = [
-  //   "书源制作教程",
-  //   "订阅源源制作教程",
-  //   "替换净化教程",
-  // ]
   @State MoreQuestionsSideBarList: Array<string> = [
     "热门问题",
     "书源校验",
@@ -44,90 +42,74 @@ struct HelpCenterPage {
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
+  getMainColor(): string {
+    return this.theme?.mainColor || InkPalette.CINNABAR;
+  }
+
+  getSecondColor(): string {
+    return this.theme?.secondColor || InkPalette.PAPER_WARM;
+  }
+
   build() {
     Column() {
-      Flex({
-        direction: FlexDirection.Column,
-        alignItems: ItemAlign.Start,
-        justifyContent: FlexAlign.Start
-      }) {
-        // 顶部固定内容
-        Flex() {
-          Column() {
-            Image($r("app.media.return_left"))
-              .size({ width: 24, height: 24 })
-              .interpolation(ImageInterpolation.Medium)
-              .onClick(() => {
-                router.back()
-              })
-          }
-          .alignItems(HorizontalAlign.Start)
-          .width('33%')
-
-          Column() {
-            Text(`帮助中心`)
-              .lineHeight(24)
-              .font({
-                family: "PingFang SC",
-                size: 16,
-                weight: 500,
-                style: FontStyle.Normal,
-              })
-          }.width('33%')
+      // 头部标题栏
+      Row() {
+        Row() {
+          Image($r('sys.media.ohos_ic_public_arrow_left'))
+            .width(24)
+            .height(24)
+            .fillColor(InkPalette.INK)
         }
-        .padding({
-          top: 12,
-          bottom: 12,
-        })
-        .height(48)
-        .width("100%")
+        .width(InkLayout.MIN_TOUCH_TARGET)
+        .height(InkLayout.MIN_TOUCH_TARGET)
+        .borderRadius(InkRadius.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => { router.back() })
 
-        Search({ value: this.SearchValue, placeholder: '搜索问题关键词', icon: "/common/images/search.svg" })
+        Text('帮助中心')
+          .fontSize(InkTypography.TITLE)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK)
+          .position({ left: '50%' })
+          .translate({ x: '-50%' })
+      }
+      .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+      .width('100%')
+      .height(InkLayout.HEADER_HEIGHT)
+      .margin({ top: this.topRectHeight })
+
+      // 搜索框区域
+      Column() {
+        Search({ value: this.SearchValue, placeholder: '搜索问题关键词' })
           .width("100%")
           .height(40)
-        // .onChange(this.onChange)
-        // .onSubmit(this.onSubmit)
+          .backgroundColor(Color.White)
+          .placeholderColor(InkPalette.INK_GHOST)
+          .borderRadius(InkRadius.SEARCH)
+          .shadow(InkShadow.SUBTLE)
       }
-      .padding({
-        left: 20,
-        right: 20
-      })
-      .height(110)
+      .padding({ left: InkSpacing.PAGE_HORIZONTAL, right: InkSpacing.PAGE_HORIZONTAL, bottom: InkSpacing.LG })
 
       Scroll(this.scroller) {
-        Flex({
-          direction: FlexDirection.Row,
-        }) {
-          Flex({
-            direction: FlexDirection.Column,
-          }) {
-            // 帮助中心左页
+        Flex({ direction: FlexDirection.Row }) {
+          // 帮助中心左页
+          Column() {
             Column() {
               Row() {
                 Text("猜你想问")
-                  .lineHeight(24)
-                  .font({
-                    family: "PingFang SC",
-                    size: 16,
-                    weight: 500,
-                    style: FontStyle.Normal,
-                  })
-                Blank(20)
+                  .fontSize(InkTypography.TITLE_SMALL)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(InkPalette.INK)
+                Blank()
                 Row() {
                   Text("更多问题")
-                    .lineHeight(22)
-                    .opacity(0.45)
-                    .font({
-                      family: "PingFang SC",
-                      size: 14,
-                      weight: 400,
-                      style: FontStyle.Normal,
-                    })
-                  Image($r("app.media.right"))
-                    .width(24)
-                    .height(24)
-                    .opacity(0.45)
-                    .interpolation(ImageInterpolation.Medium)
+                    .fontSize(InkTypography.CAPTION)
+                    .fontColor(InkPalette.INK_MIST)
+                  Image($r("app.media.ic_public_right"))
+                    .width(16)
+                    .height(16)
+                    .fillColor(InkPalette.INK_MIST)
                 }
                 .onClick(() => {
                   this.scroller.scrollEdge(Edge.End)
@@ -137,7 +119,7 @@ struct HelpCenterPage {
 
               Row() {
                 Scroll() {
-                  Row({ space: 12 }) {
+                  Row({ space: InkSpacing.SM }) {
                     ForEach(this.questionsList, (item: string, index) => {
                       this.question(item, index)
                     })
@@ -146,156 +128,140 @@ struct HelpCenterPage {
                 .scrollBar(BarState.Off)
                 .scrollable(ScrollDirection.Horizontal)
               }
-              .margin({
-                top: 16,
-                bottom: 16
-              })
+              .margin({ top: InkSpacing.LG, bottom: InkSpacing.LG })
               .width("100%")
 
-              ForEach(this.questionsShowList, (item: string, index) => {
-                Row() {
-                  Text(item)
-                    .lineHeight(22)
-                    .font({
-                      family: "PingFang SC",
-                      size: 14,
-                      weight: 400,
-                      style: FontStyle.Normal,
-                    })
-                  Blank(20)
-                  Image($r("app.media.right"))
-                    .width(24)
-                    .height(24)
-                    .interpolation(ImageInterpolation.Medium)
-                    .onClick(() => {
+              Column() {
+                ForEach(this.questionsShowList, (item: string, index) => {
+                  Column() {
+                    Row() {
+                      Text(item)
+                        .fontSize(InkTypography.BODY)
+                        .fontColor(InkPalette.INK_LIGHT)
+                        .layoutWeight(1)
+                      Image($r("app.media.ic_public_right"))
+                        .width(18)
+                        .height(18)
+                        .fillColor(InkPalette.INK_WHISPER)
+                    }
+                    .width("100%")
+                    .height(InkLayout.MIN_TOUCH_TARGET)
+                    .onClick(() => {})
 
-                    })
-                }
-                .margin({
-                  top: 12,
-                  bottom: 12
+                    if (index < this.questionsShowList.length - 1) {
+                      Divider()
+                        .color(InkPalette.PAPER_WARM)
+                        .strokeWidth(0.5)
+                    }
+                  }
                 })
-                .width("100%")
-              })
+              }
+              .width("100%")
             }
-            .borderRadius(12)
+            .borderRadius(InkRadius.CARD)
             .width("100%")
-            .backgroundColor("#FFFFFF")
-            .padding({
-              top: 20,
-              left: 16,
-              right: 16
-            })
-            .margin({
-              bottom: 16
-            })
+            .backgroundColor(Color.White)
+            .padding(InkSpacing.LG)
+            .shadow(InkShadow.SUBTLE)
           }
-          .padding({
-            left: 20,
-            right: 20
-          })
+          .width("50%")
+          .padding({ left: InkSpacing.PAGE_HORIZONTAL, right: InkSpacing.PAGE_HORIZONTAL })
 
+          // 帮助中心右页
           Column() {
-            // 帮助中心右页，点击 更多问题 的页面显示
             Row() {
               SideBarContainer(SideBarContainerType.Overlay) {
                 Column() {
                   ForEach(this.MoreQuestionsSideBarList, (item: string, index) => {
                     Row() {
-                      if (this.MoreQuestionsIndex == index) {
-                        Line({ width: 3, height: 16 })
-                          .backgroundColor(this.theme.mainColor)
+                      if (this.MoreQuestionsIndex === index) {
+                        Row()
+                          .width(3)
+                          .height(16)
+                          .borderRadius(1.5)
+                          .backgroundColor(this.getMainColor())
+                          .margin({ right: InkSpacing.XS })
                       }
                       Text(item)
-                        .lineHeight(22)
-                        .font({
-                          family: "PingFang SC",
-                          size: 14,
-                          weight: 500,
-                          style: FontStyle.Normal,
-                        })
+                        .fontSize(InkTypography.CAPTION)
+                        .fontWeight(this.MoreQuestionsIndex === index ? FontWeight.Medium : FontWeight.Normal)
+                        .fontColor(this.MoreQuestionsIndex === index ? this.getMainColor() : InkPalette.INK)
                         .width("100%")
                         .textAlign(TextAlign.Center)
                     }
                     .height(48)
                     .width("100%")
-                    .backgroundColor(this.MoreQuestionsIndex == index ? "#F5F5F5" : "white")
+                    .backgroundColor(this.MoreQuestionsIndex === index ? this.getSecondColor() : Color.White)
                     .onClick(() => {
                       this.MoreQuestionsIndex = index
                     })
                   })
                 }
+                .backgroundColor(Color.White)
               }
               .showControlButton(false)
-              .width("24.4%") // 88/360
-              .borderRadius({
-                topRight: 12,
-                bottomRight: 12
-              })
+              .width("28%")
+              .borderRadius({ topLeft: InkRadius.CARD, bottomLeft: InkRadius.CARD })
 
               // 右侧内容显示
               Column() {
                 ForEach(this.MoreQuestionsItemList, (item: string, index) => {
-                  Row() {
-                    Text(item)
-                      .width(200)
-                      .lineHeight(22)
-                      .font({
-                        family: "PingFang SC",
-                        size: 14,
-                        weight: 500,
-                        style: FontStyle.Normal,
-                      })
-                    Blank(20)
-                    Image($r("app.media.right"))
-                      .width(24)
-                      .height(24)
-                      .opacity(0.45)
-                      .interpolation(ImageInterpolation.Medium)
+                  Column() {
+                    Row() {
+                      Text(item)
+                        .fontSize(InkTypography.BODY)
+                        .fontColor(InkPalette.INK_LIGHT)
+                        .layoutWeight(1)
+                      Image($r("app.media.ic_public_right"))
+                        .width(18)
+                        .height(18)
+                        .fillColor(InkPalette.INK_WHISPER)
+                    }
+                    .width("100%")
+                    .height(InkLayout.MIN_TOUCH_TARGET)
+
+                    if (index < this.MoreQuestionsItemList.length - 1) {
+                      Divider()
+                        .color(InkPalette.PAPER_WARM)
+                        .strokeWidth(0.5)
+                    }
                   }
-                  .padding({
-                    top: 12,
-                    bottom: 12
-                  })
-                  .width("100%")
                 })
               }
-              .padding({
-                left: 16,
-                right: 16
-              })
+              .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
               .height("100%")
-              .width("75.6%") // (360-88)/360
-
+              .layoutWeight(1)
+              .backgroundColor(Color.White)
+              .borderRadius({ topRight: InkRadius.CARD, bottomRight: InkRadius.CARD })
             }
             .width("100%")
             .height(432)
+            .shadow(InkShadow.SUBTLE)
           }
-
+          .width("50%")
+          .padding({ left: InkSpacing.PAGE_HORIZONTAL, right: InkSpacing.PAGE_HORIZONTAL })
         }
         .width("200%")
       }
       .scrollBar(BarState.Off)
       .scrollable(ScrollDirection.Horizontal)
       .scrollSnap({ snapAlign: ScrollSnapAlign.START, snapPagination: "100%" })
+      .layoutWeight(1)
     }
     .height("100%")
-    .backgroundColor("#F5F5F5")
-    .padding({
-      top: this.topRectHeight
-    })
+    .backgroundColor(InkPalette.PAPER_EMBEDDED)
   }
 
   @Builder
   question(title: string, index: number) {
     Column() {
       Text(title)
-        .fontColor(index == 0 ? this.theme.mainColor : 'rgba(0, 0, 0, 0.88)')
-        .fontSize(12)
-        .fontWeight(700)
+        .fontColor(index === 0 ? this.getMainColor() : InkPalette.INK_LIGHT)
+        .fontSize(InkTypography.CAPTION)
+        .fontWeight(index === 0 ? FontWeight.Medium : FontWeight.Normal)
     }
-    .borderRadius(8)
-    .padding(8)
-    .backgroundColor(index == 0 ? this.theme.secondColor : 'rgb(240,240,240)')
+    .borderRadius(InkRadius.SM)
+    .padding({ left: InkSpacing.MD, right: InkSpacing.MD, top: InkSpacing.SM, bottom: InkSpacing.SM })
+    .backgroundColor(index === 0 ? this.getSecondColor() : InkPalette.PAPER_WARM)
   }
 }

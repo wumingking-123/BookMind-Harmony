@@ -7,7 +7,7 @@
 import picker from '@ohos.file.picker';
 
 
- export const pickerAvatar = async () => {
+export const pickerAvatar = async (): Promise<picker.PhotoSelectResult | undefined> => {
   // 实例化选项对象
   const options = new picker.PhotoSelectOptions()
   // 过滤选择媒体文件类型为IMAGE——只能选择图片类型的资源
@@ -17,9 +17,9 @@ import picker from '@ohos.file.picker';
 
   // 利用PhotoViewPicker对象实例中的select自动获取到用户选择的那张图片的地址
   const pickerView = new picker.PhotoViewPicker()
-  let urls = await pickerView.select(options)
-  if (urls.photoUris.length <= 0) {
-    return
+  let urls: picker.PhotoSelectResult = await pickerView.select(options)
+  if (!urls || !urls.photoUris || urls.photoUris.length <= 0) {
+    return undefined
   }
   return urls
 }

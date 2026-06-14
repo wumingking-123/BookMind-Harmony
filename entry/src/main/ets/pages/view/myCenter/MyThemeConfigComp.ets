@@ -1,8 +1,10 @@
 import { ThemeColor, ThemeStorageKey } from '../../../common/constants/Theme'
 import { ThemeItem } from '../../../common/model/Theme'
-import { promptAction, PromptAction, router } from '@kit.ArkUI'
+import { promptAction, router } from '@kit.ArkUI'
 import { themeManager } from '../../../common/utils/ThemeManager'
-import { JSON } from '@kit.ArkTS'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../../common/constants/DesignTokens'
 
 // 个性主题组件模块
 @Component
@@ -27,117 +29,130 @@ export struct MyThemeConfigComp {
   // 构建自定义弹窗
   @Builder
   dialogBuilder() {
-    Column({space: 24}) {
-      Text('确定要删除吗？')
-        .fontSize(18)
-        .fontWeight(FontWeight.Bold)
+    Column({ space: InkSpacing.XL }) {
+      Text('删除主题')
+        .fontSize(InkTypography.TITLE)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(InkPalette.INK)
 
-      Row({space: 12}) {
+      Text('确定要删除这个主题吗？')
+        .fontSize(InkTypography.BODY)
+        .fontColor(InkPalette.INK_GHOST)
+
+      Row({ space: InkSpacing.MD }) {
         Button('取消')
-          .fontSize(14)
+          .fontSize(InkTypography.BODY)
           .fontColor(this.theme.mainColor)
           .backgroundColor(this.theme.secondColor)
-          .onClick(() => {
-            this.dialog.close()
-          })
+          .onClick(() => { this.dialog.close() })
           .width(112)
-          .height(38)
+          .height(44)
+          .borderRadius(InkRadius.BUTTON_LARGE)
+
         Button('确定')
-          .fontSize(14)
+          .fontSize(InkTypography.BODY)
           .fontColor(Color.White)
           .backgroundColor(this.theme.mainColor)
           .onClick(() => {
             if (this.themeList.length > 1) {
               themeManager.deleteTheme(this.longPressGestureIndex)
             } else {
-              promptAction.showToast({message: "删除失败，至少需要保留一个主题"})
+              this.getUIContext().getPromptAction().showToast({ message: '至少需要保留一个主题' })
             }
             this.dialog.close()
           })
           .width(112)
-          .height(38)
+          .height(44)
+          .borderRadius(InkRadius.BUTTON_LARGE)
       }
       .justifyContent(FlexAlign.Center)
-
     }
-    .padding(24)
-    .width(284)
-    .height(136)
+    .padding(InkSpacing.XXL)
+    .width(280)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(Color.White)
-    .borderRadius(32)
+    .backgroundColor(InkPalette.PAPER)
+    .borderRadius(InkRadius.DIALOG)
+    .shadow(InkShadow.FLOATING)
   }
 
   // 构建个性主题下列表元素
   @Builder
   themeItemBuilder(item: ThemeItem, index: number) {
-    Column({space: 8}) {
-      Column() {
-        if (this.activeIndex == index) {
+    Column({ space: InkSpacing.SM }) {
+      Stack() {
+        Column()
+          .width('100%')
+          .height('100%')
+          .linearGradient({
+            direction: GradientDirection.Bottom,
+            colors: [[item.mainColor, 0], [item.secondColor, 1]]
+          })
+          .borderRadius(InkRadius.MD)
+
+        // 使用中标记
+        if (this.activeIndex === index) {
           Text('使用中')
-            .fontSize(9)
-            .fontColor('#fff')
-            .backgroundColor('#ef4444')
+            .fontSize(InkTypography.MICRO)
+            .fontColor(Color.White)
+            .backgroundColor(item.mainColor)
             .textAlign(TextAlign.Center)
-            .lineHeight(14)
-            .width(39)
-            .height(14)
-            .borderRadius({
-              topRight: 8,
-              bottomLeft: 8
-            })
-            .position({right: 0, top: 0})
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .borderRadius({ topRight: InkRadius.MD, bottomLeft: InkRadius.MD })
+            .position({ right: 0, top: 0 })
         }
       }
-      .width(154)
-      .height(77)
-      .borderRadius(8)
-      .backgroundColor(item.mainColor)
+      .width('100%')
+      .height(72)
+      .borderRadius(InkRadius.MD)
+      .shadow(InkShadow.SUBTLE)
 
       Text(item.text)
-        .fontSize(14)
-        .height(22)
-        .lineHeight(22)
+        .fontSize(InkTypography.BODY_SMALL)
+        .fontColor(InkPalette.INK)
+        .height(20)
         .width('100%')
+        .textAlign(TextAlign.Center)
     }
-    .width(154)
-    .height(107)
+    .width('100%')
   }
 
   build() {
     Column() {
       Grid() {
-        // 自定义主题
+        // 自定义主题入口
         GridItem() {
-          Column({space: 8}) {
+          Column({ space: InkSpacing.SM }) {
             Column() {
               Image($r('app.media.my_theme_config_custom'))
                 .width(24)
-                .aspectRatio(1)
+                .height(24)
+                .fillColor(InkPalette.INK_MIST)
             }
-            .alignItems(HorizontalAlign.Center)
             .justifyContent(FlexAlign.Center)
-            .width(154)
-            .height(77)
-            .borderRadius(8)
-            .backgroundColor('#f5f5f5')
-            .onClick(() => {
-              router.pushUrl({
-                url: '/pages/view/myCenter/CreateCustomTheme'.slice(1)
-              })
-            })
+            .alignItems(HorizontalAlign.Center)
+            .width('100%')
+            .height(72)
+            .borderRadius(InkRadius.MD)
+            .backgroundColor(InkPalette.PAPER_WARM)
+            .border({ width: 1, color: InkPalette.PAPER_DEEP, style: BorderStyle.Dashed })
 
-            Text('自定义主题')
-              .fontSize(14)
-              .height(22)
-              .lineHeight(22)
+            Text('自定义')
+              .fontSize(InkTypography.BODY_SMALL)
+              .fontColor(InkPalette.INK_GHOST)
+              .height(20)
               .width('100%')
+              .textAlign(TextAlign.Center)
           }
-          .width(154)
-          .height(107)
+          .width('100%')
         }
-        ForEach(this.themeList, (item: ThemeItem, index) => {
+        .onClick(() => {
+          router.pushUrl({
+            url: '/pages/view/myCenter/CreateCustomTheme'.slice(1)
+          })
+        })
+
+        ForEach(this.themeList, (item: ThemeItem, index: number) => {
           GridItem() {
             this.themeItemBuilder(item, index)
           }
@@ -148,6 +163,11 @@ export struct MyThemeConfigComp {
           .gesture(
             LongPressGesture()
               .onAction(() => {
+                // 不允许删除内置主题 (前10个)
+                if (index < 10) {
+                  this.getUIContext().getPromptAction().showToast({ message: '内置主题不可删除' })
+                  return
+                }
                 this.dialog.open()
                 this.longPressGestureIndex = index
               })
@@ -155,8 +175,8 @@ export struct MyThemeConfigComp {
         })
       }
       .columnsTemplate('1fr 1fr')
-      .columnsGap(12)
-      .rowsGap(12)
+      .columnsGap(InkSpacing.MD)
+      .rowsGap(InkSpacing.MD)
       .width('100%')
       .height('100%')
     }

@@ -91,6 +91,10 @@
     {
       "name": "clear_recently_used",
       "value": "clear recently used"
+    },
+    {
+      "name": "read_pasteboard_reason",
+      "value": "Read pasteboard links to quickly import subscriptions and book sources"
     }
   ]
 }

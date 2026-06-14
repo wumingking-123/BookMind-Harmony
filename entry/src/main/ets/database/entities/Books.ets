@@ -64,8 +64,6 @@ export class Books {
   sort:number = 0
   //书源排序
   originOrder:number = 0
-  //同步时间
-  syncTime:number = 0
   //小说0/漫画1/有声2
   bookType:number = 0
   //是否置顶

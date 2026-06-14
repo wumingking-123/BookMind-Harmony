@@ -1,4 +1,9 @@
 import { router } from '@kit.ArkUI';
+import { ThemeStorageKey } from '../../../../common/constants/Theme';
+import { ThemeItem } from '../../../../common/model/Theme';
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../../../common/constants/DesignTokens';
 
 @Entry
 @Component
@@ -6,75 +11,92 @@ struct PrivacyAgreementPage {
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @State rowsData: Array<string> = [
-    '本应用没有服务端,不收集任何用户信息,只采用了Google Firebase收集崩溃报告和性能报告. ',
-    '本应用网络同步和备份采用webDav协议,由用户自己提供同步服务.',
-    '存储权限用来打开本地文件和本地备份恢复. 其它一些权限是Google Firebase需要.',
-    '本应用为开源软件,内置js引擎,因书源调用js发生的任何问题由用户自行承担.'
+    '本应用没有服务端，不收集任何用户信息，只采用了 Google Firebase 收集崩溃报告和性能报告。',
+    '存储权限用来打开本地文件和本地备份恢复。其它一些权限是 Google Firebase 需要。',
+    '本应用为开源软件，内置 JS 引擎，因书源调用 JS 发生的任何问题由用户自行承担。'
   ]
-  build() {
-    Column({ space: 16 }) {
-      // 标题部分（不滚动，保持固定）
-      Flex() {
-        Column() {
-          Image($r("app.media.return_left"))
-            .size({ width: 24, height: 24 })
-            .interpolation(ImageInterpolation.Medium)
-            .onClick(() => {
-              router.back()
-            })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .width('30%')
+  // 主题颜色
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
-        Column() {
-          Text(`用户隐私与协议`)
-            .lineHeight(24)
-            .font({
-              family: "PingFang SC",
-              size: 16,
-              weight: 500,
-              style: FontStyle.Normal,
-            })
-        }.width('40%')
+  getMainColor(): string {
+    return this.theme?.mainColor || InkPalette.CINNABAR;
+  }
+
+  build() {
+    Column() {
+      // 头部标题栏
+      Row() {
+        Row() {
+          Image($r('sys.media.ohos_ic_public_arrow_left'))
+            .width(24)
+            .height(24)
+            .fillColor(InkPalette.INK)
+        }
+        .width(InkLayout.MIN_TOUCH_TARGET)
+        .height(InkLayout.MIN_TOUCH_TARGET)
+        .borderRadius(InkRadius.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => { router.back() })
+
+        Text('用户隐私与协议')
+          .fontSize(InkTypography.TITLE)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK)
+          .position({ left: '50%' })
+          .translate({ x: '-50%' })
       }
-      .padding({
-        top: 12,
-        bottom: 12,
-      })
-      .height(48)
-      .width("100%")
+      .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+      .width('100%')
+      .height(InkLayout.HEADER_HEIGHT)
+      .margin({ top: this.topRectHeight })
 
       // 内容区域
-        Column() {
-          ForEach(this.rowsData, (item: string) => {
-            Row() {
-              // 黑色原点
-              Column()
-                .width(4) // 设置宽度
-                .height(4) // 设置高度
-                .backgroundColor(0x000000) // 黑色背景
-                .borderRadius(2) // 半径设置为宽高的一半，形成圆形
-                .margin({ right: 8, top: -20 }) // 与文字的间隔
-              Text(item)
-                .lineHeight(22)
-                .font({
-                  family: "PingFang SC",
-                  size: 14,
-                  style: FontStyle.Normal,
-                  weight: 400,
-                })
-            }.width("100%")
-            .margin({ top: 12 })
-          })
+      Scroll() {
+        Column({ space: InkSpacing.LG }) {
+          Column({ space: InkSpacing.MD }) {
+            ForEach(this.rowsData, (item: string) => {
+              Row() {
+                // 精致的莫兰迪色圆点
+                Row()
+                  .width(6)
+                  .height(6)
+                  .borderRadius(3)
+                  .backgroundColor(this.getMainColor())
+                  .margin({ right: InkSpacing.MD, top: 8 })
+                  .alignSelf(ItemAlign.Start)
+
+                Text(item)
+                  .fontSize(InkTypography.BODY)
+                  .fontColor(InkPalette.INK_LIGHT)
+                  .lineHeight(22)
+                  .layoutWeight(1)
+              }
+              .width("100%")
+              .alignItems(VerticalAlign.Top)
+            })
+          }
+          .borderRadius(InkRadius.CARD)
+          .backgroundColor(Color.White)
+          .padding(InkSpacing.LG)
+          .width("100%")
+          .shadow(InkShadow.SUBTLE)
+
+          Blank(InkSpacing.XXL)
         }
-        .width("100%")
+        .padding({
+          left: InkSpacing.PAGE_HORIZONTAL,
+          right: InkSpacing.PAGE_HORIZONTAL,
+          top: InkSpacing.LG,
+          bottom: this.bottomRectHeight + InkSpacing.XXL
+        })
+      }
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+      .layoutWeight(1)
     }
-    .height("100%") // 设置外部 Column 高度为 100%
-    .padding({
-      top: this.topRectHeight,
-      left: 20,
-      right: 20
-    })
-    .backgroundColor("rgb(245, 245, 245)")
+    .height("100%")
+    .width("100%")
+    .backgroundColor(InkPalette.PAPER_EMBEDDED)
   }
 }

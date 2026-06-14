@@ -5,7 +5,6 @@ import { dataItem } from '../../../componets/dataList/dataItem';
 import { readStatisticsDataList } from '../../../componets/myCenter/readStatisticsDataList';
 import { readBookList } from '../../../componets/dataList/readBookList';
 import { readTabs } from '../../../componets/myCenter/readTabs';
-import { serviceDialog } from '../../../componets/webDavService/serviceDialog';
 import { PublicConstants } from '../../../common/constants/PublicConstants';
 
 
@@ -136,13 +135,25 @@ struct readStatistics {
   exitApp() {
     this.delDialog = false
   }
+  @Builder
+  confirmDialogBuilder() {
+    Column({ space: 16 }) {
+      Text('确认删除吗？')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+      Row({ space: 16 }) {
+        Button('取消')
+          .onClick(() => { this.onCancel() })
+        Button('确认')
+          .onClick(() => { this.onAccept() })
+      }
+    }
+    .padding(24)
+    .backgroundColor(Color.White)
+    .borderRadius(12)
+  }
   clearInfoDel: CustomDialogController | null = new CustomDialogController({
-    builder: serviceDialog({
-      title:"确认删除吗？",
-      value:"",
-      cancel: ()=> { this.onCancel() },
-      confirm: ()=> { this.onAccept() }
-    }),
+    builder: this.confirmDialogBuilder(),
     cancel: this.exitApp,
     autoCancel: true,
     alignment: DialogAlignment.Center,

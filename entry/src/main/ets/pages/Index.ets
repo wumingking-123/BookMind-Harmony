@@ -6,17 +6,18 @@ import BookShelf from './view/BookShelf'
 import Find from './view/Find/Find'
 import MyCenter from './view/myCenter/MyCenter'
 import Subscription from './view/Subscription'
-import {testGetColorFunction} from '@ohos/colorLibrary'
 import { BusinessError, emitter } from '@kit.BasicServicesKit'
 import { JSON } from '@kit.ArkTS'
 import { image } from '@kit.ImageKit'
 import { ThemeStorageKey } from '../common/constants/Theme'
 import { ThemeItem } from '../common/model/Theme'
+import { InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkMotion, InkLayout }
+  from '../common/constants/DesignTokens'
 
 @Entry
 @Component
 struct Main {
-  @State showReadShow:boolean = true
+  @State showReadShow: boolean = true
   @State currentTabIndex: number = 0
   @State isShow: boolean = true
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
@@ -30,7 +31,7 @@ struct Main {
 
   onPageShow(): void {
     // initBookListData()
-    setTimeout(()=>{
+    setTimeout(() => {
       this.showReadShow = false
       this.isShow = false
     }, 5000)
@@ -48,7 +49,7 @@ struct Main {
     this.tabController.changeIndex(0)
     this.getUIContext().getComponentSnapshot().get('main', ((err: Error, pixmap: image.PixelMap) => {
       if (err) {
-        console.log("error: " + JSON.stringify(err))
+        console.log('error: ' + JSON.stringify(err))
         return
       }
       AppStorage.setOrCreate('screen_shot', pixmap)
@@ -62,80 +63,115 @@ struct Main {
     emitter.on('screen_shot', () => {
       this.screenShot()
     })
-    //测试颜色模块
-    testGetColorFunction();
   }
 
-  @Builder TabBuilder(index = 0, name: string,icon_select: Resource,unselected: Resource) {
-    Column(){
-      Flex({
-        direction:FlexDirection.Column,
-        alignItems:ItemAlign.Center,
-        justifyContent:FlexAlign.Center
-      }){
-        Image(this.currentTabIndex === index? icon_select:unselected).height(25)
-          .draggable(false)
-          .fillColor(this.currentTabIndex === index ? this.theme.mainColor : '#000000')
-        Text(name).fontSize(11).margin(5).fontColor(this.currentTabIndex === index ? this.theme.mainColor : '#000000')
+  @State tabScale: number[] = [1.1, 1, 1, 1]
+
+  @Builder TabBuilder(index: number, name: string, iconSelect: Resource, iconLine: Resource) {
+    Column() {
+      Column({ space: 4 }) {
+        // Tab 图标 — 选中/未选中状态
+        Image(this.currentTabIndex === index ? iconSelect : iconLine)
+          .width(24)
+          .height(24)
+          .fillColor(this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST)
+          .scale({ x: this.tabScale[index], y: this.tabScale[index] })
+
+        // Tab 文字
+        Text(name)
+          .fontSize(InkTypography.MICRO + 1)
+          .fontWeight(this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST)
       }
-    }.gesture(
-      LongPressGesture({ repeat: index === 0,duration:1000 })
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .gesture(
+      // 长按锁定/解锁标签栏滚动
+      LongPressGesture({ repeat: index === 0, duration: 1000 })
         .onAction((event: GestureEvent) => {
-          console.log('onAction' + event.repeat)
           if (event.repeat) {
             updateAppData(!this.APP_INDEX_SCROLLABLE)
-            showMessage(this.APP_INDEX_SCROLLABLE?'标签栏锁已开启':'标签栏已解锁')}}))
-    .width('100%')
-    .margin({top:4})
-    .height("100%")
+            showMessage(this.APP_INDEX_SCROLLABLE ? '标签栏已锁定' : '标签栏已解锁')
+          }
+        })
+    )
   }
 
-  nav : NavItem[] = [
-    new NavItem(0,$r("app.media.HOME_theme"),$r('app.media.HOME_line') ,'书架'),
-    new NavItem(1,$r('app.media.FIND_theme'), $r('app.media.FIND_line') ,'发现'),
-    new NavItem(2,$r('app.media.SUB_theme'),$r('app.media.SUB_line'), '订阅源'),
-    new NavItem(3, $r('app.media.MINE_theme'),$r('app.media.MINE_line'), '我的')
+  // 底部导航栏配置
+  nav: NavItem[] = [
+    new NavItem(0, $r('app.media.HOME_theme'), $r('app.media.HOME_line'), '书架'),
+    new NavItem(1, $r('app.media.FIND_theme'), $r('app.media.FIND_line'), '发现'),
+    new NavItem(2, $r('app.media.SUB_theme'), $r('app.media.SUB_line'), '订阅'),
+    new NavItem(3, $r('app.media.MINE_theme'), $r('app.media.MINE_line'), '我的')
   ]
 
   build() {
     Column() {
+      // 底部 TabBar 上方添加精致细微的轻墨分割线
+      if (this.ShowBar) {
+        Divider()
+          .color(InkPalette.INK_WHISPER)
+          .strokeWidth(0.5)
+      }
+
+      // 主 Tab 容器 — 4 个页面
       Tabs({
-        barPosition:BarPosition.End,
+        barPosition: BarPosition.End,
         controller: this.tabController
-      }){
-        ForEach(this.nav,(item:NavItem) => {
+      }) {
+        ForEach(this.nav, (item: NavItem) => {
           TabContent() {
             Column() {
-              if (item.index === 0){
+              if (item.index === 0) {
                 BookShelf()
-              } else if (item.index === 1){
+              } else if (item.index === 1) {
                 Find()
-              } else if (item.index === 2){
-                Subscription({
-                  currentTabIndex:this.currentTabIndex
-                })
+              } else if (item.index === 2) {
+                Subscription({ currentTabIndex: this.currentTabIndex })
               }
-              if (item.index === 3){
+              if (item.index === 3) {
                 MyCenter()
               }
             }
-          }.tabBar(
-            this.TabBuilder(item.index,item.title,item.selectImg,item.unselected)
+          }
+          .tabBar(
+            this.TabBuilder(item.index, item.title, item.selectImg, item.unselected)
           )
         })
       }
-      .barHeight(this.ShowBar?null:0)
+      .barBackgroundColor(InkPalette.PAPER)
+      .barHeight(this.ShowBar ? InkLayout.TAB_BAR_HEIGHT + this.bottomRectHeight : 0)
       .scrollable(!this.APP_INDEX_SCROLLABLE)
-      .padding({bottom:this.bottomRectHeight})
+      .barMode(BarMode.Fixed)
       .onChange((index) => {
+        // 先缩小旧 tab
+        animateTo({ duration: 80, curve: Curve.FastOutLinearIn }, () => {
+          this.tabScale[this.currentTabIndex] = 1
+          this.tabScale[index] = 0.85
+        })
         this.currentTabIndex = index
+        // 再放大新 tab (延迟半帧让缩小先执行)
+        setTimeout(() => {
+          animateTo({ duration: 150, curve: Curve.LinearOutSlowIn }, () => {
+            this.tabScale[index] = 1.1
+          })
+        }, 80)
       })
-      if (this.showReadShow){
-        ReadShow({showReadShow:this.showReadShow}).offset({y:-150 - this.bottomRectHeight})
+
+      // 继续阅读浮层
+      if (this.showReadShow) {
+        ReadShow({ showReadShow: this.showReadShow })
+          .offset({ y: -InkLayout.TAB_BAR_HEIGHT - this.bottomRectHeight - 16 })
       }
     }
-    .width("100%")
-    .height("100%")
+    .width('100%')
+    .height('100%')
+    .backgroundColor(InkPalette.PAPER)
     .id('main')
   }
 }

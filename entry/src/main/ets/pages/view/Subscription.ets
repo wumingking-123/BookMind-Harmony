@@ -1,16 +1,16 @@
-import IndexSubscription from './Subscription/IndexSubscription'
 import SubscriptionIndex from './Subscription/SubscriptionIndex'
+import { InkPalette } from '../../common/constants/DesignTokens'
 
 @Component
 export default struct Subscription {
-  @State subscription: string = '订阅源'
   @Prop currentTabIndex: number
-  build(){
-    Column(){
-      SubscriptionIndex({
-        currentTabIndex:this.currentTabIndex,
-      })
+
+  build() {
+    Column() {
+      SubscriptionIndex({ currentTabIndex: this.currentTabIndex })
     }
-    .backgroundColor('F3F4F8')
+    .width('100%')
+    .height('100%')
+    .backgroundColor(InkPalette.PAPER)
   }
 }

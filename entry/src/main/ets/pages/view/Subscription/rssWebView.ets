@@ -98,7 +98,11 @@ struct RssWebView {
     let canGoForward = this.controller.accessForward()//是否可前进
     let canGoBackward =this.controller.accessBackward() //是否可以后退
     if (canGoBackward) {
-      this.controller.backward() // 后退一个页面
+      try {
+        this.controller.backward() // 后退一个页面
+      } catch (e) {
+        console.error('backward failed: ' + e)
+      }
     }
     if (!canGoBackward) {
       router.back()
@@ -300,7 +304,7 @@ struct RssWebView {
        this.copyText(this.controller.getUrl())
       },
       startBrowsable:()=>{
-        const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
+        const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
         systemUtil.startBrowsableAbility(context,this.controller.getUrl())
       }
     }),
@@ -312,16 +316,23 @@ struct RssWebView {
   })
   //网站链接复制到剪切板
   copyText(text: string) {
-    const pasteboardData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
-    const systemPasteboard = pasteboard.getSystemPasteboard();
-    systemPasteboard.setData(pasteboardData); // 将数据放入剪切板
-    systemPasteboard.getData().then((data) => {
-      if (data) {
-        showMessage('链接已经复制在剪切板中.')
-      } else {
-        showMessage('复制失败')
-      }
-    })
+    try {
+      const pasteboardData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
+      const systemPasteboard = pasteboard.getSystemPasteboard();
+      systemPasteboard.setData(pasteboardData); // 将数据放入剪切板
+      systemPasteboard.getData().then((data) => {
+        if (data) {
+          showMessage('链接已经复制在剪切板中.')
+        } else {
+          showMessage('复制失败')
+        }
+      }).catch((err: Error) => {
+        showMessage('复制失败: ' + err.message)
+      })
+    } catch (e) {
+      console.error('Failed to copy text: ' + e)
+      showMessage('复制失败')
+    }
   }
 
 
@@ -355,22 +366,38 @@ struct RssWebView {
     if (match  && match[1]) {
       let urlBook = decodeURIComponent(match[1]);
       this.pasteAnalyzeBookSource(urlBook)
-      this.controller.backward()
-      this.controller.scrollTo(0, 0)
+      try {
+        this.controller.backward()
+      } catch (e) {
+        console.error('backward failed: ' + e)
+      }
+      try {
+        this.controller.scrollTo(0, 0)
+      } catch (e) {
+        console.error('scrollTo failed: ' + e)
+      }
       return false
     }
     const matchRss = url.match(this.regexRss);
     if (matchRss  && matchRss[1]) {
       let urlRss = decodeURIComponent(matchRss[1]);
       this.pasteAnalyzeRssSource(urlRss)
-      this.controller.backward()
+      try {
+        this.controller.backward()
+      } catch (e) {
+        console.error('backward failed: ' + e)
+      }
       return false
     }
     const legadoMatch = url.match(this.legadoRegex);
     if (legadoMatch  && legadoMatch[1]) {
       let urlLegado= decodeURIComponent(legadoMatch[1]);
       showMessage(urlLegado) //todo 替换规则导入
-      this.controller.backward()
+      try {
+        this.controller.backward()
+      } catch (e) {
+        console.error('backward failed: ' + e)
+      }
       return false
     }
     return true

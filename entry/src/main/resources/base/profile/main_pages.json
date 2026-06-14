@@ -3,13 +3,10 @@
     "pages/Index",
     "pages/welcomePage",
     "pages/view/search/SearchBook",
-    "pages/view/myCenter/WebDav",
     "pages/view/myCenter/MySetPage",
     "pages/view/BookDetailPage",
     "pages/view/bookShelf/Manage/BookManagePage",
     "pages/view/myCenter/clearCache",
-    "pages/view/myCenter/cloudDisk",
-    "pages/view/myCenter/diskSet",
     "pages/view/myCenter/aboutUs/aboutUsPage",
     "pages/view/myCenter/aboutUs/versionLogPage",
     "pages/view/myCenter/aboutUs/PrivacyAgreementPage",
@@ -28,6 +25,7 @@
     "pages/view/Subscription/rssWebView",
     "pages/view/Find/CategoryList/Index",
     "pages/view/myCenter/MyThemeConfig",
-    "pages/view/myCenter/CreateCustomTheme"
+    "pages/view/myCenter/CreateCustomTheme",
+    "pages/view/myCenter/ProfileEditPage"
   ]
 }

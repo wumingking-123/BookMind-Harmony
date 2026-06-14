@@ -10,6 +10,9 @@
 import { router } from '@kit.ArkUI'
 import { IconTitleVo } from '../../componetsmodel/IconTitleVo'
 import dialogTitleFuction from './dialogTitleFuction'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../common/constants/DesignTokens'
 
 @Component
 export default struct Header {
@@ -40,65 +43,74 @@ export default struct Header {
         if (this.customLeftBuilder !== this.leftBuilder) {
           this.customLeftBuilder()
         } else {
-          Column() {
-            Image($r("app.media.return_left"))
-              .size({ width: 24, height: 24 })
-              .interpolation(ImageInterpolation.Medium)
-              .onClick(() => {
-                router.back()
-              })
+          // 默认返回按钮 — 48dp 触控区域
+          Row() {
+            Image($r('app.media.return_left'))
+              .width(24)
+              .height(24)
+              .fillColor(InkPalette.INK)
           }
-          .alignItems(HorizontalAlign.Start)
+          .width(InkLayout.MIN_TOUCH_TARGET)
+          .height(InkLayout.MIN_TOUCH_TARGET)
+          .borderRadius(InkRadius.FULL)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => {
+            router.back()
+          })
         }
 
         if (this.customTitleBuilder !== this.titleBuilder) {
           this.customTitleBuilder()
         } else {
-          Column() {
-            Text(this.title)
-              .lineHeight(24)
-              .font({
-                size: 16,
-                weight: 500,
-                style: FontStyle.Normal,
-              })
-          }
+          // 默认标题
+          Text(this.title)
+            .fontSize(InkTypography.TITLE_SMALL)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(InkPalette.INK)
         }
 
+        // 右侧自定义区域
         if (this.customRightBuilder !== this.rightBuilder) {
           this.customRightBuilder()
         }
 
+        // 右侧下拉菜单
         if (this.dialogRightData.length) {
-          Image(this.rightIcon ? this.rightIcon : $r('app.media.addSubscription')).width(24)
-            .bindMenu(
-              this.showFunction,
-              this.dialogRightFuction(),
-              {
-                onDisappear: () => {
-                  this.showFunction = false
-                }
-              })
-            .onClick(() => {
-              this.showFunction = true
+          Row() {
+            Image(this.rightIcon ? this.rightIcon : $r('app.media.addSubscription'))
+              .width(20)
+              .height(20)
+              .fillColor(InkPalette.INK_FAINT)
+          }
+          .width(36)
+          .height(36)
+          .borderRadius(InkRadius.FULL)
+          .backgroundColor(InkPalette.OVERLAY_LIGHT)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
+          .bindMenu(
+            this.showFunction,
+            this.dialogRightFuction(),
+            {
+              onDisappear: () => {
+                this.showFunction = false
+              }
             })
+          .onClick(() => {
+            this.showFunction = true
+          })
         } else {
           if (this.customRightBuilder === this.rightBuilder && !this.dialogRightData.length) {
-            Row()
-              .size({ width: 24 })
+            Row().width(40)
           }
         }
       }
       .alignItems(VerticalAlign.Center)
       .justifyContent(this.flexAlign)
-      .padding({
-        left: 12,
-        right: 20,
-        top: 9,
-        bottom: 9
-      })
-      .height(50)
-      .width("100%")
+      .padding({ left: InkSpacing.MD, right: InkSpacing.LG, top: InkSpacing.XS, bottom: InkSpacing.XS })
+      .height(InkLayout.HEADER_HEIGHT)
+      .width('100%')
     }
     .padding({
       top: this.topRectHeight + this.paddingTop
@@ -119,5 +131,8 @@ export default struct Header {
           })
       })
     }
+    .backgroundColor(InkPalette.PAPER)
+    .borderRadius(InkRadius.MD)
+    .shadow(InkShadow.MEDIUM)
   }
 }

@@ -1,4 +1,9 @@
 import { router } from '@kit.ArkUI';
+import { ThemeStorageKey } from '../../../../common/constants/Theme';
+import { ThemeItem } from '../../../../common/model/Theme';
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
+} from '../../../../common/constants/DesignTokens';
 
 @Entry
 @Component
@@ -18,71 +23,74 @@ struct OpenSourceLicensePage {
     'For the developers\' and authors\' protection, the GPL clearly explains that there is no warranty for this free software. For both users\' and authors\' sake, the GPL requires that modified versions be marked as changed, so that their problems will not be attributed erroneously to authors of previous versions.',
     'Some devices are designed to deny users access to install or run modified versions of the software inside them, although the manufacturer can do so. This is fundamentally incompatible with the aim of protecting users\' freedom to change the software. The systematic pattern of such abuse occurs in the area of products for individuals to use, which is precisely where it is most unacceptable. Therefore, we have designed this version of the GPL to prohibit the practice for those products. If such problems arise substantially in other domains, we stand ready to extend this provision to those domains in future versions of the GPL, as needed to protect the freedom of users.',
   ]
+  // 主题颜色
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   build() {
-    Column({ space: 16 }) {
-      // 标题部分（不滚动，保持固定）
-      Flex() {
-        Column() {
-          Image($r("app.media.return_left"))
-            .size({ width: 24, height: 24 })
-            .interpolation(ImageInterpolation.Medium)
-            .onClick(() => {
-              router.back()
-            })
+    Column() {
+      // 头部标题栏
+      Row() {
+        Row() {
+          Image($r('sys.media.ohos_ic_public_arrow_left'))
+            .width(24)
+            .height(24)
+            .fillColor(InkPalette.INK)
         }
-        .alignItems(HorizontalAlign.Start)
-        .width('33%')
+        .width(InkLayout.MIN_TOUCH_TARGET)
+        .height(InkLayout.MIN_TOUCH_TARGET)
+        .borderRadius(InkRadius.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => { router.back() })
 
-        Column() {
-          Text(`开源许可`)
-            .lineHeight(24)
-            .font({
-              family: "PingFang SC",
-              size: 16,
-              weight: 500,
-              style: FontStyle.Normal,
-            })
-        }.width('33%')
+        Text('开源许可')
+          .fontSize(InkTypography.TITLE)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK)
+          .position({ left: '50%' })
+          .translate({ x: '-50%' })
       }
-      .padding({
-        top: 12,
-        bottom: 12,
-      })
-      .height(48)
-      .width("100%")
+      .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+      .width('100%')
+      .height(InkLayout.HEADER_HEIGHT)
+      .margin({ top: this.topRectHeight })
 
       // 可滚动的内容区域
       Scroll() {
-        Column() {
-          ForEach(this.rowsData, (item: string) => {
-            Row() {
-              Text(item)
-                .lineHeight(22)
-                .font({
-                  family: "PingFang SC",
-                  size: 14,
-                  style: FontStyle.Normal,
-                  weight: 400,
-                })
-            }.width("100%")
-            .margin({ top: 12, bottom: 20 })
-          })
+        Column({ space: InkSpacing.LG }) {
+          Column({ space: InkSpacing.MD }) {
+            ForEach(this.rowsData, (item: string, index: number) => {
+              Row() {
+                Text(item)
+                  .fontSize(index === 0 || index === 2 ? InkTypography.TITLE_SMALL : InkTypography.BODY)
+                  .fontWeight(index === 0 || index === 2 ? FontWeight.Medium : FontWeight.Normal)
+                  .fontColor(index === 0 || index === 2 ? InkPalette.INK : InkPalette.INK_LIGHT)
+                  .lineHeight(24)
+              }
+              .width("100%")
+            })
+          }
+          .borderRadius(InkRadius.CARD)
+          .backgroundColor(Color.White)
+          .padding(InkSpacing.LG)
+          .width("100%")
+          .shadow(InkShadow.SUBTLE)
+
+          Blank(InkSpacing.XXL)
         }
-        .width("100%")
+        .padding({
+          left: InkSpacing.PAGE_HORIZONTAL,
+          right: InkSpacing.PAGE_HORIZONTAL,
+          top: InkSpacing.LG,
+          bottom: this.bottomRectHeight + InkSpacing.XXL
+        })
       }
-      .scrollable(ScrollDirection.Vertical) // 设置为垂直滚动
       .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.None)
-      .height("100%")
-      .margin({ bottom: 60 })
+      .edgeEffect(EdgeEffect.Spring)
+      .layoutWeight(1)
     }
-    .height("100%") // 设置外部 Column 高度为 100%
-    .padding({
-      top: this.topRectHeight,
-      left: 20,
-      right: 20
-    })
-    .backgroundColor("rgb(245, 245, 245)")
+    .height("100%")
+    .width("100%")
+    .backgroundColor(InkPalette.PAPER_EMBEDDED)
   }
 }

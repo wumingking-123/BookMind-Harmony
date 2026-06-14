@@ -33,7 +33,6 @@ export class FileHandler {
       canUpdate: false,
       sort: 0,
       originOrder: 0,
-      syncTime: 0,
       bookType: currentIndex,
       isTop: false,
       isJoin: true,

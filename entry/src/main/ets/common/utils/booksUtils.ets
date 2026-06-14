@@ -46,7 +46,6 @@ class booksUtils{
         canUpdate: false,
         sort: 0,
         originOrder: 0,
-        syncTime: 0,
         bookType: bookType,
         isTop: false,
         isJoin: true,
