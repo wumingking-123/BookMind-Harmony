@@ -7,8 +7,7 @@ import LayoutMoreDialog from '../../../componets/Reader/LayoutMoreDialog';
 import { MusicPlayer } from 'ets/componets/Reader/MusicPlayer';
 import { AudioPlayer } from 'ets/componets/Reader/AudioPlayer';
 import purificationView from './purificationView';
-import { Books } from '../../../database/entities/Books';
-import { BookContentHolder } from '../../../common/utils/BookContentHolder';
+import { chaptersItem } from 'ets/componets/dataList/ReaderChaptersItem';
 import { InkPalette, InkSpacing, InkRadius } from '../../../common/constants/DesignTokens';
 import { CoverFlipView, } from '@ohos/readerLibrary';
 import {
@@ -25,11 +24,17 @@ import {
   ReaderChapterItem,
 } from '@ohos/readerLibrary/src/main/ets/common/entity/ReaderChaptersItem';
 import { ReaderProvider } from '@ohos/readerLibrary/src/main/ets/provider/configProvider';
+import bookHistoryUtils from '../../../common/utils/BookHistoryUtils';
+import bookMarkUtils from '../../../common/utils/BookMarkUtils';
+import { Books } from '../../../database/entities/Books';
+import { BookHistory } from '../../../database/entities/BookHistory';
+import { BookMark } from '../../../database/entities/BookMark';
 
 
 interface ParamsObj {
   bookData: Books,
-  clickBookChapter: number
+  clickBookChapter: number,
+  txtFile: chaptersItem[]
 }
 
 @Entry
@@ -38,24 +43,63 @@ struct ReaderPage2 {
   @State bookData: Books | undefined = undefined
   currentChapters: number = 0
   chapterList: ReaderChapterItem[] = [];
+  bookData: Books = {} as Books
+  bookChapterTitle: string = ''
+  fontWeight: number = 400
+
   async aboutToAppear() {
     let temp = router.getParams() as ParamsObj
+    console.log(‘router ReaderPage2:’ + temp.bookData.bookUrl)
     this.bookData = temp.bookData
-    console.log('router ReaderPage2:' + (this.bookData?.bookUrl || ''))
-    
-    // 从 BookContentHolder 获取章节数据 (避免通过 router 传递大量数据)
-    let rawFile = BookContentHolder.getChapters();
-    if (!rawFile || rawFile.length === 0) {
-      console.error('BookContentHolder is empty, no chapters to display');
-      return;
-    }
-    this.chapterList = rawFile.map((value) => {
+    this.chapterList = temp.txtFile.map((value) => {
       return new ReaderChapterItem(value.number, value.title, value.chapterTitleNumber, value.content);
     })
 
+    if (this.chapterList.length != 0) {
+      this.chapterList[0].paragraphList = this.chapterList[0].content.split(‘\n’).map((value) => value + ‘\n’);
+    }
+
+    if (this.chapterList.length >= 2) {
+      for (let index = 1; index < this.chapterList.length; index++) {
+        this.chapterList[index].paragraphList = this.chapterList[index].content.split(‘\n’).map((value) => value + ‘\n’);
+      }
+    }
     this.currentChapters = temp.clickBookChapter
+    this.bookChapterTitle = this.chapterList[this.currentChapters]?.title ?? ‘’
+
+    // 初始化AppStorage用于跨组件传递阅读进度
+    AppStorage.setOrCreate(‘readerCurrentChapterIndex’, this.currentChapters)
+    AppStorage.setOrCreate(‘readerCurrentPageIndex’, 0)
+    AppStorage.setOrCreate(‘readerBookData’, this.bookData)
 
     this.changeSystemBarStatue();
+  }
+
+  saveReadingProgress(chapterIndex: number, pageIndex: number) {
+    if (!this.bookData || !this.bookData.id) {
+      return
+    }
+    let chapterTitle = this.chapterList[chapterIndex]?.title ?? ‘’
+    let bookHistory = new BookHistory()
+    bookHistory.id = this.bookData.id
+    bookHistory.bookName = this.bookData.bookName
+    bookHistory.author = this.bookData.author
+    bookHistory.durChapterTime = Date.now()
+    bookHistory.bookType = this.bookData.bookType
+    bookHistory.bookUrl = this.bookData.bookUrl ?? ‘’
+    bookHistory.coverUrl = this.bookData.coverUrl ?? ‘’
+    bookHistory.originBookId = this.bookData.id
+    bookHistory.durChapterTitle = `${this.chapterList[chapterIndex]?.chapterTitleNumber ?? ‘’} ${chapterTitle}`
+    bookHistory.durChapterIndex = chapterIndex
+    bookHistoryUtils.addBooks(bookHistory)
+    console.info(`阅读进度已保存: 章节${chapterIndex}, 页码${pageIndex}`)
+  }
+
+  onBackPress() {
+    let chapterIndex = AppStorage.get<number>(‘readerCurrentChapterIndex’) ?? this.currentChapters
+    let pageIndex = AppStorage.get<number>(‘readerCurrentPageIndex’) ?? 0
+    this.saveReadingProgress(chapterIndex, pageIndex)
+    return false
   }
 
 
@@ -115,7 +159,8 @@ struct ReaderPage2 {
         ReaderProvider({
           chapterList: this.chapterList,
           currentChapterIndex: this.currentChapters,
-          child: this.contentBuilder
+          child: this.contentBuilder,
+          fontWeight: this.fontWeight
         })
       }
       .height('100%')
@@ -154,9 +199,16 @@ struct ReaderPageContent {
   @State isFontChanged: boolean = false
   @State isShowSource: boolean = false
   @State isShowPurification: boolean = false
+  @State isShowBookMarkList: boolean = false
+  @State isCurrentBookMarked: boolean = false
+  @State bookMarkList: BookMark[] = []
+  @State isSystemLight: boolean = false
   @State screenH: number = 0
   @State screenW: number = 0
   @State readerPadding: number = 24 // 边距
+  @Consume('fontWeight') fontWeight: number
+  @State isIndent: boolean = true // 首行缩进
+  @State isSimplified: boolean = true // 简体/繁体
   @Consume('fontSize') fontSize: number
   @Consume('lineHeightRatio') lineHeightRatio: number
   @Consume('bgColor') bgColor: string
@@ -164,10 +216,31 @@ struct ReaderPageContent {
   @Consume('turnStyle') turnStyle: FlipPageType
   @Consume('currentPageIndex') @Watch('onFlush') currentPageIndex: number
   @Consume('paragraphSpacing') paragraphSpacing: number
-  @Consume('currentChapterIndex') currentChapterIndex: number
+  @Consume('currentChapterIndex') @Watch('onChapterChanged') currentChapterIndex: number
   @Consume('currentLuminance') currentLuminance: number
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
+
+  saveProgressAndBack() {
+    let bookData = AppStorage.get<Books>('readerBookData')
+    if (bookData && bookData.id) {
+      let chapterIndex = this.currentChapterIndex
+      let ch = this.chapterList[chapterIndex]
+      let bookHistory = new BookHistory()
+      bookHistory.id = bookData.id
+      bookHistory.bookName = bookData.bookName
+      bookHistory.author = bookData.author
+      bookHistory.durChapterTime = Date.now()
+      bookHistory.bookType = bookData.bookType
+      bookHistory.bookUrl = bookData.bookUrl ?? ''
+      bookHistory.coverUrl = bookData.coverUrl ?? ''
+      bookHistory.originBookId = bookData.id
+      bookHistory.durChapterTitle = `${ch?.chapterTitleNumber ?? ''} ${ch?.title ?? ''}`
+      bookHistory.durChapterIndex = chapterIndex
+      bookHistoryUtils.addBooks(bookHistory)
+    }
+    router.back()
+  }
 
   aboutToAppear(): void {
     this.screenW = px2vp(display.getDefaultDisplaySync().width);
@@ -175,6 +248,90 @@ struct ReaderPageContent {
     if (this.bookData && this.bookData.bookType === 2) {
       this.isShowListen = true;
     }
+    this.checkCurrentBookMark()
+    this.loadBookMarkList()
+  }
+
+  // 书签相关方法
+  async checkCurrentBookMark() {
+    let bookData = AppStorage.get<Books>('readerBookData')
+    if (bookData) {
+      this.isCurrentBookMarked = await bookMarkUtils.isBookMarked(
+        bookData.bookName, bookData.author, this.currentChapterIndex)
+    }
+  }
+
+  async loadBookMarkList() {
+    let bookData = AppStorage.get<Books>('readerBookData')
+    if (bookData) {
+      this.bookMarkList = await bookMarkUtils.getBookMarks(bookData.bookName, bookData.author)
+    }
+  }
+
+  async toggleBookMark() {
+    let bookData = AppStorage.get<Books>('readerBookData')
+    if (!bookData) return
+
+    if (this.isCurrentBookMarked) {
+      // 取消书签 - 删除当前章节的书签
+      let marks = await bookMarkUtils.getBookMarks(bookData.bookName, bookData.author)
+      let currentMark = marks.find(m => m.chapterIndex === this.currentChapterIndex)
+      if (currentMark) {
+        await bookMarkUtils.deleteBookMark(currentMark.time)
+      }
+      this.isCurrentBookMarked = false
+      promptAction.showToast({ message: '已取消书签', duration: 1500 })
+    } else {
+      // 添加书签
+      let ch = this.chapterList[this.currentChapterIndex]
+      let mark = new BookMark()
+      mark.bookName = bookData.bookName
+      mark.bookAuthor = bookData.author
+      mark.chapterIndex = this.currentChapterIndex
+      mark.chapterPos = this.currentPageIndex
+      mark.chapterName = `${ch?.chapterTitleNumber ?? ''} ${ch?.title ?? ''}`
+      mark.bookText = ch?.paragraphList?.[0]?.substring(0, 50) ?? ''
+      mark.content = ''
+      await bookMarkUtils.addBookMark(mark)
+      this.isCurrentBookMarked = true
+      promptAction.showToast({ message: '已添加书签', duration: 1500 })
+    }
+    this.loadBookMarkList()
+  }
+
+  jumpToBookMark(mark: BookMark) {
+    this.currentChapterIndex = mark.chapterIndex
+    this.currentPageIndex = mark.chapterPos
+    this.isShowBookMarkList = false
+    this.isShowSetting = false
+  }
+
+  async deleteBookMarkItem(mark: BookMark) {
+    await bookMarkUtils.deleteBookMark(mark.time)
+    this.loadBookMarkList()
+    this.checkCurrentBookMark()
+  }
+
+  // 亮度控制
+  onLuminanceChanged(value: number) {
+    this.currentLuminance = value
+    this.isSystemLight = false
+    window.getLastWindow(getContext(this), (err, data) => {
+      if (err.code) return
+      data.setWindowBrightness(value / 100)
+    })
+  }
+
+  onSystemLightToggle(isOn: boolean) {
+    this.isSystemLight = isOn
+    window.getLastWindow(getContext(this), (err, data) => {
+      if (err.code) return
+      if (isOn) {
+        data.setWindowBrightness(-1)
+      } else {
+        data.setWindowBrightness(this.currentLuminance / 100)
+      }
+    })
   }
 
   get totalChapter(): number {
@@ -191,7 +348,7 @@ struct ReaderPageContent {
               Image($r("app.media.ic_public_return_left"))
                 .width(24)
                 .onClick(() => {
-                  router.back()
+                  this.saveProgressAndBack()
                 })
               Text(`${this.chapterList[this.currentChapterIndex]?.chapterTitleNumber} ${this.chapterList[this.currentChapterIndex]?.title}`
                 .replace(new RegExp('\\s{1,}', 'g'), ' ')
@@ -374,10 +531,18 @@ struct ReaderPageContent {
                     .blockSize({ width: 30, height: 30 })
                     .layoutWeight(1)
                     .onChange((value) => {
-                      this.currentLuminance = value
+                      this.onLuminanceChanged(value)
                     })
-                  Row() {
+                  Row({ space: 8 }) {
                     Text('跟随系统')
+                      .fontSize(12)
+                      .fontColor('#666666')
+                    Toggle({ type: ToggleType.Switch, isOn: $$this.isSystemLight })
+                      .height(20)
+                      .width(40)
+                      .onChange((isOn) => {
+                        this.onSystemLightToggle(isOn)
+                      })
                   }
                 }
 
@@ -481,6 +646,25 @@ struct ReaderPageContent {
 
               GridItem() {
                 Column() {
+                  Image($r("app.media.bookmark"))
+                    .width(24)
+                    .fillColor(this.isCurrentBookMarked ? '#FF6B6B' : '#333333')
+                  Text("书签")
+                    .fontColor(this.isCurrentBookMarked ? '#FF6B6B' : '#333333')
+                }
+              }
+              .onClick(() => {
+                this.toggleBookMark()
+              })
+              .bindSheet($$this.isShowBookMarkList, this.BookMarkListSheet(), {
+                height: 400,
+                showClose: false,
+                dragBar: true,
+                blurStyle: BlurStyle.COMPONENT_ULTRA_THIN
+              })
+
+              GridItem() {
+                Column() {
                   Image($r("app.media.night_icon")).width(24)
                   Text("夜间")
                 }
@@ -502,7 +686,7 @@ struct ReaderPageContent {
               left: 24,
               right: 24
             })
-            .columnsTemplate("1fr 1fr 1fr 1fr")
+            .columnsTemplate("1fr 1fr 1fr 1fr 1fr")
             .width("100%")
             .height(60)
           }
@@ -666,10 +850,94 @@ struct ReaderPageContent {
 
   onFlush() {
     console.info('currentPageNum=' + this.currentPageIndex + ', isFontChanged=' + this.isFontChanged);
+    AppStorage.set('readerCurrentPageIndex', this.currentPageIndex)
     if (this.isFontChanged && this.currentPageIndex === 0) {
       this.isFontChanged = false;
       this.currentPageIndex = 0;
     }
+  }
+
+  onChapterChanged() {
+    AppStorage.set('readerCurrentChapterIndex', this.currentChapterIndex)
+  }
+
+  @Builder
+  BookMarkListSheet() {
+    Column() {
+      Row() {
+        Text('书签列表')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+        Blank()
+        Text('长按删除')
+          .fontSize(12)
+          .fontColor('#999999')
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 12, bottom: 8 })
+
+      if (this.bookMarkList.length === 0) {
+        Column() {
+          Text('暂无书签')
+            .fontColor('#999999')
+            .fontSize(14)
+        }
+        .width('100%')
+        .height(200)
+        .justifyContent(FlexAlign.Center)
+      } else {
+        List() {
+          ForEach(this.bookMarkList, (mark: BookMark) => {
+            ListItem() {
+              Row() {
+                Column({ space: 4 }) {
+                  Text(mark.chapterName)
+                    .fontSize(14)
+                    .fontWeight(FontWeight.Medium)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Text(mark.bookText)
+                    .fontSize(12)
+                    .fontColor('#999999')
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Text(new Date(mark.time).toLocaleString())
+                    .fontSize(11)
+                    .fontColor('#BBBBBB')
+                }
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
+
+                Image($r("app.media.ic_public_right"))
+                  .width(16)
+                  .height(16)
+                  .fillColor('#CCCCCC')
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .onClick(() => {
+                this.jumpToBookMark(mark)
+              })
+              .gesture(
+                LongPressGesture({ repeat: false })
+                  .onAction(() => {
+                    this.deleteBookMarkItem(mark)
+                  })
+              )
+            }
+          })
+        }
+        .divider({
+          strokeWidth: 0.5,
+          color: '#F0F0F0',
+          startMargin: 16,
+          endMargin: 16
+        })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#FFFFFF')
   }
 
   @Builder
@@ -734,7 +1002,12 @@ struct ReaderPageContent {
 
   @Builder
   LayoutMoreDialog() {
-    LayoutMoreDialog({ ReaderPadding: this.readerPadding })
+    LayoutMoreDialog({
+      ReaderPadding: this.readerPadding,
+      fontWeight: this.fontWeight,
+      isIndent: this.isIndent,
+      isSimplified: this.isSimplified
+    })
       .height(500)
       .width("100%")
   }

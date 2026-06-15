@@ -16,6 +16,7 @@ export struct ReaderProvider {
   curPosition: number = 0
   turnStyle: FlipPageType = FlipPageType.COVER_FLIP_PAGE
   chapterList: ReaderChapterItem[] = [];
+  fontWeight: number = 400
 
   build() {
     Row() {
@@ -26,7 +27,8 @@ export struct ReaderProvider {
         bgColor: this.bgColor,
         child: this.child,
         chapterList: this.chapterList,
-        currentChapterIndex: this.currentChapterIndex
+        currentChapterIndex: this.currentChapterIndex,
+        fontWeight: this.fontWeight
       })
     }
   }
@@ -158,6 +160,7 @@ struct ReaderConfigProvider {
   @Provide('lineHeightRatio') lineHeightRatio: number = Constants.INIT_LINE_HEIGHT_RATIO;
   @Provide('bgColor') bgColor: string = BG_COLOR_ARRAY[BGColorType.WHITE];
   @Provide('paragraphSpacing') paragraphSpacing: number = 0;
+  @Provide('fontWeight') fontWeight: number = 400;
   chapterList: ReaderChapterItem[] = [];
   currentChapterIndex: number = 0;
 

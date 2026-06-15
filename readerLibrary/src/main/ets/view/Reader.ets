@@ -13,6 +13,7 @@ export struct Reader {
   @Consume('lineHeightRatio') lineHeightRatio: number;
   @Consume('turnStyle') turnStyle: FlipPageType;
   @Consume('displaySize') displaySize: number[];
+  @Consume('fontWeight') fontWeight: number;
   @Prop content: string = '';
 
   build() {
@@ -22,6 +23,7 @@ export struct Reader {
         .align(Alignment.TopStart)
         .font({
           size: this.fontSize,
+          weight: this.fontWeight,
         })
         .fontColor($r('sys.color.black'))
         .lineHeight(this.fontSize * this.lineHeightRatio)// todo:copyOption会跟外部的Click有冲突，本身会消费掉所有的click事件不留给外部，待解决
@@ -66,6 +68,7 @@ export struct ReaderForCurlView {
   @Consume('turnStyle') turnStyle: FlipPageType;
   @Consume('displaySize') displaySize: number[];
   @Consume('batteryPixelMap') batteryPixelMap: image.PixelMap | null;
+  @Consume('fontWeight') fontWeight: number;
   @Prop content: string = '';
   batteryContainerId: string = 'batteryContainerId';
 
@@ -102,6 +105,7 @@ export struct ReaderForCurlView {
         .align(Alignment.TopStart)
         .font({
           size: this.fontSize,
+          weight: this.fontWeight,
         })
         .fontColor($r('sys.color.black'))
         .lineHeight(this.fontSize * this.lineHeightRatio)// todo:copyOption会跟外部的Click有冲突，本身会消费掉所有的click事件不留给外部，待解决

@@ -101,6 +101,15 @@ struct BookDetailPage {
       if (!this.bookData.isJoin) {
         this.bookData.isJoin = await booksUtil.isExistBooks(this.bookData.bookUrl, this.bookData.bookName)
       }
+      // 从数据库读取最新的阅读进度
+      if (this.bookData.id) {
+        let savedBooks = await booksUtil.getBookByIds(this.bookData.id)
+        if (savedBooks.length > 0) {
+          this.bookData.durChapterIndex = savedBooks[0].durChapterIndex
+          this.bookData.durChapterTitle = savedBooks[0].durChapterTitle
+          this.bookData.durChapterPos = savedBooks[0].durChapterPos
+        }
+      }
       let temp = await FileHandler.readFile(this.bookData?.bookUrl || '') // txt小说
       this.txtFile.pushAllData(temp)
       this.txtFiles = this.txtFile.getListData()
@@ -253,22 +262,44 @@ struct BookDetailPage {
           .fontColor(InkPalette.PAPER)
           .enabled(this.bookData.bookType === 2 || this.txtFile.totalCount() > 0)
           .onClick(() => {
-            if (this.bookData.bookType === 2) {
-              // 有声书直接跳转播放器
-              router.pushUrl({
-                url: 'pages/view/Reader/ReaderPage2',
-                params: { bookData: this.bookData, clickBookChapter: 0 }
-              })
-            } else {
-              // 小说/漫画跳转阅读器
-              BookContentHolder.setChapters(this.txtFiles);
-              router.pushUrl({
-                url: 'pages/view/Reader/ReaderPage2',
-                params: { bookData: this.bookData, clickBookChapter: 0 }
-              })
-              if (this.txtFiles && this.txtFile.getListData()[0]) {
-                this.jumpReadPage(`${this.txtFile.getListData()[0].chapterTitleNumber} ${this.txtFile.getListData()[0].title}`, 0)
-              }
+if (this.bookData.bookType === 2) {
+  // 有声书直接跳转播放器，从记录位置打开
+  let savedIndex = this.bookData.durChapterIndex || 0
+  if (savedIndex >= this.txtFiles.length) {
+    savedIndex = 0
+  }
+  let chapterItem = this.txtFile.getListData()[savedIndex]
+  router.pushUrl({
+    url: 'pages/view/Reader/ReaderPage2',
+    params: {
+      bookData: this.bookData,
+      clickBookChapter: savedIndex,
+      txtFile: this.txtFiles
+    }
+  })
+  if (this.txtFiles && chapterItem) {
+    this.jumpReadPage(`${chapterItem.chapterTitleNumber} ${chapterItem.title}`, savedIndex)
+  }
+} else {
+  // 小说/漫画 读取历史章节，实现续读
+  let savedIndex = this.bookData.durChapterIndex || 0
+  if (savedIndex >= this.txtFiles.length) {
+    savedIndex = 0
+  }
+  let chapterItem = this.txtFile.getListData()[savedIndex]
+  BookContentHolder.setChapters(this.txtFiles);
+  router.pushUrl({
+    url: 'pages/view/Reader/ReaderPage2',
+    params: {
+      bookData: this.bookData,
+      clickBookChapter: savedIndex,
+      txtFile: this.txtFiles
+    }
+  })
+  if (this.txtFiles && chapterItem) {
+    this.jumpReadPage(`${chapterItem.chapterTitleNumber} ${chapterItem.title}`, savedIndex)
+  }
+}
             }
           })
       }

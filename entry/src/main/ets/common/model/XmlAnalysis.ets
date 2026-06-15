@@ -2,29 +2,25 @@ import { SearchRule } from '../../database/entities/rule';
 import { SearchBook } from '../../database/entities/SearchBook';
 import { BookSource } from '../../database/entities/BookSource';
 import { ExploreQuery } from '../../database/types/BookSourceType';
-import axios, { AxiosError, AxiosResponse } from '@ohos/axios';
 import { isNetworkUrl } from '../utils/utils';
-import CommonConstants from '../constants/CommonConstants';
+import { RuleAnalyzer, RuleAnalyzerData } from './analyzeRule/RuleAnalyzer';
 
 
 export interface IXmlAnalysis {
   baseUrl: string  //搜索地址
-  body:string  //请求内容
-  bookSource:BookSource//书源
-  variable?:string
-  searchUrl:string
+  body: string  //请求内容
+  bookSource: BookSource//书源
+  variable?: string
+  searchUrl: string
 }
-interface dataRule{
-  body:string
-  rule:SearchRule
-  searchUrl:string
-}
+
 export class XmlAnalysisData {
   baseUrl: string = ''  //搜索地址
-  body:string = ''//请求内容
-  bookSource?:BookSource//书源
-  variable?:string
-  searchUrl:string = ''
+  body: string = ''//请求内容
+  bookSource?: BookSource//书源
+  variable?: string
+  searchUrl: string = ''
+
   constructor(xmlDate?: IXmlAnalysis) {
     this.baseUrl = xmlDate?.baseUrl || ''
     this.body = xmlDate?.body || ''
@@ -33,45 +29,86 @@ export class XmlAnalysisData {
     this.searchUrl = xmlDate?.searchUrl || ''
   }
 }
+
 export class XmlAnalysis {
-  xmlDate:XmlAnalysisData = new XmlAnalysisData()
-  url:string = ''
-  source?:SearchRule
-  searchUrl:string = ''
-  init(xmlDate:XmlAnalysisData){
+  xmlDate: XmlAnalysisData = new XmlAnalysisData()
+  url: string = ''
+  source?: SearchRule
+  searchUrl: string = ''
+
+  init(xmlDate: XmlAnalysisData) {
     this.xmlDate = xmlDate
     this.url = xmlDate.searchUrl
     this.source = this.xmlDate.bookSource?.ruleSearch
-    this.searchUrl = this.xmlDate.searchUrl
+    this.searchUrl = xmlDate.searchUrl
   }
 
-  async getBookList(): Promise<SearchBook[]>  {
-    let bookList:SearchBook[] = []
-    if (!this.source) return bookList
-    const data: dataRule = {
+  /**
+   * 本地解析获取书籍列表（替代后端API）
+   */
+  async getBookList(): Promise<SearchBook[]> {
+    const bookList: SearchBook[] = []
+    if (!this.source || !this.xmlDate.body) return bookList
+
+    const analyzer = new RuleAnalyzer()
+    analyzer.init(new RuleAnalyzerData({
       body: this.xmlDate.body,
-      rule: this.source,
-      searchUrl: this.searchUrl
-    }
-    axios.defaults.timeout = 5000
-    let response: AxiosResponse<object> = await axios.post(CommonConstants.BASE_URL + '/search/analysisBook', data)
-    if (response.data){
-     bookList = (response.data as SearchBook[]).map(item => {
-        item.bookType = this.xmlDate.bookSource?.bookSourceType ?? 0
-        item.source = this.xmlDate.bookSource
-        if (item.bookUrl && !isNetworkUrl(item.bookUrl)){
-          item.tocUrl = this.xmlDate.bookSource?.bookSourceUrl + item.bookUrl
-        }
-        if (item.coverUrl && !isNetworkUrl(item.coverUrl)) {
-          item.coverUrl = this.xmlDate.bookSource?.bookSourceUrl + item.coverUrl
-        }
-        return item
-      })
+      bookSource: this.xmlDate.bookSource
+    }))
+
+    // 1. 获取书籍列表元素
+    const bookListRule = this.source.bookList
+    if (!bookListRule) return bookList
+
+    const bookElements = analyzer.getElements(bookListRule)
+    if (bookElements.length === 0) return bookList
+
+    // 2. 从每个书籍元素中提取信息
+    for (const element of bookElements) {
+      const book = new SearchBook()
+
+      // 提取书名
+      book.name = analyzer.extractText(element, this.source.name)
+
+      // 提取作者
+      book.author = analyzer.extractText(element, this.source.author)
+
+      // 提取简介
+      book.intro = analyzer.extractText(element, this.source.intro)
+
+      // 提取分类
+      book.kind = analyzer.extractText(element, this.source.kind)
+
+      // 提取最新章节
+      book.latestChapterTitle = analyzer.extractText(element, this.source.lastChapter)
+
+      // 提取字数
+      book.wordCount = analyzer.extractText(element, this.source.wordCount)
+
+      // 提取书籍URL
+      book.bookUrl = analyzer.extractAttribute(element, this.source.bookUrl)
+
+      // 提取封面URL
+      book.coverUrl = analyzer.extractAttribute(element, this.source.coverUrl)
+
+      // 解析相对URL
+      if (book.bookUrl && !isNetworkUrl(book.bookUrl)) {
+        book.bookUrl = this.xmlDate.bookSource?.bookSourceUrl + book.bookUrl
+      }
+      if (book.bookUrl) {
+        book.tocUrl = book.bookUrl
+      }
+      if (book.coverUrl && !isNetworkUrl(book.coverUrl)) {
+        book.coverUrl = this.xmlDate.bookSource?.bookSourceUrl + book.coverUrl
+      }
+
+      // 设置书源信息
+      book.bookType = this.xmlDate.bookSource?.bookSourceType ?? 0
+      book.source = this.xmlDate.bookSource
+
+      bookList.push(book)
     }
 
-    if (bookList.length > 0){
-      console.log('test')
-    }
     return bookList
   }
 
@@ -79,7 +116,4 @@ export class XmlAnalysis {
   async analysisXml(): Promise<SearchBook[]> {
     return await this.getBookList();
   }
-
 }
-// const xmlAnalysis = new XmlAnalysis();
-// export default xmlAnalysis as XmlAnalysis;
