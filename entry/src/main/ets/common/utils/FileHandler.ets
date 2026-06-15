@@ -385,7 +385,7 @@ export class FileHandler {
       fs.readSync(file.fd, buf);
       fs.closeSync(file);
       let uint8View = new Uint8Array(buf);
-      // 设置编码格式为“utf-8”
+      // 设置编码格式为"utf-8"
       let textDecoder = util.TextDecoder.create('utf-8', { ignoreBOM: true });
       // 解码输后获取对应文本
       let readString = textDecoder.decodeWithStream(uint8View, { stream: false });

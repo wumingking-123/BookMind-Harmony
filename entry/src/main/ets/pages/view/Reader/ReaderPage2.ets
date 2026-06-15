@@ -44,12 +44,12 @@ struct ReaderPage2 {
   async aboutToAppear() {
     let temp = router.getParams() as ParamsObj
     this.bookData = temp.bookData
-    console.log(‘router ReaderPage2:’ + (this.bookData?.bookUrl || ‘’))
+    console.log('router ReaderPage2:' + (this.bookData?.bookUrl || ''))
 
     // 从 BookContentHolder 获取章节数据 (避免通过 router 传递大量数据)
     let rawFile = BookContentHolder.getChapters();
     if (!rawFile || rawFile.length === 0) {
-      console.error(‘BookContentHolder is empty, no chapters to display’);
+      console.error('BookContentHolder is empty, no chapters to display');
       return;
     }
     this.chapterList = rawFile.map((value) => {
