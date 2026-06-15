@@ -10,8 +10,16 @@ import { Books } from '../../database/entities/Books';
 import booksUtil from './booksUtils';
 import { EpubParser } from './EpubParser';
 
-let context = getContext(this) as common.UIAbilityContext;
-let filePath = context.filesDir;
+// 延迟获取沙箱路径，避免模块顶层 getContext 不可用
+function getAppFilesDir(): string {
+  try {
+    const ctx = getContext() as common.UIAbilityContext;
+    return ctx.filesDir;
+  } catch (e) {
+    console.error('获取 filesDir 失败: ' + JSON.stringify(e));
+    return '';
+  }
+}
 
 let options: Options = {
   encoding: 'utf-8'
@@ -67,19 +75,27 @@ export class FileHandler {
 
   static async CopyFile(srcUrl: string, currentIndex: number) {
     try {
-      let file = fs.openSync(srcUrl, fs.OpenMode.READ_WRITE);
-      let dstPath = filePath + '/' + file.name;
+      const filesDir: string = getAppFilesDir();
+      if (filesDir.length === 0) {
+        showMessage('应用存储不可用');
+        return;
+      }
+
+      // picker 返回的 URI 只允许 READ 访问
+      let file = fs.openSync(srcUrl, fs.OpenMode.READ_ONLY);
+      let fileName: string = file.name || 'unknown.txt';
+      let dstPath = filesDir + '/' + fileName;
       
       // 处理同名文件冲突 — 添加时间戳后缀
       if (fs.accessSync(dstPath)) {
-        const dotIndex = file.name.lastIndexOf('.');
-        const baseName = dotIndex > 0 ? file.name.substring(0, dotIndex) : file.name;
-        const ext = dotIndex > 0 ? file.name.substring(dotIndex) : '';
-        const timestamp = Date.now();
-        dstPath = filePath + '/' + baseName + '_' + timestamp + ext;
+        const dotIndex: number = fileName.lastIndexOf('.');
+        const baseName: string = dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+        const ext: string = dotIndex > 0 ? fileName.substring(dotIndex) : '';
+        const timestamp: number = Date.now();
+        dstPath = filesDir + '/' + baseName + '_' + timestamp + ext;
       }
       
-      const classification = FileHandler.classifyFile(file.name, currentIndex);
+      const classification: FileClassification = FileHandler.classifyFile(fileName, currentIndex);
       
       // 先复制文件到沙箱，确保文件就位后再入库
       try {
@@ -98,7 +114,7 @@ export class FileHandler {
       // 如果是 EPUB 文件，尝试提取封面图片
       if (classification.typeName === 'EPUB') {
         try {
-          const epubCover: string = await EpubParser.extractCover(dstPath, filePath);
+          const epubCover: string = await EpubParser.extractCover(dstPath);
           if (epubCover.length > 0) {
             coverUrl = epubCover;
           }
@@ -108,7 +124,7 @@ export class FileHandler {
       }
       
       let book = new Books();
-      book.bookName = file.name.replace(/\.[^.]+$/, '');
+      book.bookName = fileName.replace(/\.[^.]+$/, '');
       book.bookUrl = dstPath;
       book.author = '本地导入';
       book.bookGroup = 4;
@@ -138,18 +154,26 @@ export class FileHandler {
 
   static async importLocalFile(srcUrl: string, currentTabIndex: number): Promise<boolean> {
     try {
-      let file = fs.openSync(srcUrl, fs.OpenMode.READ_WRITE);
-      let dstPath = filePath + '/' + file.name;
+      const filesDir: string = getAppFilesDir();
+      if (filesDir.length === 0) {
+        showMessage('应用存储不可用');
+        return false;
+      }
+
+      // picker 返回的 URI 只允许 READ 访问
+      let file = fs.openSync(srcUrl, fs.OpenMode.READ_ONLY);
+      let fileName: string = file.name || 'unknown.txt';
+      let dstPath = filesDir + '/' + fileName;
       
       // 检查书架中是否已存在同名同路径的书籍
-      let exist = await booksUtil.isExistBooks(dstPath, file.name);
+      let exist = await booksUtil.isExistBooks(dstPath, fileName);
       if (exist) {
-        console.info(`书籍 ${file.name} 已存在`);
+        console.info(`书籍 ${fileName} 已存在`);
         fs.closeSync(file);
         return false;
       }
       
-      const classification = FileHandler.classifyFile(file.name, currentTabIndex);
+      const classification: FileClassification = FileHandler.classifyFile(fileName, currentTabIndex);
       
       // 先复制文件到沙箱，确保文件就位后再入库
       try {
@@ -168,7 +192,7 @@ export class FileHandler {
       // 如果是 EPUB 文件，尝试提取封面图片
       if (classification.typeName === 'EPUB') {
         try {
-          const epubCover: string = await EpubParser.extractCover(dstPath, filePath);
+          const epubCover: string = await EpubParser.extractCover(dstPath);
           if (epubCover.length > 0) {
             coverUrl = epubCover;
           }
@@ -178,7 +202,7 @@ export class FileHandler {
       }
       
       let book = new Books();
-      book.bookName = file.name.replace(/\.[^.]+$/, '');
+      book.bookName = fileName.replace(/\.[^.]+$/, '');
       book.bookUrl = dstPath;
       book.author = '本地导入';
       book.bookGroup = 4;
@@ -209,10 +233,11 @@ export class FileHandler {
   //动态获取文件大小
   static async ReadJSONFile(srcUrl: string) {
     try {
-      let file = fs.openSync(srcUrl, fs.OpenMode.READ_WRITE);
+      let file = fs.openSync(srcUrl, fs.OpenMode.READ_ONLY);
       let stat = fs.statSync(file.path)
       let arrayBuffer = new ArrayBuffer(stat.size);
-      let readLen: number = await fs.read(file.fd, arrayBuffer)
+      let readLen: number = fs.readSync(file.fd, arrayBuffer)
+      fs.closeSync(file)
       let JSONString = buffer.from(arrayBuffer, 0, readLen).toString();
       return JSONString
     } catch (e){
@@ -329,12 +354,13 @@ export class FileHandler {
   static async documentPickerFile(maxSelectNumber: number, fileSuffixFilters: Array<string>) {
     // 尝试写一个通用的picker
     try {
+      const ctx = getContext() as common.UIAbilityContext;
       const documentSelectOptions = new picker.DocumentSelectOptions();
       // 选择文档的最大数目（可选）
       documentSelectOptions.maxSelectNumber = maxSelectNumber;
       // 选择文件的后缀类型，若选择项存在多个后缀名，则每一个后缀名之间用英文逗号进行分隔（可选），后缀类型名不能超过100
       documentSelectOptions.fileSuffixFilters = fileSuffixFilters;
-      let documentViewPicker = new picker.DocumentViewPicker(context);
+      let documentViewPicker = new picker.DocumentViewPicker(ctx);
       const documentSelectResult: Array<string> = await documentViewPicker.select(documentSelectOptions)
       return documentSelectResult
     } catch (err) {

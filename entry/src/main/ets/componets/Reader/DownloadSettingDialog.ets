@@ -1,248 +1,219 @@
 import { AddDownloadDialog } from 'ets/componets/Reader/AddDownloadDialog';
 import { ThemeStorageKey } from '../../common/constants/Theme';
 import { ThemeItem } from '../../common/model/Theme';
-import downloadManager from '../../common/utils/DownloadManager';
-import { BookSource } from '../../database/entities/BookSource';
+import { promptAction } from '@kit.ArkUI';
 
 @Component
 export default struct DownloadSettingDialog {
-  @Link isShowDownload: boolean// 下载-缓存结束章节
-  @Link isShowSetting: boolean// 下载-缓存结束章节
-  bookUrl: string = ''
-  bookName: string = ''
-  bookAuthor: string = ''
-  bookSource?: BookSource
-  tocUrl: string = ''
-  totalChapters: number = 0
-  currentChapter: number = 0
-
-  // 加入下载列表Dialog
-  DownloadDialogController: CustomDialogController = new CustomDialogController({
-    builder: AddDownloadDialog(),
-    cornerRadius: 8,
-    offset: { dx: 0, dy: -100 }
-  })
-  @State selectedIndex: number = -1
-  @State StartText: string = "1" // 下载-缓存开始章节
-  @State EndText: string = "2" // 下载-缓存结束章节
+  @Link isShowDownload: boolean
+  @Link isShowSetting: boolean
+  @State selectedOption: number = -1 // 选中的选项 0-3
+  @State StartText: string = "1" // 缓存开始章节
+  @State EndText: string = "50" // 缓存结束章节
   controller: TextInputController = new TextInputController()
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
+  // 下载选项配置
+  private downloadOptions: string[] = [
+    '缓存后50章',
+    '缓存后面全部章节',
+    '缓存全部章节',
+    '自定义缓存范围'
+  ]
+
   build() {
-    Column() {
-      Grid() {
-        GridItem() {
-          Row() {
-            Text("缓存后50章")
-            Blank(1)
-            Checkbox()
-              .select(this.selectedIndex === 0)
-              .onChange((value: boolean) => {
-                if (value) this.selectedIndex = 0
-              })
-          }
-          .width("100%")
-        }
-        .onClick(() => {
-          this.selectedIndex = 0
-        })
-
-        GridItem() {
-          Row() {
-            Text("缓存后面全部章节")
-            Blank(1)
-            Checkbox()
-              .select(this.selectedIndex === 1)
-              .onChange((value: boolean) => {
-                if (value) this.selectedIndex = 1
-              })
-          }
-          .width("100%")
-        }
-        .onClick(() => {
-          this.selectedIndex = 1
-        })
-
-        GridItem() {
-          Row() {
-            Text("缓存全部")
-            Blank(1)
-            Checkbox()
-              .select(this.selectedIndex === 2)
-              .onChange((value: boolean) => {
-                if (value) this.selectedIndex = 2
-              })
-          }
-          .width("100%")
-        }
-        .onClick(() => {
-          this.selectedIndex = 2
-        })
-
-        GridItem() {
-          Row() {
-            Text("自定义缓存")
-            Blank(1)
-            Checkbox()
-              .select(this.selectedIndex === 3)
-              .onChange((value: boolean) => {
-                if (value) this.selectedIndex = 3
-              })
-          }
-          .width("100%")
-        }
-        .onClick(() => {
-          this.selectedIndex = 3
-        })
-
-        GridItem() {
-          Row({ space: 16 }) {
-            TextInput({ text: this.StartText, controller: this.controller })
-              .type(InputType.Number)
-              .width(107)
-              .height(38)
-              .borderRadius(8)
-              .fontSize(20)
-              .fontWeight(400)
-              .lineHeight(22)
-              .textAlign(TextAlign.Center)
-              .backgroundColor("white")
-              .border({
-                width: 1,
-                color: "gray"
-              })
-              .onChange((value: string) => {
-                this.StartText = value
-              })
-
-            Text("至")
-
-            TextInput({ text: this.EndText, controller: this.controller })
-              .type(InputType.Number)
-              .width(107)
-              .height(38)
-              .borderRadius(8)
-              .fontSize(20)
-              .fontWeight(400)
-              .lineHeight(22)
-              .textAlign(TextAlign.Center)
-              .backgroundColor("white")
-              .border({
-                width: 1,
-                color: "gray"
-              })
-              .onChange((value: string) => {
-                this.EndText = value
-              })
-          }
-          .width("100%")
-        }
+    Column({ space: 20 }) {
+      // 标题
+      Row() {
+        Text('缓存设置')
+          .fontSize(18)
+          .fontWeight(600)
+          .fontColor('#1F2329')
       }
-      .padding({
-        top: 16
-      })
-      .height("80%")
-      .columnsTemplate("1fr")
-      .rowsTemplate("1fr 1fr 1fr 1fr 1fr")
+      .width('100%')
+      .padding({ top: 20 })
 
-      Blank(1)
-      Grid() {
-        GridItem() {
-          Button() {
-            Text("取消")
-              .lineHeight(24)
-              .fontColor(this.theme.mainColor)
-              .font({
-                size: 16,
-                weight: 500
-              })
+      // 选项列表
+      Column({ space: 12 }) {
+        ForEach(this.downloadOptions, (option: string, index: number) => {
+          this.OptionItem(option, index)
+        })
+      }
+      .width('100%')
+
+      // 自定义范围输入
+      if (this.selectedOption === 3) {
+        Column({ space: 12 }) {
+          Text('请输入缓存章节范围')
+            .fontSize(14)
+            .fontColor('#646A73')
+            .width('100%')
+
+          Row({ space: 12 }) {
+            Column({ space: 4 }) {
+              Text('起始章节')
+                .fontSize(12)
+                .fontColor('#8F959E')
+              TextInput({ text: this.StartText, controller: this.controller })
+                .type(InputType.Number)
+                .height(44)
+                .borderRadius(8)
+                .fontSize(15)
+                .fontWeight(400)
+                .textAlign(TextAlign.Center)
+                .backgroundColor('#F7F8FA')
+                .onChange((value: string) => {
+                  this.StartText = value
+                })
+            }
+            .layoutWeight(1)
+
+            Text('至')
+              .fontSize(14)
+              .fontColor('#646A73')
+              .margin({ top: 20 })
+
+            Column({ space: 4 }) {
+              Text('结束章节')
+                .fontSize(12)
+                .fontColor('#8F959E')
+              TextInput({ text: this.EndText, controller: this.controller })
+                .type(InputType.Number)
+                .height(44)
+                .borderRadius(8)
+                .fontSize(15)
+                .fontWeight(400)
+                .textAlign(TextAlign.Center)
+                .backgroundColor('#F7F8FA')
+                .onChange((value: string) => {
+                  this.EndText = value
+                })
+            }
+            .layoutWeight(1)
           }
-          .width("80%")
-          .height(40)
-          .backgroundColor(this.theme.secondColor)
-          .onClick(() => {
-            this.isShowDownload = false
-            this.isShowSetting = false
-          })
+          .width('100%')
         }
+        .width('100%')
+        .padding({ top: 8 })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
+      }
 
-        GridItem() {
-          Button() {
-            Text("确定")
-              .fontColor("white")
-              .lineHeight(24)
-              .font({
-                size: 16,
-                weight: 500
-              })
-          }
-          .width("80%")
-          .height(40)
-          .backgroundColor(this.theme.mainColor)
+      // 底部按钮
+      Row({ space: 12 }) {
+        Button('取消')
+          .fontSize(15)
+          .fontColor('#646A73')
+          .backgroundColor('#F7F8FA')
+          .borderRadius(10)
+          .height(44)
+          .layoutWeight(1)
           .onClick(() => {
             this.startDownload()
             this.isShowDownload = false
-            this.isShowSetting = false
-            this.DownloadDialogController.open()
-            setTimeout(() => {
-              this.DownloadDialogController.close()
-            }, 1000)
           })
+
+        Button('开始缓存')
+          .fontSize(15)
+          .fontColor('#FFFFFF')
+          .backgroundColor(this.theme.mainColor || '#A89B7E')
+          .borderRadius(10)
+          .height(44)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.startDownload()
+          })
+      }
+      .width('100%')
+      .padding({ top: 12 })
+    }
+    .padding({ left: 20, right: 20, bottom: 24 })
+    .width('100%')
+    .backgroundColor('#FFFFFF')
+    .borderRadius({ topLeft: 16, topRight: 16 })
+  }
+
+  // 选项条目
+  @Builder
+  OptionItem(text: string, index: number) {
+    Row({ space: 12 }) {
+      // 单选框
+      Column() {
+        if (this.selectedOption === index) {
+          Column()
+            .width(12)
+            .height(12)
+            .backgroundColor(this.theme.mainColor || '#A89B7E')
+            .borderRadius(6)
         }
       }
-      .height(64)
-      .columnsTemplate("1fr 1fr")
-      .rowsTemplate("1fr")
-      .width("100%")
-      .padding({
-        top: 12,
-        bottom: 12
+      .width(20)
+      .height(20)
+      .border({
+        width: 2,
+        color: this.selectedOption === index ? (this.theme.mainColor || '#A89B7E') : '#E5E6EB',
+        radius: 10
       })
+      .justifyContent(FlexAlign.Center)
+
+      // 选项文字
+      Text(text)
+        .fontSize(15)
+        .fontColor(this.selectedOption === index ? '#1F2329' : '#646A73')
+        .fontWeight(this.selectedOption === index ? 500 : 400)
+        .layoutWeight(1)
     }
-    .height(500)
-    .padding({
-      left: 20,
-      right: 20
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+    .backgroundColor(this.selectedOption === index ? '#F7F4F0' : '#FFFFFF')
+    .borderRadius(10)
+    .border({
+      width: this.selectedOption === index ? 1.5 : 1,
+      color: this.selectedOption === index ? (this.theme.mainColor || '#A89B7E') : '#E5E6EB'
+    })
+    .onClick(() => {
+      this.selectedOption = index
     })
   }
 
-  private startDownload(): void {
-    if (!this.bookSource) return;
-
-    let start = 0;
-    let end = -1; // -1 表示全部
-
-    switch (this.selectedIndex) {
-      case 0: // 后50章
-        start = this.currentChapter;
-        end = Math.min(this.currentChapter + 49, this.totalChapters - 1);
-        break;
-      case 1: // 后面全部
-        start = this.currentChapter;
-        end = this.totalChapters - 1;
-        break;
-      case 2: // 全部
-        start = 0;
-        end = this.totalChapters - 1;
-        break;
-      case 3: // 自定义
-        start = parseInt(this.StartText) - 1;
-        end = parseInt(this.EndText) - 1;
-        if (isNaN(start) || start < 0) start = 0;
-        if (isNaN(end) || end >= this.totalChapters) end = this.totalChapters - 1;
-        break;
-      default:
-        return;
+  // 开始下载
+  startDownload() {
+    if (this.selectedOption === -1) {
+      promptAction.showToast({
+        message: '请选择缓存选项',
+        duration: 1500
+      })
+      return
     }
 
-    downloadManager.addTask(
-      this.bookUrl,
-      this.bookName,
-      this.bookAuthor,
-      this.bookSource,
-      this.tocUrl,
-      start,
-      end
-    );
+    let message = ''
+    switch (this.selectedOption) {
+      case 0:
+        message = '开始缓存后50章'
+        break
+      case 1:
+        message = '开始缓存后面全部章节'
+        break
+      case 2:
+        message = '开始缓存全部章节'
+        break
+      case 3:
+        if (!this.StartText || !this.EndText) {
+          promptAction.showToast({
+            message: '请输入有效的章节范围',
+            duration: 1500
+          })
+          return
+        }
+        message = `开始缓存第${this.StartText}-${this.EndText}章`
+        break
+    }
+
+    promptAction.showToast({
+      message: message,
+      duration: 2000
+    })
+
+    // TODO: 实现实际的下载逻辑
+    this.isShowDownload = false
   }
 }

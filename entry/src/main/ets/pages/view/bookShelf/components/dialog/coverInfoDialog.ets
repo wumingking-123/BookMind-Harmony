@@ -1,4 +1,4 @@
-import { pickerAvatar } from '../../../../../common/utils/photoViewPicker'
+import { pickerAvatar, PhotoSelectResultClean } from '../../../../../common/utils/photoViewPicker'
 import coverInfoImageShow from '../../../coverInfoImageShow'
 import { BookGroups } from '../../../../../database/entities/BookGroups'
 import { showMessage } from '../../../../../componets/common/promptShow'
@@ -128,7 +128,10 @@ export default struct coverInfoDialog{
 
   async setCoverImages(){
     let imageUrl = await pickerAvatar();
-    this.coverImages = imageUrl?.photoUris[0] || ''
+    if (imageUrl) {
+      let cleanRes = imageUrl as PhotoSelectResultClean
+      this.coverImages = cleanRes.photoUris[0] || ''
+    }
     this.itemData.coverUrl = this.coverImages
   }
 }

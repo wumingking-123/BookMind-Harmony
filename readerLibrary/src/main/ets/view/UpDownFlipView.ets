@@ -1,121 +1,173 @@
 import { promptAction } from '@kit.ArkUI';
-import { BG_COLOR_ARRAY, Constants } from '../common/constants/Constants';
+import { Constants } from '../common/constants/Constants';
 import { ReaderChapterItem } from '../common/entity/ReaderChaptersItem';
 import { Reader } from './Reader';
+import { NovelChapterOperateHelper } from '../common/helper/NovelChapterOperateHelper';
 
 @Component
 export struct UpDownFlipView {
-  @State @Watch('onChangeY') translateY2: number = 0;
-  @Link currentChapterNum: number;
-  @Consume('offsetY') offsetY: number;
-  @Consume('sumRow') sumRow: number;
-  @Consume('rowWord') rowWord: number;
-  @Consume('screenW') screenW: number;
   @Consume('screenH') screenH: number;
-  @Link currentPageNum: number;
-  @Consume('bgColorIndex') bgColorIndex: number;
-  @Consume('chapterList') chapterList: ReaderChapterItem[];
+  @Consume('screenW') screenW: number;
+  @Consume('chapterList') @Watch('onChapterListChanged') chapterList: ReaderChapterItem[];
+  @Consume('currentPageIndex') currentPageIndex: number;
+  @Consume('currentChapterIndex') currentChapterIndex: number;
+  @State private offsetY: number = 0;
   private isFirst: boolean = false;
 
-  aboutToDisappear(): void {
-    this.offsetY = 0;
+  @State nextPageIndex: number[] | null = null;
+  @State prePageIndex: number[] | null = null;
+
+  aboutToAppear(): void {
+    this.calPageIndex();
   }
 
-  onChangeY() {
-    if (this.translateY2 <= -this.screenH) {
-      // this.currentStartIndex += (this.sumRow * this.rowWord);
-      this.translateY2 = this.translateY2 + this.screenH;
-      this.currentPageNum += 1;
-      this.offsetY = 0;
-      return;
-    }
-    if (this.translateY2 >= this.screenH) {
-      // this.currentStartIndex -= (this.sumRow * this.rowWord);
-      this.translateY2 = this.translateY2 - this.screenH;
-      this.currentPageNum -= 1;
-      this.offsetY = 0;
-      return;
-    }
+  onChapterListChanged() {
+    this.calPageIndex();
+  }
+
+  calPageIndex() {
+    this.nextPageIndex =
+      NovelChapterOperateHelper.nextPageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
+    this.prePageIndex =
+      NovelChapterOperateHelper.prePageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
   }
 
   build() {
-    Row()
+    Stack() {
+      if (this.chapterList.length === 0 || !this.chapterList[this.currentChapterIndex] || !this.chapterList[this.currentChapterIndex].chapterPageList || this.chapterList[this.currentChapterIndex].chapterPageList.length === 0) {
+        Reader({ content: '', lineContentList: [], isCurrentPage: true })
+          .width(this.screenW)
+          .height('100%')
+      } else {
+        // 下一页（底层）
+        if (this.nextPageIndex !== null) {
+          Reader({
+            content: this.chapterList[this.nextPageIndex[0]]?.chapterPageList?.[this.nextPageIndex[1]]?.content || '',
+            lineContentList: this.chapterList[this.nextPageIndex[0]]?.chapterPageList?.[this.nextPageIndex[1]]?.lineContentList || [],
+            isCurrentPage: false
+          })
+            .width(this.screenW)
+            .height('100%')
+        }
 
-    // Stack() {
-    //   Reader({ startIndex: this.currentStartIndex + 2 * this.sumRow * this.rowWord })
-    //     .translate({ x: 0, y: this.translateY2 + 2 * this.screenH + this.offsetY, z: 0 })
-    //
-    //   Reader({ startIndex: this.currentStartIndex + this.sumRow * this.rowWord })
-    //     .translate({ x: 0, y: this.translateY2 + this.screenH + this.offsetY, z: 0 })
-    //
-    //   Reader({ startIndex: this.currentStartIndex })
-    //     .translate({ x: 0, y: this.translateY2 + this.offsetY, z: 0 })
-    //     .width(this.screenW)
-    //
-    //   if (this.currentPageNum > 1) {
-    //     Reader({ startIndex: this.currentStartIndex - this.sumRow * this.rowWord })
-    //       .translate({ x: 0, y: this.translateY2 - this.screenH + this.offsetY, z: 0 })
-    //   }
-    //
-    //   if (this.currentPageNum > 2) {
-    //     Reader({ startIndex: this.currentStartIndex - 2 * this.sumRow * this.rowWord })
-    //       .translate({ x: 0, y: this.translateY2 - 2 * this.screenH + this.offsetY, z: 0 })
-    //   }
-    //
-    //   Row()
-    //     .backgroundColor(BG_COLOR_ARRAY[this.bgColorIndex])
-    //     .width(Constants.FULL_PERCENT)
-    //     .height(AppStorage.get('stateHeight') as number)
-    //     .translate({
-    //       x: 0,
-    //       y: -(AppStorage.get('stateHeight') as number),
-    //       z: 0
-    //     })
-    // }
-    // .gesture(
-    //   PanGesture()
-    //     .onActionUpdate((event?: GestureEvent) => {
-    //       if (!event) {
-    //         return;
-    //       }
-    //
-    //       // The first page slides down, and the prompt slides to the top.
-    //       if (this.currentPageNum === 1 && this.translateY2 === 0 && event.offsetY > 0 && this.offsetY === 0) {
-    //         this.isFirst = true;
-    //         return;
-    //       }
-    //
-    //       // The first page has been overwritten,
-    //       // and the underwriting distance is limited when the next page is overwritten.
-    //       if (this.currentPageNum === 1 && this.translateY2 + event.offsetY > 0 && event.offsetY > 0) {
-    //         this.offsetY = -this.translateY2;
-    //         return;
-    //       }
-    //
-    //       // Part of the second page has been underlined.
-    //       // When underlining again, the underlining distance shall be limited.
-    //       if (this.currentPageNum === 2 && this.translateY2 + event.offsetY >= this.screenH) {
-    //         this.offsetY = this.screenH - this.translateY2;
-    //         return;
-    //       }
-    //
-    //       this.offsetY = event.offsetY;
-    //     })
-    //     .onActionEnd(() => {
-    //       if (this.isFirst) {
-    //         promptAction.showToast({
-    //           message: Constants.MSG_FLIP_OVER,
-    //           duration: Constants.PROMPT_DURATION
-    //         });
-    //         this.isFirst = false;
-    //       }
-    //       if (this.currentPageNum === 1 && this.translateY2 === 0 && this.offsetY > 0) {
-    //         return;
-    //       }
-    //       this.translateY2 += this.offsetY;
-    //       this.offsetY = 0;
-    //     })
-    // )
-    // .alignContent(Alignment.TopStart)
+        // 当前页（上下随手势偏移）
+        Reader({
+          content: this.chapterList[this.currentChapterIndex]?.chapterPageList?.[this.currentPageIndex]?.content || '',
+          lineContentList: this.chapterList[this.currentChapterIndex]?.chapterPageList?.[this.currentPageIndex]?.lineContentList || [],
+          isCurrentPage: true
+        })
+          .translate({ x: 0, y: this.offsetY <= 0 ? this.offsetY : 0, z: 0 })
+          .width(this.screenW)
+          .height('100%')
+
+        // 上一页（从上方跟随）
+        if (this.prePageIndex != null) {
+          Reader({
+            content: this.chapterList[this.prePageIndex[0]]?.chapterPageList?.[this.prePageIndex[1]]?.content || '',
+            lineContentList: this.chapterList[this.prePageIndex[0]]?.chapterPageList?.[this.prePageIndex[1]]?.lineContentList || [],
+            isCurrentPage: false
+          })
+            .translate({
+              x: 0,
+              y: this.offsetY > 0 ? this.offsetY - this.screenH : -this.screenH
+            })
+            .width(this.screenW)
+            .height('100%')
+        }
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .clip(true)
+    .gesture(
+      PanGesture({ direction: PanDirection.Vertical })
+        .onActionStart(() => {
+          this.isFirst = false;
+        })
+        .onActionUpdate((event?: GestureEvent) => {
+          if (!event) return;
+          const dy = event.offsetY;
+
+          const prePageIndex = NovelChapterOperateHelper.prePageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
+          const nextPageIndex = NovelChapterOperateHelper.nextPageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
+
+          if (dy > 0 && prePageIndex === null) {
+            this.isFirst = true;
+            return;
+          }
+          if (dy < 0 && nextPageIndex === null) {
+            return;
+          }
+          this.offsetY = dy;
+          this.calPageIndex();
+        })
+        .onActionEnd((event?: GestureEvent) => {
+          const velocity = event?.velocityY ?? 0;
+          const threshold = this.screenH * 0.3;
+          const shouldFlip = Math.abs(this.offsetY) > threshold || Math.abs(velocity) > 500;
+
+          if (this.isFirst) {
+            promptAction.showToast({ message: Constants.MSG_FLIP_OVER, duration: Constants.PROMPT_DURATION });
+            this.isFirst = false;
+            animateTo({ duration: Constants.SLIDE_DURATION, curve: Curve.EaseOut }, () => {
+              this.offsetY = 0;
+            });
+            return;
+          }
+
+          if (shouldFlip && this.offsetY > 0) {
+            const prevIdx = NovelChapterOperateHelper.prePageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
+            if (prevIdx !== null) {
+              animateTo({
+                duration: Constants.SLIDE_DURATION,
+                curve: Curve.EaseOut,
+                onFinish: () => {
+                  this.currentChapterIndex = prevIdx[0];
+                  this.currentPageIndex = prevIdx[1];
+                  this.offsetY = 0;
+                  this.calPageIndex();
+                }
+              }, () => {
+                this.offsetY = this.screenH;
+                this.calPageIndex();
+              });
+            } else {
+              animateTo({ duration: Constants.SLIDE_DURATION, curve: Curve.EaseOut }, () => {
+                this.offsetY = 0;
+              });
+            }
+          } else if (shouldFlip && this.offsetY < 0) {
+            const nextIdx = NovelChapterOperateHelper.nextPageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
+            if (nextIdx !== null) {
+              animateTo({
+                duration: Constants.SLIDE_DURATION,
+                curve: Curve.EaseOut,
+                onFinish: () => {
+                  this.currentChapterIndex = nextIdx[0];
+                  this.currentPageIndex = nextIdx[1];
+                  this.offsetY = 0;
+                  this.calPageIndex();
+                }
+              }, () => {
+                this.offsetY = -this.screenH;
+                this.calPageIndex();
+              });
+            } else {
+              animateTo({ duration: Constants.SLIDE_DURATION, curve: Curve.EaseOut }, () => {
+                this.offsetY = 0;
+              });
+            }
+          } else {
+            animateTo({ duration: Constants.SLIDE_DURATION, curve: Curve.EaseOut }, () => {
+              this.offsetY = 0;
+            });
+          }
+        })
+        .onActionCancel(() => {
+          animateTo({ duration: Constants.SLIDE_DURATION, curve: Curve.EaseOut }, () => {
+            this.offsetY = 0;
+          });
+        })
+    )
   }
 }

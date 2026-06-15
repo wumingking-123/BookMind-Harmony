@@ -7,6 +7,10 @@
 import picker from '@ohos.file.picker';
 
 
+export interface PhotoSelectResultClean {
+  photoUris: string[]
+}
+
 export const pickerAvatar = async (): Promise<picker.PhotoSelectResult | undefined> => {
   // 实例化选项对象
   const options = new picker.PhotoSelectOptions()
@@ -18,7 +22,8 @@ export const pickerAvatar = async (): Promise<picker.PhotoSelectResult | undefin
   // 利用PhotoViewPicker对象实例中的select自动获取到用户选择的那张图片的地址
   const pickerView = new picker.PhotoViewPicker()
   let urls: picker.PhotoSelectResult = await pickerView.select(options)
-  if (!urls || !urls.photoUris || urls.photoUris.length <= 0) {
+  let urlsClean = urls as PhotoSelectResultClean
+  if (!urls || !urlsClean.photoUris || urlsClean.photoUris.length <= 0) {
     return undefined
   }
   return urls
