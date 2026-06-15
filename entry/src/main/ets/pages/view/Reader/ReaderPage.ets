@@ -528,7 +528,7 @@ struct ReaderPage {
 
   @Builder
   LayoutMoreDialog() {
-    LayoutMoreDialog({ ReaderPadding: this.ReaderPadding })
+    LayoutMoreDialog()
       .height(500)
       .width("100%")
   }

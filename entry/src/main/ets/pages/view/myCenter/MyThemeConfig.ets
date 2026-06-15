@@ -5,7 +5,7 @@ import { MyThemeConfigComp } from './MyThemeConfigComp'
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkMotion, InkLayout, InkShadow
 } from '../../../common/constants/DesignTokens'
-import { pickerAvatar } from '../../../common/utils/photoViewPicker'
+import { pickerAvatar, PhotoSelectResultClean } from '../../../common/utils/photoViewPicker'
 import picker from '@ohos.file.picker'
 
 // 中间导航区需要渲染的元素列表
@@ -147,10 +147,13 @@ struct MyThemeConfig {
                 .margin({ top: InkSpacing.XS })
                 .onClick(async () => {
                   let res: picker.PhotoSelectResult | undefined = await pickerAvatar()
-                  if (res && res.photoUris && res.photoUris.length > 0) {
-                    this.splashCustomImage = res.photoUris[0]
-                    this.activeSplashIndex = index
-                    this.getUIContext().getPromptAction().showToast({ message: '自定义图片设置成功，下次启动生效' })
+                  if (res) {
+                    let cleanRes = res as PhotoSelectResultClean
+                    if (cleanRes.photoUris && cleanRes.photoUris.length > 0) {
+                      this.splashCustomImage = cleanRes.photoUris[0]
+                      this.activeSplashIndex = index
+                      this.getUIContext().getPromptAction().showToast({ message: '自定义图片设置成功，下次启动生效' })
+                    }
                   }
                 })
             }

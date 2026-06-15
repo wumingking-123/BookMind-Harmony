@@ -6,7 +6,7 @@ import { Reader, ReaderForCurlView, SimulateDrawManager } from './Reader';
 import { image } from '@kit.ImageKit';
 import { NovelChapterOperateHelper } from '../common/helper/NovelChapterOperateHelper';
 
-const NODE_CONTAINER_ID = 'root'; // 组件NodeContainer的id
+const NODE_CONTAINER_ID = 'root';
 
 @Component
 export struct SimulateCurlView {
@@ -15,19 +15,20 @@ export struct SimulateCurlView {
   private isOnGesture: boolean = false;
   @State
   private isOnAnimation: boolean = false;
-  private isReady = false
-  controller: TextController = new TextController();
+  private isReady: boolean = false
   private lastTime: number | null = null
   private animatorResult: AnimatorResult | undefined | null
   @Consume('screenW') screenW: number;
-  @Link currentPageIndex: number;
+  @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('chapterList') chapterList: ReaderChapterItem[];
-  @Link currentChapterIndex: number;
+  @Consume('currentChapterIndex') currentChapterIndex: number;
   @Consume('fontSize') fontSize: number;
   @Consume('lineHeightRatio') lineHeightRatio: number;
   @Consume('bgColor') bgColor: string;
+  @Consume('readerPadding') readerPadding: number;
   @Provide('batteryPixelMap') @Watch('setBatteryPixelMap') batteryPixelMap: image.PixelMap | null = null;
   @Consume('displaySize') @Watch('onTextDisplaySizeChanged') displaySize: number[];
+  @Consume('paragraphSpacing') paragraphSpacing: number;
   drawManager: SimulateDrawManager | null = null;
   isTurnNext: boolean | null = null;
   animationEndValue: number | null = null;
@@ -42,17 +43,20 @@ export struct SimulateCurlView {
   }
 
   aboutToDisappear(): void {
+    this.animatorResult?.cancel();
     this.animatorResult = undefined;
   }
 
   aboutToAppear(): void {
     this.drawManager =
       new SimulateDrawManager(this.context, this.fontSize, this.fontSize * this.lineHeightRatio, this.chapterList,
-        this.currentChapterIndex, this.currentPageIndex, this.bgColor);
+        this.currentChapterIndex, this.currentPageIndex, this.bgColor, this.paragraphSpacing);
+    this.drawManager.setReaderPadding(this.readerPadding)
     this.drawManager.setTextDisplaySize(this.displaySize)
+
     let options: AnimatorOptions = {
-      duration: 300,
-      easing: "linear",
+      duration: 350,
+      easing: "ease-out",
       delay: 0,
       fill: "none",
       direction: "normal",
@@ -62,7 +66,6 @@ export struct SimulateCurlView {
     };
     this.animatorResult = animator.create(options)
     this.animatorResult.onFinish = () => {
-      console.info(`animation: onFinish callback time is ${Date.now()}`)
       this.isOnAnimation = false;
       if (this.drawManager !== null) {
         this.drawManager.dispatchPointerUPEvent();
@@ -75,7 +78,6 @@ export struct SimulateCurlView {
           this.currentPageIndex = nextPageIndex![1];
           this.drawManager?.updatePageIndex(this.currentPageIndex, this.currentChapterIndex)
         }
-
       } else if (!this.isTurnNext && this.animationEndValue === -1.0) {
         let prePageIndex =
           NovelChapterOperateHelper.prePageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
@@ -90,7 +92,6 @@ export struct SimulateCurlView {
       this.calPageIndex();
     }
     this.animatorResult.onFrame = (progress) => {
-      console.info(`animation: onFrame callback time is ${Date.now()} , progress : ${progress}}`)
       if (this.drawManager !== null) {
         this.drawManager.applyAnimationProgressToTouch(progress);
         this.drawManager.draw()
@@ -114,8 +115,8 @@ export struct SimulateCurlView {
   startAnimation(isRecover: boolean, isTurnNext: boolean) {
     this.animationEndValue = (isTurnNext !== isRecover) ? 1.0 : -1.0;
     let options: AnimatorOptions = {
-      duration: 300,
-      easing: "linear",
+      duration: isRecover ? 250 : 350,
+      easing: isRecover ? "ease-in-out" : "ease-out",
       delay: 0,
       fill: "forwards",
       direction: "normal",
@@ -130,20 +131,20 @@ export struct SimulateCurlView {
   }
 
   build() {
-
     Stack() {
-
-      if (this.chapterList[this.currentChapterIndex].chapterPageList.length === 0) {
-        Reader({ content: '' })
+      if (this.chapterList.length === 0 || !this.chapterList[this.currentChapterIndex] ||
+          !this.chapterList[this.currentChapterIndex].chapterPageList ||
+          this.chapterList[this.currentChapterIndex].chapterPageList.length === 0) {
+        Reader({ content: '', lineContentList: [] })
       } else {
         Canvas(this.context)
           .width(Constants.FULL_PERCENT)
           .height(Constants.FULL_PERCENT)
           .id(NODE_CONTAINER_ID)
           .onReady(() => {
-            console.info('canvas need draw')
             this.isReady = true;
             if (this.drawManager !== null) {
+              this.drawManager.setCanvasSizeFromDimensions(vp2px(this.context.size.width), vp2px(this.context.size.height))
               if (!this.drawManager.canvasSize.isEmpty() && !this.drawManager.touch.offset.isEmpty()) {
                 this.drawManager.draw()
               }
@@ -151,7 +152,8 @@ export struct SimulateCurlView {
           })
 
         ReaderForCurlView({
-          content: this.chapterList[this.currentChapterIndex].chapterPageList[this.currentPageIndex].content
+          content: this.chapterList[this.currentChapterIndex]?.chapterPageList?.[this.currentPageIndex]?.content || '',
+          lineContentList: this.chapterList[this.currentChapterIndex]?.chapterPageList?.[this.currentPageIndex]?.lineContentList || []
         })
           .width(Constants.FULL_PERCENT)
           .height(Constants.FULL_PERCENT)
@@ -164,19 +166,12 @@ export struct SimulateCurlView {
     .gesture(
       PanGesture()
         .onActionStart((event) => {
-          console.info('PanGesture:start');
-
           if (this.drawManager !== null) {
             this.drawManager.dispatchPointerStart(event)
           }
         })
         .onActionUpdate((event) => {
-          console.info(`绘制事件耗时:绘制事件发生,timeStamp:${Date.now()},间隔：${Date.now() - (this.lastTime ?? 0)}`)
-          this.lastTime = Date.now();
           try {
-            let startTime = Date.now();
-            console.info('PanGesture:update');
-
             if (this.drawManager !== null) {
               this.isTurnNext = this.drawManager.dispatchPointerMoveEvent(event)
               if (this.isTurnNext != null) {
@@ -186,8 +181,6 @@ export struct SimulateCurlView {
                 this.drawManager.draw();
               }
             }
-            let endTime = Date.now();
-            console.info(`绘制事件耗时：${endTime - startTime}`)
           } catch (e) {
             console.error(e)
           }
@@ -195,11 +188,10 @@ export struct SimulateCurlView {
         .onActionEnd((event) => {
           if (this.isTurnNext != null) {
             let velocity = event.velocityX;
-            // this.drawManager.dispatchPointerUPEvent();
             this.isOnGesture = false;
-            let isShowStartInertiaAnimation = this.isTurnNext ? velocity <= -30 : velocity >= -30;
-            this.startAnimation(!isShowStartInertiaAnimation, this.isTurnNext);
-            console.info(`animation: start time is ${Date.now()}`)
+            // 速度阈值判断：快速滑动时自动翻页，慢速滑动时回弹
+            let shouldTurn = this.isTurnNext ? velocity <= -20 : velocity >= 20;
+            this.startAnimation(!shouldTurn, this.isTurnNext);
           }
         })
         .onActionCancel(() => {

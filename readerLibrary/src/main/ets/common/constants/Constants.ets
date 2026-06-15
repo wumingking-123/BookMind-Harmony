@@ -182,13 +182,14 @@ export enum BGColorType {
   WHITE = 0,
   YELLOW = 1,
   GREEN = 2,
-  BLUE = 3
+  BLUE = 3,
+  GREY = 4
 }
 
 /**
  * Background color array.
  */
-export const BG_COLOR_ARRAY: string[] = ['#FFFFFF', '#FDEAD3', '#DFF7E5', '#DFF1FA'];
+export const BG_COLOR_ARRAY: string[] = ['#FFFFFF', '#FDEAD3', '#DFF7E5', '#DFF1FA', '#2C2C2C'];
 
 /**
  * Background color title.

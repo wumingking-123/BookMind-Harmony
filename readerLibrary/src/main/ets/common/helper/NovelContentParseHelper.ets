@@ -24,6 +24,7 @@ export class NovelContentParseHelper {
     });
     let pageIndex = 0;
     let pageContent: string[][] = [];
+    let lastLength = tempParagraphList.length;
     while (tempParagraphList.length != 0) {
       try {
         let pageParagraphList =
@@ -32,8 +33,17 @@ export class NovelContentParseHelper {
 
         pageContent[pageIndex] = pageParagraphList
         pageIndex++;
+
+        // 安全检查，如果一次计算没有消耗任何段落，强制消耗一个，防止死循环
+        if (tempParagraphList.length === lastLength) {
+          tempParagraphList.splice(0, 1);
+        }
+        lastLength = tempParagraphList.length;
       } catch (e) {
         console.error(e)
+        // 发生错误时，强制消耗一个以确保进度
+        tempParagraphList.splice(0, 1);
+        lastLength = tempParagraphList.length;
       }
     }
 
@@ -60,9 +70,25 @@ export class NovelContentParseHelper {
 
       let wordWidth: number = typeof wordSize.width === 'number' ? (wordSize.width ?? 0) : 0
       let wordHeight: number = typeof wordSize.height === 'number' ? (wordSize.height ?? 0) : 0
+      if (wordWidth <= 0) {
+        wordWidth = fontSize;
+      }
+      if (wordHeight <= 0) {
+        wordHeight = lineHeight || (fontSize * 1.5);
+      }
 
       let guessLineWordCount = Math.floor(constraintWidth / wordWidth)
-      let maxLines = Math.floor(targetHeight / wordHeight);
+      if (guessLineWordCount <= 0) {
+        guessLineWordCount = 1;
+      }
+      let constraintHeight = targetHeight - vp2px(6);
+      if (constraintHeight <= 0) {
+        constraintHeight = targetHeight;
+      }
+      let maxLines = Math.floor(constraintHeight / wordHeight);
+      if (maxLines <= 0) {
+        maxLines = 1;
+      }
 
       // 断句对象
       let breakIterator = I18n.getLineInstance('cn');
@@ -75,56 +101,104 @@ export class NovelContentParseHelper {
 
       while (currentLineIndex < maxLines && paragraphs.length != 0) {
         let currentTarget = paragraphs[0]
+        
+        // 检查是否为图片占位符
+        let isImage = currentTarget.trim().startsWith('[img:') && currentTarget.trim().endsWith(']');
+        if (isImage) {
+          let imgLinesNeeded = 8; // 图片占用的行高度相当于8行文本
+          if (currentLineIndex === 0 || currentLineIndex + imgLinesNeeded <= maxLines) {
+            result[currentLineIndex] = currentTarget.trim();
+            for (let i = 1; i < imgLinesNeeded; i++) {
+              if (currentLineIndex + i < maxLines) {
+                result[currentLineIndex + i] = '';
+              }
+            }
+            currentLineIndex += imgLinesNeeded;
+            paragraphs.splice(0, 1);
+          } else {
+            // 空间不够，留到下一页
+            break;
+          }
+          continue;
+        }
+
         let isNeedAddLineFeed = currentTarget.endsWith(lineFeed);
         if (isNeedAddLineFeed) {
           currentTarget = currentTarget.substring(0, currentTarget.length - 1)
         }
-        if (currentTarget.length < guessLineWordCount) {
+
+        if (currentTarget.length === 0) {
+          result[currentLineIndex] = isNeedAddLineFeed ? lineFeed : '';
+          currentLineIndex++;
+          paragraphs.splice(0, 1);
+          continue;
+        }
+
+        let heightLimit = wordHeight * 1.15;
+        let currentTargetHeight = NovelContentParseHelper.measureTextHeight(currentTarget, constraintWidth, fontSize, lineHeight);
+
+        if (currentTargetHeight <= heightLimit) {
           result[currentLineIndex] = currentTarget + (isNeedAddLineFeed ? lineFeed : '');
           currentLineIndex++
           paragraphs.splice(0, 1)
         } else {
+          breakIterator.setLineBreakText(currentTarget)
+          breakIterator.following(guessLineWordCount)
+          let currentPos = breakIterator.current();
 
-          let tempCurrentTarget = currentTarget;
+          if (currentPos <= 0 || currentPos > currentTarget.length) {
+            currentPos = Math.max(1, Math.min(currentTarget.length, guessLineWordCount));
+          }
 
-          let lineCount = (NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize,
-            lineHeight) / wordHeight);
+          let tempCurrentTarget = currentTarget.substring(0, currentPos)
+          let testHeight = NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize, lineHeight);
 
-          if (lineCount == 1) {
-            result[currentLineIndex] = tempCurrentTarget + (isNeedAddLineFeed ? lineFeed : '');
-            currentLineIndex++
-            paragraphs.splice(0, 1)
-          } else {
-            breakIterator.setLineBreakText(currentTarget)
-            breakIterator.following(guessLineWordCount)
-            breakIterator.previous();
-            tempCurrentTarget = currentTarget.substring(0, breakIterator.current())
-            lineCount =
-              NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize, lineHeight) /
-                wordHeight;
-
-            if (lineCount > 1) {
-              while (lineCount > 1) {
-                tempCurrentTarget = currentTarget.substring(0, breakIterator.previous())
-                lineCount =
-                  NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize, lineHeight) /
-                    wordHeight;
+          if (testHeight <= heightLimit) {
+            while (true) {
+              let nextPos = breakIterator.next();
+              if (nextPos === -1 || nextPos > currentTarget.length) {
+                break;
               }
-              result[currentLineIndex] = tempCurrentTarget;
-              currentLineIndex++
-              paragraphs[0] = paragraphs[0].substring(tempCurrentTarget.length, paragraphs[0].length)
-            } else {
-              while (lineCount <= 1) {
-                tempCurrentTarget = currentTarget.substring(0, breakIterator.next())
-                lineCount =
-                  NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize, lineHeight) /
-                    wordHeight;
+              let nextTarget = currentTarget.substring(0, nextPos);
+              let nextHeight = NovelContentParseHelper.measureTextHeight(nextTarget, constraintWidth, fontSize, lineHeight);
+              if (nextHeight > heightLimit) {
+                break;
               }
-              tempCurrentTarget = currentTarget.substring(0, breakIterator.previous())
-              result[currentLineIndex] = tempCurrentTarget
-              currentLineIndex++
-              paragraphs[0] = paragraphs[0].substring(tempCurrentTarget.length, paragraphs[0].length)
+              currentPos = nextPos;
+              tempCurrentTarget = nextTarget;
             }
+          } else {
+            while (currentPos > 1) {
+              let prevPos = breakIterator.previous();
+              if (prevPos === -1 || prevPos === 0) {
+                break;
+              }
+              let prevTarget = currentTarget.substring(0, prevPos);
+              let prevHeight = NovelContentParseHelper.measureTextHeight(prevTarget, constraintWidth, fontSize, lineHeight);
+              if (prevHeight <= heightLimit) {
+                currentPos = prevPos;
+                tempCurrentTarget = prevTarget;
+                break;
+              }
+              currentPos = prevPos;
+              tempCurrentTarget = prevTarget;
+            }
+          }
+
+          // 确保每次循环至少消耗 1 个字符，保证有进度，绝不死循环
+          if (tempCurrentTarget.length === 0 && currentTarget.length > 0) {
+            tempCurrentTarget = currentTarget.substring(0, 1);
+            currentPos = 1;
+          }
+
+          result[currentLineIndex] = tempCurrentTarget;
+          currentLineIndex++
+          
+          let remaining = paragraphs[0].substring(tempCurrentTarget.length);
+          if (remaining.length === 0 || remaining === lineFeed) {
+            paragraphs.splice(0, 1);
+          } else {
+            paragraphs[0] = remaining;
           }
         }
       }

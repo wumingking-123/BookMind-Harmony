@@ -4,7 +4,7 @@ import { ThemeItem } from '../../../common/model/Theme'
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout, InkMotion
 } from '../../../common/constants/DesignTokens'
-import { pickerAvatar } from '../../../common/utils/photoViewPicker'
+import { pickerAvatar, PhotoSelectResultClean } from '../../../common/utils/photoViewPicker'
 import picker from '@ohos.file.picker'
 
 // ===== 昵称编辑组件 =====
@@ -416,8 +416,11 @@ struct ProfileEditPage {
             .onClick(async () => {
               try {
                 let res: picker.PhotoSelectResult | undefined = await pickerAvatar()
-                if (res && res.photoUris && res.photoUris.length > 0) {
-                  this.avatarUri = res.photoUris[0]
+                if (res) {
+                  let cleanRes = res as PhotoSelectResultClean
+                  if (cleanRes.photoUris && cleanRes.photoUris.length > 0) {
+                    this.avatarUri = cleanRes.photoUris[0]
+                  }
                 }
               } catch (e) {
                 // 用户取消选择或发生错误

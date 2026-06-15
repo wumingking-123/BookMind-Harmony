@@ -13,38 +13,59 @@ export struct Reader {
   @Consume('lineHeightRatio') lineHeightRatio: number;
   @Consume('turnStyle') turnStyle: FlipPageType;
   @Consume('displaySize') displaySize: number[];
+  @Consume('readerPadding') readerPadding: number;
+  @Consume('fontWeight') fontWeight: number;
+  @Consume('fontType') fontType: string;
+  @Consume('isFirstLineIndent') isFirstLineIndent: boolean;
+  @Consume('letterSpacing') letterSpacing: number;
+  @Consume('currentPageIndex') currentPageIndex: number;
+  @Consume('currentChapterIndex') currentChapterIndex: number;
+  @Consume('chapterList') chapterList: ReaderChapterItem[];
+  @Consume('paragraphSpacing') paragraphSpacing: number;
   @Prop content: string = '';
+  @Prop lineContentList: string[] = [];
+  @Prop isCurrentPage: boolean = true;
 
   build() {
     Column() {
-      Text(this.content)
-        .textOverflow({ overflow: TextOverflow.Clip })
-        .align(Alignment.TopStart)
-        .font({
-          size: this.fontSize,
-        })
-        .fontColor($r('sys.color.black'))
-        .lineHeight(this.fontSize * this.lineHeightRatio)// todo:copyOption会跟外部的Click有冲突，本身会消费掉所有的click事件不留给外部，待解决
-          // .copyOption(CopyOptions.LocalDevice)
-          // .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
-          //   console.info(`文本选中区域变化回调, selectionStart: ${selectionStart}, selectionEnd: ${selectionEnd}`);
-          // })
-        .width("100%")
-        .layoutWeight(1)
-        .onSizeChange((oldSize, newSize) => {
-          if (typeof newSize.width === 'number' && typeof newSize.height === 'number') {
-            let width = vp2px(newSize.width as number)
-            let height = vp2px(newSize.height as number)
-            if (this.displaySize[0] !== width || this.displaySize[1] !== height) {
-              this.displaySize = [width, height];
-            }
+      Column() {
+        ForEach(this.lineContentList && this.lineContentList.length > 0 ? this.lineContentList : [this.content], (line: string) => {
+          if (line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
+            Image(line.trim().substring(5, line.trim().length - 1))
+              .objectFit(ImageFit.Contain)
+              .width('100%')
+              .height(180)
+              .margin({ top: 8, bottom: 8 })
+          } else if (line !== '' && line !== '\n') {
+            Text(line.endsWith('\n') ? line.slice(0, -1) : line)
+              .textOverflow({ overflow: TextOverflow.Clip })
+              .align(Alignment.TopStart)
+              .font({
+                size: this.fontSize,
+              })
+              .fontWeight(this.fontWeight)
+              .letterSpacing(this.letterSpacing)
+              .fontColor($r('sys.color.black'))
+              .lineHeight(this.fontSize * this.lineHeightRatio)
+              .width("100%")
+              .margin({ bottom: line.endsWith('\n') ? this.paragraphSpacing : 0 })
           }
-          console.info(`display size, width : ${vp2px(newSize.width as number)} , height : ${vp2px(newSize.height as number)}`)
         })
-
-      if (this.turnStyle !== FlipPageType.UP_DOWN_FLIP_PAGE) {
-        ReaderBottom()
       }
+      .alignItems(HorizontalAlign.Start)
+      .width("100%")
+      .layoutWeight(1)
+      .clip(true)
+      .onSizeChange((oldSize, newSize) => {
+        if (typeof newSize.width === 'number' && typeof newSize.height === 'number') {
+          let width = vp2px(newSize.width as number)
+          let height = vp2px(newSize.height as number)
+          if (this.displaySize[0] !== width || this.displaySize[1] !== height) {
+            this.displaySize = [width, height];
+          }
+        }
+        console.info(`display size, width : ${vp2px(newSize.width as number)} , height : ${vp2px(newSize.height as number)}`)
+      })
     }
     .backgroundColor(this.bgColor)
     .width(Constants.FULL_PERCENT)
@@ -52,8 +73,8 @@ export struct Reader {
     .padding({
       top: Constants.SCREEN_MARGIN_LEFT,
       bottom: Constants.SCREEN_MARGIN_LEFT,
-      left: Constants.SCREEN_MARGIN_LEFT,
-      right: Constants.SCREEN_MARGIN_LEFT,
+      left: this.readerPadding,
+      right: this.readerPadding,
     })
   }
 }
@@ -65,69 +86,58 @@ export struct ReaderForCurlView {
   @Consume('lineHeightRatio') lineHeightRatio: number;
   @Consume('turnStyle') turnStyle: FlipPageType;
   @Consume('displaySize') displaySize: number[];
-  @Consume('batteryPixelMap') batteryPixelMap: image.PixelMap | null;
+  @Consume('readerPadding') readerPadding: number;
+  @Consume('fontWeight') fontWeight: number;
+  @Consume('fontType') fontType: string;
+  @Consume('isFirstLineIndent') isFirstLineIndent: boolean;
+  @Consume('letterSpacing') letterSpacing: number;
+  @Consume('currentPageIndex') currentPageIndex: number;
+  @Consume('currentChapterIndex') currentChapterIndex: number;
+  @Consume('chapterList') chapterList: ReaderChapterItem[];
+  @Consume('paragraphSpacing') paragraphSpacing: number;
   @Prop content: string = '';
-  batteryContainerId: string = 'batteryContainerId';
-
-  @Builder
-  BottomBuilder() {
-    Row({ space: 4 }) {
-      TextClock({ timeZoneOffset: -8 })
-        .format('hh:mm')
-        .fontSize(12)
-        .fontWeight(400)
-      battery()
-    }.padding({
-      top: 16,
-    }).height(36)
-  }
-
-  getPixelMap() {
-    componentSnapshot.createFromBuilder(() => {
-      this.BottomBuilder()
-    })
-      .then((pixmap: image.PixelMap) => {
-        if (pixmap !== null) {
-          this.batteryPixelMap = pixmap
-        }
-      }).catch((err: Error) => {
-      console.log("error: " + err)
-    })
-  }
+  @Prop lineContentList: string[] = [];
 
   build() {
     Column() {
-      Text(this.content)
-        .textOverflow({ overflow: TextOverflow.Clip })
-        .align(Alignment.TopStart)
-        .font({
-          size: this.fontSize,
-        })
-        .fontColor($r('sys.color.black'))
-        .lineHeight(this.fontSize * this.lineHeightRatio)// todo:copyOption会跟外部的Click有冲突，本身会消费掉所有的click事件不留给外部，待解决
-          // .copyOption(CopyOptions.LocalDevice)
-          // .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
-          //   console.info(`文本选中区域变化回调, selectionStart: ${selectionStart}, selectionEnd: ${selectionEnd}`);
-          // })
-        .width("100%")
-        .layoutWeight(1)
-        .onSizeChange((oldSize, newSize) => {
-          if (typeof newSize.width === 'number' && typeof newSize.height === 'number') {
-            let width = vp2px(newSize.width as number)
-            let height = vp2px(newSize.height as number)
-            if (this.displaySize[0] !== width || this.displaySize[1] !== height) {
-              this.displaySize = [width, height];
-            }
-          }
-          console.info(`display size, width : ${vp2px(newSize.width as number)} , height : ${vp2px(newSize.height as number)}`)
-          if (this.batteryPixelMap === null) {
-            this.getPixelMap();
+      Column() {
+        ForEach(this.lineContentList && this.lineContentList.length > 0 ? this.lineContentList : [this.content], (line: string) => {
+          if (line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
+            Image(line.trim().substring(5, line.trim().length - 1))
+              .objectFit(ImageFit.Contain)
+              .width('100%')
+              .height(180)
+              .margin({ top: 8, bottom: 8 })
+          } else if (line !== '' && line !== '\n') {
+            Text(line.endsWith('\n') ? line.slice(0, -1) : line)
+              .textOverflow({ overflow: TextOverflow.Clip })
+              .align(Alignment.TopStart)
+              .font({
+                size: this.fontSize,
+              })
+              .fontWeight(this.fontWeight)
+              .letterSpacing(this.letterSpacing)
+              .fontColor($r('sys.color.black'))
+              .lineHeight(this.fontSize * this.lineHeightRatio)
+              .width("100%")
+              .margin({ bottom: line.endsWith('\n') ? this.paragraphSpacing : 0 })
           }
         })
-
-      if (this.turnStyle !== FlipPageType.UP_DOWN_FLIP_PAGE) {
-        ReaderBottom().id(this.batteryContainerId)
       }
+      .alignItems(HorizontalAlign.Start)
+      .width("100%")
+      .layoutWeight(1)
+      .clip(true)
+      .onSizeChange((oldSize, newSize) => {
+        if (typeof newSize.width === 'number' && typeof newSize.height === 'number') {
+          let width = vp2px(newSize.width as number)
+          let height = vp2px(newSize.height as number)
+          if (this.displaySize[0] !== width || this.displaySize[1] !== height) {
+            this.displaySize = [width, height];
+          }
+        }
+        console.info(`display size, width : ${vp2px(newSize.width as number)} , height : ${vp2px(newSize.height as number)}`)
+      })
     }
     .backgroundColor(this.bgColor)
     .width(Constants.FULL_PERCENT)
@@ -135,8 +145,8 @@ export struct ReaderForCurlView {
     .padding({
       top: Constants.SCREEN_MARGIN_LEFT,
       bottom: Constants.SCREEN_MARGIN_LEFT,
-      left: Constants.SCREEN_MARGIN_LEFT,
-      right: Constants.SCREEN_MARGIN_LEFT,
+      left: this.readerPadding,
+      right: this.readerPadding,
     })
   }
 }
@@ -145,6 +155,9 @@ export struct ReaderForCurlView {
 export struct ReaderBottom {
   private containerId = 'root'; // 组件NodeContainer的id
   @Consume('fontSize') fontSize: number;
+  @Consume('currentPageIndex') currentPageIndex: number;
+  @Consume('currentChapterIndex') currentChapterIndex: number;
+  @Consume('chapterList') chapterList: ReaderChapterItem[];
 
   build() {
     Row({ space: 4 }) {
@@ -158,9 +171,8 @@ export struct ReaderBottom {
       /// todo:电池状态监听与更新到SimulateDrawManager
       battery()
       Blank(0)
-      Text("1/14" + "\u3000" + "0.1%").font({
-        size: this.fontSize,
-      })
+      Text(`${this.currentPageIndex + 1}/${this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1}` + "\u3000" + `${(this.chapterList.length > 0 ? (this.currentChapterIndex + ((this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1) > 0 ? this.currentPageIndex / (this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1) : 0)) / this.chapterList.length * 100 : 0).toFixed(1)}%`)
+        .fontSize(12)
         .fontColor($r('sys.color.black'))
     }.padding({
       top: 16,
@@ -168,7 +180,6 @@ export struct ReaderBottom {
     .width("100%").height(36)
   }
 }
-
 
 export class SimulateDrawManager {
   currentDrawHelper: SimulationDrawHelper | null = null;
@@ -187,12 +198,14 @@ export class SimulateDrawManager {
   private currentChapterIndex: number;
   private currentPageIndex: number;
   private bgColor: string;
+  paragraphSpacing: number;
   batteryPixelMap: image.PixelMap | null = null;
   textDisplaySize: number[] = [0, 0];
   private isTurnNext: boolean | null = null;
+  public readerPadding: number = 24;
 
   constructor(context: DrawingRenderingContext, fontSize: number, lineHeight: number,
-    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string) {
+    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string, paragraphSpacing: number) {
     this.context = context;
     this.fontSize = fontSize;
     this.lineHeight = lineHeight;
@@ -200,6 +213,15 @@ export class SimulateDrawManager {
     this.currentChapterIndex = currentChapterIndex;
     this.currentPageIndex = currentPageIndex;
     this.bgColor = bgColor;
+    this.paragraphSpacing = paragraphSpacing;
+  }
+
+  setReaderPadding(padding: number) {
+    this.readerPadding = padding;
+  }
+
+  setCanvasSizeFromDimensions(width: number, height: number) {
+    this.canvasSize = new Size(width, height);
   }
 
   setCanvasSize(size: Size) {
@@ -244,7 +266,6 @@ export class SimulateDrawManager {
     if (this.canvasSize.equal(Size.zero())) {
       this.setCanvasSize(new Size(vp2px(this.context.size.width), vp2px(this.context.size.height)));
     }
-
   }
 
   /**
@@ -296,15 +317,14 @@ export class SimulateDrawManager {
           new SimulationCornerTurnDrawHelper(this, this.context, this.fontSize, this.lineHeight, this.chapterList,
             this.isTurnNext ? this.currentChapterIndex : prePageIndex![0],
             this.isTurnNext ? this.currentPageIndex : prePageIndex![1],
-            this.bgColor);
+            this.bgColor, this.paragraphSpacing);
       } else {
         this.currentDrawHelper =
           new SimulationPageTurnDrawHelper(this, this.context, this.fontSize, this.lineHeight, this.chapterList,
             this.isTurnNext ? this.currentChapterIndex : prePageIndex![0],
             this.isTurnNext ? this.currentPageIndex : prePageIndex![1],
-            this.bgColor);
+            this.bgColor, this.paragraphSpacing);
       }
-
     }
 
     this.currentDrawHelper?.onMove();
@@ -339,10 +359,11 @@ abstract class SimulationDrawHelper {
   protected currentChapterIndex: number;
   protected currentPageIndex: number;
   protected bgColor: string;
+  protected paragraphSpacing: number;
   protected context: DrawingRenderingContext;
 
   constructor(hostManager: SimulateDrawManager, context: DrawingRenderingContext, fontSize: number, lineHeight: number,
-    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string) {
+    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string, paragraphSpacing: number) {
     this.hostManager = hostManager;
     this.context = context;
     this.fontSize = fontSize;
@@ -351,6 +372,7 @@ abstract class SimulationDrawHelper {
     this.currentChapterIndex = currentChapterIndex;
     this.currentPageIndex = currentPageIndex;
     this.bgColor = bgColor;
+    this.paragraphSpacing = paragraphSpacing;
   }
 
   get canvasSize(): Size {
@@ -394,9 +416,6 @@ abstract class SimulationDrawHelper {
   }
 
   protected hexToRgb(hex: string): Array<number> | null {
-    // // 检查输入的十六进制颜色字符串是否有效
-    // const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-    // hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
     const hexRegex = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i;
     const result = hexRegex.exec(hex);
     if (result) {
@@ -415,7 +434,6 @@ abstract class SimulationDrawHelper {
     }
 
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-      // const canvas = context.canvas;
       canvas.drawColor(preColor)
       const brush = new drawing.Brush();
       brush.setColor({
@@ -425,50 +443,34 @@ abstract class SimulationDrawHelper {
         blue: 0
       });
       const font = new drawing.Font();
-
       font.setSize(fp2px(this.fontSize));
       canvas.attachBrush(brush);
       let fontMetrics = font.getMetrics();
-      // 36是lineHeight，20是字号
       let lineHeight = Math.round(fp2px(this.lineHeight))
+      // 文本绘制位置：水平用 readerPadding，垂直从顶部开始（与 ReaderForCurlView 一致）
+      let horizontalMargin = vp2px(this.hostManager.readerPadding)
       let startY =
         Math.round(lineHeight * (Math.abs(fontMetrics.ascent) / (fontMetrics.descent - fontMetrics.ascent))) +
         vp2px(Constants.SCREEN_MARGIN_LEFT)
 
       let currentY = startY;
 
-      // if(maskFilter!=null){
-      //   pen.setMaskFilter(maskFilter)
-      // }
       let currentPageLineList =
-        this.chapterList[this.currentChapterIndex].chapterPageList[this.currentPageIndex].lineContentList;
+        this.chapterList?.[this.currentChapterIndex]?.chapterPageList?.[this.currentPageIndex]?.lineContentList || [];
+      let accumulatedY = startY;
       for (let index = 0; index < currentPageLineList.length; index++) {
+        let line = currentPageLineList[index];
+        let drawLine = line.endsWith('\n') ? line.slice(0, -1) : line;
         const textBlob =
-          drawing.TextBlob.makeFromString(currentPageLineList[index],
+          drawing.TextBlob.makeFromString(drawLine,
             font, drawing.TextEncoding.TEXT_ENCODING_UTF8);
-        currentY = startY + (lineHeight * index)
-        canvas.drawTextBlob(textBlob, vp2px(Constants.SCREEN_MARGIN_LEFT), currentY);
+        canvas.drawTextBlob(textBlob, horizontalMargin, accumulatedY);
+        accumulatedY += lineHeight;
+        if (line.endsWith('\n')) {
+          accumulatedY += vp2px(this.paragraphSpacing);
+        }
       }
-
-      canvas.drawImage(this.hostManager.batteryPixelMap,
-        vp2px(Constants.SCREEN_MARGIN_LEFT), this.hostManager.textDisplaySize[1] + vp2px(Constants.SCREEN_MARGIN_LEFT))
-
-      const pageTip = "1/14" + "\u3000" + "0.1%";
-      const textBlob =
-        drawing.TextBlob.makeFromString(pageTip,
-          font, drawing.TextEncoding.TEXT_ENCODING_UTF8);
-      let tipWidth = MeasureText.measureText({
-        textContent: pageTip,
-        fontSize: this.fontSize,
-        lineHeight: lineHeight
-      }
-      );
-      canvas.drawTextBlob(textBlob,
-        this.hostManager.textDisplaySize[0] + vp2px(Constants.SCREEN_MARGIN_LEFT) - tipWidth,
-        this.hostManager.textDisplaySize[1] + vp2px(Constants.SCREEN_MARGIN_LEFT) + vp2px(16) + vp2px(36 / 2));
       canvas.detachBrush();
-
-
     }
   }
 
@@ -482,7 +484,6 @@ abstract class SimulationDrawHelper {
     }
 
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-      // const canvas = context.canvas;
       canvas.drawColor(preColor)
       const brush = new drawing.Brush();
       brush.setColor({
@@ -492,59 +493,43 @@ abstract class SimulationDrawHelper {
         blue: 0
       });
       const font = new drawing.Font();
-
       font.setSize(fp2px(this.fontSize));
       canvas.attachBrush(brush);
       let fontMetrics = font.getMetrics();
-      // 36是lineHeight，20是字号
       let lineHeight = Math.round(fp2px(this.lineHeight))
+      let horizontalMargin = vp2px(this.hostManager.readerPadding)
       let startY =
         Math.round(lineHeight * (Math.abs(fontMetrics.ascent) / (fontMetrics.descent - fontMetrics.ascent))) +
         vp2px(Constants.SCREEN_MARGIN_LEFT)
 
       let currentY = startY;
 
-      // let nextPageIndex =
-      //   NovelChapterOperateHelper.nextPageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
-      //
-      // if (nextPageIndex == null) {
-      //   return
-      // }
-      //
-      // let currentPageLineList =
-      //   this.chapterList[nextPageIndex[0]].chapterPageList[nextPageIndex[1]].lineContentList;
+      // 安全获取下一页索引，避免越界
+      let nextPageIndex = this.currentPageIndex + 1;
+      let nextPageLineList: string[] = [];
+      if (nextPageIndex < (this.chapterList?.[this.currentChapterIndex]?.chapterPageList?.length ?? 0)) {
+        nextPageLineList = this.chapterList?.[this.currentChapterIndex]?.chapterPageList?.[nextPageIndex]?.lineContentList || [];
+      } else if (this.currentChapterIndex + 1 < (this.chapterList?.length ?? 0)) {
+        nextPageLineList = this.chapterList?.[this.currentChapterIndex + 1]?.chapterPageList?.[0]?.lineContentList || [];
+      }
 
-      let currentPageLineList =
-        this.chapterList[this.currentChapterIndex].chapterPageList[this.currentPageIndex+1].lineContentList;
-      for (let index = 0; index < currentPageLineList.length; index++) {
+      let accumulatedY = startY;
+      for (let index = 0; index < nextPageLineList.length; index++) {
+        let line = nextPageLineList[index];
+        let drawLine = line.endsWith('\n') ? line.slice(0, -1) : line;
         const textBlob =
-          drawing.TextBlob.makeFromString(currentPageLineList[index],
+          drawing.TextBlob.makeFromString(drawLine,
             font, drawing.TextEncoding.TEXT_ENCODING_UTF8);
-        currentY = startY + (lineHeight * index)
-        canvas.drawTextBlob(textBlob, vp2px(Constants.SCREEN_MARGIN_LEFT), currentY);
+        canvas.drawTextBlob(textBlob, horizontalMargin, accumulatedY);
+        accumulatedY += lineHeight;
+        if (line.endsWith('\n')) {
+          accumulatedY += vp2px(this.paragraphSpacing);
+        }
       }
-
-      canvas.drawImage(this.hostManager.batteryPixelMap,
-        vp2px(Constants.SCREEN_MARGIN_LEFT), this.hostManager.textDisplaySize[1] + vp2px(Constants.SCREEN_MARGIN_LEFT))
-
-      const pageTip = "1/14" + "\u3000" + "0.1%";
-      const textBlob =
-        drawing.TextBlob.makeFromString(pageTip,
-          font, drawing.TextEncoding.TEXT_ENCODING_UTF8);
-      let tipWidth = MeasureText.measureText({
-        textContent: pageTip,
-        fontSize: this.fontSize,
-        lineHeight: lineHeight
-      }
-      );
-      canvas.drawTextBlob(textBlob,
-        this.hostManager.textDisplaySize[0] + vp2px(Constants.SCREEN_MARGIN_LEFT) - tipWidth,
-        this.hostManager.textDisplaySize[1] + vp2px(Constants.SCREEN_MARGIN_LEFT) + vp2px(16) + vp2px(36 / 2));
       canvas.detachBrush();
-
-
     }
   }
+
 }
 
 // 从角落开始的仿真翻页
@@ -739,7 +724,6 @@ class SimulationCornerTurnDrawHelper extends SimulationDrawHelper {
   }
 
   applyAnimationProgressToTouch(process: number): void {
-
     let isRecover = process <= 0
 
     this.touch.x = Math.min((this.lastTouchOffset?.x ?? 0) +
@@ -755,8 +739,6 @@ class SimulationCornerTurnDrawHelper extends SimulationDrawHelper {
 
   draw(canvas: drawing.Canvas): void {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-
-      let startTime = Date.now();
       try {
         this.calPath();
         let color: common2D.Color = {
@@ -766,23 +748,17 @@ class SimulationCornerTurnDrawHelper extends SimulationDrawHelper {
           blue: 0
         }
         canvas.drawColor(color, drawing.BlendMode.CLEAR);
-        console.info('draw called')
         this.drawCurrentPageArea(canvas);
         this.drawNextPageArea(canvas);
         this.drawCurrentTurningPage(canvas)
 
-        let endTime = Date.now();
-
+        // 页面边缘阴影
         let shadowBrush = new drawing.Brush();
-        let maskFilter = drawing.MaskFilter.createBlurMaskFilter(drawing.BlurType.OUTER, 50);
-
+        let maskFilter = drawing.MaskFilter.createBlurMaskFilter(drawing.BlurType.OUTER, 40);
         shadowBrush.setMaskFilter(maskFilter)
         canvas.attachBrush(shadowBrush)
         canvas.drawPath(this.nextPagePath);
         canvas.detachBrush()
-
-        console.log(`绘制耗时：${endTime - startTime}`)
-
       } catch (e) {
         console.error(`绘制出错：${e}`)
       }
@@ -795,19 +771,16 @@ class SimulationCornerTurnDrawHelper extends SimulationDrawHelper {
 
   private drawNextPageArea(canvas: drawing.Canvas): void {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-
       canvas.save()
       canvas.clipPath(this.nextPagePath, drawing.ClipOp.INTERSECT, true)
       this.drawNextPage(canvas)
       this.drawNextPageShadow(canvas)
       canvas.restore()
     }
-
   }
 
   private drawNextPageShadow(canvas: drawing.Canvas) {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-
       let k1 = (this.bezierVertex1.y - this.bezierVertex2.y) / (this.bezierVertex1.x - this.bezierVertex2.x);
       let b1 = this.bezierVertex1.y - this.bezierVertex1.x * k1;
 
@@ -837,9 +810,6 @@ class SimulationCornerTurnDrawHelper extends SimulationDrawHelper {
       canvas.clipPath(backAreaPath, drawing.ClipOp.INTERSECT)
       canvas.save();
 
-      let angle =
-        2 * (Math.PI / 2 - Math.atan2(this.cornerY - this.touchOffset.dy, this.cornerX - this.touchOffset.dx));
-
       let bgColorRGB = this.hexToRgb(this.bgColor);
       let preColor: common2D.Color = {
         alpha: 255,
@@ -848,57 +818,56 @@ class SimulationCornerTurnDrawHelper extends SimulationDrawHelper {
         blue: (bgColorRGB?.[2] ?? 0)
       }
 
-      /// todo: 性能差，待优化，先就放个背景色
-      // if (this.cornerY === 0) {
-      //   canvas.translate(this.canvasSize.width, 0)
-      //   canvas.scale(-1.0, 1.0)
-      //   canvas.translate(-this.touchOffset.x, this.touchOffset.y)
-      //   canvas.rotate(180 * ((angle) / Math.PI) - 180, this.cornerX, this.cornerY)
-      //   this.drawCurrentPage(canvas,)
-      // } else {
-      //   canvas.translate(0, this.canvasSize.height,)
-      //   canvas.scale(1.0, -1.0)
-      //   canvas.translate(this.touchOffset.x - this.canvasSize.width, -this.touchOffset.y)
-      //   canvas.rotate(angle / Math.PI * 180, this.canvasSize.width, this.canvasSize.height,)
-      //   this.drawCurrentPage(canvas,)
-      // }
-
-
-      canvas.drawColor(preColor)
+      // 绘制翻起页背面（略暗的背景色）
+      canvas.drawColor({
+        alpha: 255,
+        red: Math.max(0, (bgColorRGB?.[0] ?? 255) - 20),
+        green: Math.max(0, (bgColorRGB?.[1] ?? 255) - 20),
+        blue: Math.max(0, (bgColorRGB?.[2] ?? 255) - 20)
+      })
       canvas.restore();
 
-      // const backMaskFilter = drawing.MaskFilter.createBlurMaskFilter(drawing.BlurType.INNER, 50);
+      // 半透明白色蒙版 — 模拟纸张背面
       const maskBrush = new drawing.Brush();
-      // maskBrush.setMaskFilter(backMaskFilter)
       maskBrush.setColor({
-        alpha: 125,
+        alpha: 40,
         red: 255,
         green: 255,
         blue: 255
       });
-
       canvas.attachBrush(maskBrush);
       canvas.drawPath(backAreaPath);
       canvas.detachBrush();
 
-      const pen = new drawing.Pen();
-      pen.setStrokeWidth(150);
-      pen.setColor({
-        alpha: 255,
-        red: 0,
-        green: 0,
-        blue: 0
-      });
-      let maskFilter = drawing.MaskFilter.createBlurMaskFilter(drawing.BlurType.NORMAL, 70);
-      pen.setMaskFilter(maskFilter);
-      canvas.attachPen(pen);
+      // 折痕阴影 — 多层渐变效果
+      let shadowDistance = Math.sqrt(
+        Math.pow(this.touchOffset.x - this.bezierVertex1.x, 2) +
+        Math.pow(this.touchOffset.y - this.bezierVertex1.y, 2)
+      );
+      let shadowWidth = Math.min(shadowDistance * 0.15, 80);
+
+      // 外层柔阴影
+      let outerFilter = drawing.MaskFilter.createBlurMaskFilter(drawing.BlurType.NORMAL, shadowWidth);
+      const outerPen = new drawing.Pen();
+      outerPen.setStrokeWidth(shadowWidth * 0.6);
+      outerPen.setColor({ alpha: 60, red: 0, green: 0, blue: 0 });
+      outerPen.setMaskFilter(outerFilter);
+      canvas.attachPen(outerPen);
       canvas.drawLine(this.bezierVertex1.x, this.bezierVertex1.y, this.bezierVertex2.x, this.bezierVertex2.y);
       canvas.detachPen();
 
+      // 内层硬阴影（折痕线）
+      let innerFilter = drawing.MaskFilter.createBlurMaskFilter(drawing.BlurType.NORMAL, shadowWidth * 0.3);
+      const innerPen = new drawing.Pen();
+      innerPen.setStrokeWidth(shadowWidth * 0.25);
+      innerPen.setColor({ alpha: 100, red: 0, green: 0, blue: 0 });
+      innerPen.setMaskFilter(innerFilter);
+      canvas.attachPen(innerPen);
+      canvas.drawLine(this.bezierVertex1.x, this.bezierVertex1.y, this.bezierVertex2.x, this.bezierVertex2.y);
+      canvas.detachPen();
 
       canvas.restore()
     }
-
   }
 }
 
@@ -925,7 +894,6 @@ class SimulationPageTurnDrawHelper extends SimulationDrawHelper {
 
   draw(canvas: drawing.Canvas): void {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-
       this.calPath();
       let color: common2D.Color = {
         alpha: 255,
@@ -953,7 +921,6 @@ class SimulationPageTurnDrawHelper extends SimulationDrawHelper {
 
   private drawCurrentTurningPageShadow(canvas: drawing.Canvas): void {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-
       let splitLineX = (this.canvasSize.width - this.touch.dx) / 2 + this.touch.dx;
       let shadowWidth = 70
       let maskFilter = drawing.MaskFilter.createBlurMaskFilter(drawing.BlurType.NORMAL, 70);
@@ -974,7 +941,6 @@ class SimulationPageTurnDrawHelper extends SimulationDrawHelper {
 
   private drawCurrentPageShadow(canvas: drawing.Canvas): void {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-
       let shadowWidth = (this.canvasSize.width - this.touch.dx) / 4
       if (shadowWidth <= 0) {
         return
@@ -997,7 +963,6 @@ class SimulationPageTurnDrawHelper extends SimulationDrawHelper {
 
   private drawNextPageShadow(canvas: drawing.Canvas): void {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
-
       let splitLineX = (this.canvasSize.width - this.touch.dx) / 2 + this.touch.dx;
 
       let shadowWidth = (Math.max(0, Math.min(this.canvasSize.width - splitLineX, splitLineX))) / 2
@@ -1020,14 +985,6 @@ class SimulationPageTurnDrawHelper extends SimulationDrawHelper {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
       canvas.save()
       canvas.clipPath(this.turningPagePath, drawing.ClipOp.INTERSECT)
-      // let bgColorRGB = this.hexToRgb(this.bgColor);
-      // let bgColor: common2D.Color = {
-      //   alpha: 255,
-      //   red: (bgColorRGB?.[0] ?? 0),
-      //   green: (bgColorRGB?.[1] ?? 0),
-      //   blue: (bgColorRGB?.[2] ?? 0)
-      // }
-      // canvas.drawColor(bgColor)
       canvas.save();
 
       canvas.translate(this.canvasSize.width, 0)
@@ -1055,7 +1012,6 @@ class SimulationPageTurnDrawHelper extends SimulationDrawHelper {
   }
 
   onMove(): void {
-
   }
 
   applyAnimationProgressToTouch(process: number): void {
@@ -1136,7 +1092,7 @@ class Offset {
   }
 }
 
-class Size {
+export class Size {
   width: number;
   height: number;
 
@@ -1145,7 +1101,6 @@ class Size {
     this.height = height;
   }
 
-  // 定义一个静态属性来表示 Offset.zero
   static zero(): Size {
     return new Size(0, 0);
   }
