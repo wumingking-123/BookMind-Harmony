@@ -108,7 +108,6 @@ export default struct DownloadSettingDialog {
           .height(44)
           .layoutWeight(1)
           .onClick(() => {
-            this.startDownload()
             this.isShowDownload = false
           })
 

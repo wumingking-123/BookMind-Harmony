@@ -8,7 +8,8 @@ import FlipModeDialog from '../../../componets/Reader/FlipModeDialog';
 import { MusicPlayer } from 'ets/componets/Reader/MusicPlayer';
 import { AudioPlayer } from 'ets/componets/Reader/AudioPlayer';
 import purificationView from './purificationView';
-import { chaptersItem } from 'ets/componets/dataList/ReaderChaptersItem';
+import { Books } from '../../../database/entities/Books';
+import { BookContentHolder } from '../../../common/utils/BookContentHolder';
 import { InkPalette, InkSpacing, InkRadius, InkShadow, InkMotion, InkTypography } from '../../../common/constants/DesignTokens';
 import { CoverFlipView, } from '@ohos/readerLibrary';
 import {
@@ -25,17 +26,13 @@ import {
   ReaderChapterItem,
 } from '@ohos/readerLibrary/src/main/ets/common/entity/ReaderChaptersItem';
 import { ReaderProvider } from '@ohos/readerLibrary/src/main/ets/provider/configProvider';
-import bookHistoryUtils from '../../../common/utils/BookHistoryUtils';
 import bookMarkUtils from '../../../common/utils/BookMarkUtils';
-import { Books } from '../../../database/entities/Books';
-import { BookHistory } from '../../../database/entities/BookHistory';
 import { BookMark } from '../../../database/entities/BookMark';
 
 
 interface ParamsObj {
   bookData: Books,
-  clickBookChapter: number,
-  txtFile: chaptersItem[]
+  clickBookChapter: number
 }
 
 @Entry
@@ -44,63 +41,24 @@ struct ReaderPage2 {
   @State bookData: Books | undefined = undefined
   currentChapters: number = 0
   chapterList: ReaderChapterItem[] = [];
-  bookData: Books = {} as Books
-  bookChapterTitle: string = ''
-  fontWeight: number = 400
-
   async aboutToAppear() {
     let temp = router.getParams() as ParamsObj
-    console.log(‘router ReaderPage2:’ + temp.bookData.bookUrl)
     this.bookData = temp.bookData
-    this.chapterList = temp.txtFile.map((value) => {
+    console.log(‘router ReaderPage2:’ + (this.bookData?.bookUrl || ‘’))
+
+    // 从 BookContentHolder 获取章节数据 (避免通过 router 传递大量数据)
+    let rawFile = BookContentHolder.getChapters();
+    if (!rawFile || rawFile.length === 0) {
+      console.error(‘BookContentHolder is empty, no chapters to display’);
+      return;
+    }
+    this.chapterList = rawFile.map((value) => {
       return new ReaderChapterItem(value.number, value.title, value.chapterTitleNumber, value.content);
     })
 
-    if (this.chapterList.length != 0) {
-      this.chapterList[0].paragraphList = this.chapterList[0].content.split(‘\n’).map((value) => value + ‘\n’);
-    }
-
-    if (this.chapterList.length >= 2) {
-      for (let index = 1; index < this.chapterList.length; index++) {
-        this.chapterList[index].paragraphList = this.chapterList[index].content.split(‘\n’).map((value) => value + ‘\n’);
-      }
-    }
     this.currentChapters = temp.clickBookChapter
-    this.bookChapterTitle = this.chapterList[this.currentChapters]?.title ?? ‘’
-
-    // 初始化AppStorage用于跨组件传递阅读进度
-    AppStorage.setOrCreate(‘readerCurrentChapterIndex’, this.currentChapters)
-    AppStorage.setOrCreate(‘readerCurrentPageIndex’, 0)
-    AppStorage.setOrCreate(‘readerBookData’, this.bookData)
 
     this.changeSystemBarStatue();
-  }
-
-  saveReadingProgress(chapterIndex: number, pageIndex: number) {
-    if (!this.bookData || !this.bookData.id) {
-      return
-    }
-    let chapterTitle = this.chapterList[chapterIndex]?.title ?? ‘’
-    let bookHistory = new BookHistory()
-    bookHistory.id = this.bookData.id
-    bookHistory.bookName = this.bookData.bookName
-    bookHistory.author = this.bookData.author
-    bookHistory.durChapterTime = Date.now()
-    bookHistory.bookType = this.bookData.bookType
-    bookHistory.bookUrl = this.bookData.bookUrl ?? ‘’
-    bookHistory.coverUrl = this.bookData.coverUrl ?? ‘’
-    bookHistory.originBookId = this.bookData.id
-    bookHistory.durChapterTitle = `${this.chapterList[chapterIndex]?.chapterTitleNumber ?? ‘’} ${chapterTitle}`
-    bookHistory.durChapterIndex = chapterIndex
-    bookHistoryUtils.addBooks(bookHistory)
-    console.info(`阅读进度已保存: 章节${chapterIndex}, 页码${pageIndex}`)
-  }
-
-  onBackPress() {
-    let chapterIndex = AppStorage.get<number>(‘readerCurrentChapterIndex’) ?? this.currentChapters
-    let pageIndex = AppStorage.get<number>(‘readerCurrentPageIndex’) ?? 0
-    this.saveReadingProgress(chapterIndex, pageIndex)
-    return false
   }
 
 
@@ -160,8 +118,7 @@ struct ReaderPage2 {
         ReaderProvider({
           chapterList: this.chapterList,
           currentChapterIndex: this.currentChapters,
-          child: this.contentBuilder,
-          fontWeight: this.fontWeight
+          child: this.contentBuilder
         })
       }
       .height('100%')
@@ -206,13 +163,9 @@ struct ReaderPageContent {
   @State isShowBookMarkList: boolean = false
   @State isCurrentBookMarked: boolean = false
   @State bookMarkList: BookMark[] = []
-  @State isSystemLight: boolean = false
   @State screenH: number = 0
   @State screenW: number = 0
   @State readerPadding: number = 24 // 边距
-  @Consume('fontWeight') fontWeight: number
-  @State isIndent: boolean = true // 首行缩进
-  @State isSimplified: boolean = true // 简体/繁体
   @State followSystemBrightness: boolean = true
   @State isNightMode: boolean = false
   private autoReadTimer: number = -1
@@ -223,31 +176,10 @@ struct ReaderPageContent {
   @Consume('turnStyle') turnStyle: FlipPageType
   @Consume('currentPageIndex') @Watch('onFlush') currentPageIndex: number
   @Consume('paragraphSpacing') paragraphSpacing: number
-  @Consume('currentChapterIndex') @Watch('onChapterChanged') currentChapterIndex: number
+  @Consume('currentChapterIndex') currentChapterIndex: number
   @Consume('currentLuminance') currentLuminance: number
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
-
-  saveProgressAndBack() {
-    let bookData = AppStorage.get<Books>('readerBookData')
-    if (bookData && bookData.id) {
-      let chapterIndex = this.currentChapterIndex
-      let ch = this.chapterList[chapterIndex]
-      let bookHistory = new BookHistory()
-      bookHistory.id = bookData.id
-      bookHistory.bookName = bookData.bookName
-      bookHistory.author = bookData.author
-      bookHistory.durChapterTime = Date.now()
-      bookHistory.bookType = bookData.bookType
-      bookHistory.bookUrl = bookData.bookUrl ?? ''
-      bookHistory.coverUrl = bookData.coverUrl ?? ''
-      bookHistory.originBookId = bookData.id
-      bookHistory.durChapterTitle = `${ch?.chapterTitleNumber ?? ''} ${ch?.title ?? ''}`
-      bookHistory.durChapterIndex = chapterIndex
-      bookHistoryUtils.addBooks(bookHistory)
-    }
-    router.back()
-  }
 
   aboutToAppear(): void {
     this.screenW = px2vp(display.getDefaultDisplaySync().width);
@@ -323,28 +255,6 @@ struct ReaderPageContent {
     await bookMarkUtils.deleteBookMark(mark.time)
     this.loadBookMarkList()
     this.checkCurrentBookMark()
-  }
-
-  // 亮度控制
-  onLuminanceChanged(value: number) {
-    this.currentLuminance = value
-    this.isSystemLight = false
-    window.getLastWindow(getContext(this), (err, data) => {
-      if (err.code) return
-      data.setWindowBrightness(value / 100)
-    })
-  }
-
-  onSystemLightToggle(isOn: boolean) {
-    this.isSystemLight = isOn
-    window.getLastWindow(getContext(this), (err, data) => {
-      if (err.code) return
-      if (isOn) {
-        data.setWindowBrightness(-1)
-      } else {
-        data.setWindowBrightness(this.currentLuminance / 100)
-      }
-    })
   }
 
   get totalChapter(): number {
@@ -498,7 +408,7 @@ struct ReaderPageContent {
                 .height(24)
                 .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
                 .onClick(() => {
-                  this.saveProgressAndBack()
+                  router.back()
                 })
               
               Column() {
@@ -734,7 +644,8 @@ struct ReaderPageContent {
                     .layoutWeight(1)
                     .enabled(!this.followSystemBrightness)
                     .onChange((value) => {
-                      this.onLuminanceChanged(value)
+                      this.currentLuminance = value
+                      this.setBrightness(value)
                     })
 
                   Image($r('app.media.brightness_high'))
@@ -1052,7 +963,7 @@ struct ReaderPageContent {
                 this.isShowContentSetting = true
               })
             }
-            .columnsTemplate("1fr 1fr 1fr 1fr 1fr")
+            .columnsTemplate("1fr 1fr 1fr 1fr 1fr 1fr")
             .width("100%")
             .height(56)
             .padding({ bottom: this.bottomRectHeight })
@@ -1123,15 +1034,10 @@ struct ReaderPageContent {
 
   onFlush() {
     console.info('currentPageNum=' + this.currentPageIndex + ', isFontChanged=' + this.isFontChanged);
-    AppStorage.set('readerCurrentPageIndex', this.currentPageIndex)
     if (this.isFontChanged && this.currentPageIndex === 0) {
       this.isFontChanged = false;
       this.currentPageIndex = 0;
     }
-  }
-
-  onChapterChanged() {
-    AppStorage.set('readerCurrentChapterIndex', this.currentChapterIndex)
   }
 
   @Builder
