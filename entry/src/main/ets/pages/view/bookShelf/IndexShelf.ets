@@ -20,9 +20,9 @@ export default struct IndexShelf {
   @State bookTypeNumber: number = 2
   @State EXHIBIT: string = '列表'
   @State @Watch('changeGroup') GROUP: string = '标签'
-  @State isShowImport: boolean = false
-  @State isShowCloudImport: boolean = false
-  @State isShowImportBookList: boolean = false
+  @State isShowSheet: boolean = false
+  @State sheetType: string = ''
+  @State sheetHeight: number | SheetSize = 240
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @StorageProp('APP_INDEX_SCROLLABLE') APP_INDEX_SCROLLABLE: boolean = false
   @StorageLink('BOOK_IS_BOOK_REFRESHING') isBookRefreshing: number = 0
@@ -71,13 +71,19 @@ export default struct IndexShelf {
     .onClick(async () => {
       switch (index) {
         case 0:
-          let FileResult = await FileHandler.documentPickerFile(1, ['.txt', '.epub'])
-          FileHandler.CopyFile(FileResult[0], this.currentIndex)
-          this.isShowImport = false
+          let FileResult = await FileHandler.documentPickerFile(1, [
+            '.txt', '.epub', '.pdf', '.mobi', '.azw', '.azw3', '.chm',
+            '.cbz', '.cbr', '.cb7',
+            '.m4b', '.mp3', '.wav', '.flac', '.m4a', '.ogg', '.opus'
+          ])
+          if (FileResult && FileResult.length > 0) {
+            FileHandler.CopyFile(FileResult[0], this.currentIndex)
+          }
+          this.closeSheet()
           setTimeout(() => { this.isBookRefreshing++ }, 500)
           break
         case 1:
-          this.isShowCloudImport = true
+          this.openSheet('cloud', 240)
           break
         case 2:
           this.dialogController.open()
@@ -126,7 +132,7 @@ export default struct IndexShelf {
         .width('100%')
         .textAlign(TextAlign.Center)
         .padding({ top: InkSpacing.LG, bottom: InkSpacing.LG })
-        .onClick(() => { this.isShowImport = false })
+        .onClick(() => { this.closeSheet() })
     }
     .backgroundColor(InkPalette.PAPER)
     .borderRadius({ topLeft: InkRadius.SHEET, topRight: InkRadius.SHEET })
@@ -179,7 +185,7 @@ export default struct IndexShelf {
         .width('100%')
         .textAlign(TextAlign.Center)
         .height(InkLayout.MIN_TOUCH_TARGET)
-        .onClick(() => { this.isShowCloudImport = false })
+        .onClick(() => { this.closeSheet() })
     }
     .padding({ left: InkSpacing.XL, right: InkSpacing.XL })
     .backgroundColor(InkPalette.PAPER)
@@ -211,7 +217,7 @@ export default struct IndexShelf {
         .width('100%')
         .textAlign(TextAlign.Center)
         .padding({ top: InkSpacing.LG, bottom: InkSpacing.LG })
-        .onClick(() => { this.isShowImportBookList = false })
+        .onClick(() => { this.closeSheet() })
     }
     .backgroundColor(InkPalette.PAPER)
     .borderRadius({ topLeft: InkRadius.SHEET, topRight: InkRadius.SHEET })
@@ -281,7 +287,7 @@ export default struct IndexShelf {
             {
               icon: $r('app.media.import_svg'),
               value: '书籍导入',
-              action: () => { this.isShowImport = true }
+              action: () => { this.openSheet('import', SheetSize.MEDIUM) }
             },
             {
               icon: $r('app.media.down_svg'),
@@ -291,7 +297,7 @@ export default struct IndexShelf {
             {
               icon: $r('app.media.import_book_svg'),
               value: '导入书单',
-              action: () => { this.isShowImportBookList = true }
+              action: () => { this.openSheet('booklist', 240) }
             },
             {
               icon: $r('app.media.batch_svg'),
@@ -347,24 +353,34 @@ export default struct IndexShelf {
       direction: GradientDirection.Bottom,
       colors: [[this.theme.mainColor, 0], [this.theme.secondColor, 0.15]]
     })
-    .bindSheet($$this.isShowImport, this.ImportDialog(), {
-      detents: [SheetSize.MEDIUM, SheetSize.LARGE],
+    .bindSheet($$this.isShowSheet, this.unifiedSheetBuilder(), {
+      height: this.sheetHeight,
       showClose: false,
       dragBar: false,
-      backgroundColor: InkPalette.PAPER
+      backgroundColor: InkPalette.PAPER,
+      preferType: SheetType.BOTTOM
     })
-    .bindSheet($$this.isShowCloudImport, this.CloudImportDialog(), {
-      height: 240,
-      showClose: false,
-      dragBar: false,
-      backgroundColor: InkPalette.PAPER
-    })
-    .bindSheet($$this.isShowImportBookList, this.ImportBookListDialog(), {
-      height: 240,
-      showClose: false,
-      dragBar: false,
-      backgroundColor: InkPalette.PAPER
-    })
+  }
+
+  private openSheet(type: string, height: number | SheetSize): void {
+    this.sheetType = type
+    this.sheetHeight = height
+    this.isShowSheet = true
+  }
+
+  private closeSheet(): void {
+    this.isShowSheet = false
+  }
+
+  @Builder
+  unifiedSheetBuilder() {
+    if (this.sheetType === 'import') {
+      this.ImportDialog()
+    } else if (this.sheetType === 'cloud') {
+      this.CloudImportDialog()
+    } else if (this.sheetType === 'booklist') {
+      this.ImportBookListDialog()
+    }
   }
 
   async pasteBookImport() {

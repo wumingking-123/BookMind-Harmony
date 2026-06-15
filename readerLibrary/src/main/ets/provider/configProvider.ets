@@ -66,9 +66,19 @@ struct ReaderSourceProvider {
 
   private calContentOfTargetChapter(width: number, height: number, chapterIndex: number, fontSize: number,
     lineHeightRatio: number, forceUpdate: boolean) {
+    if (!this.chapterList || !this.chapterList[chapterIndex]) {
+      return
+    }
     if (!forceUpdate) {
       if (this.chapterList[chapterIndex].chapterPageList.length !== 0) {
         return
+      }
+    }
+    if (!this.chapterList[chapterIndex].paragraphList || this.chapterList[chapterIndex].paragraphList.length === 0) {
+      if (this.chapterList[chapterIndex].content) {
+        this.chapterList[chapterIndex].paragraphList = this.chapterList[chapterIndex].content.split('\n').map((value: string) => value + '\n')
+      } else {
+        this.chapterList[chapterIndex].paragraphList = []
       }
     }
     taskPool.execute(calChapterContent, width, height, this.chapterList[chapterIndex].paragraphList, fontSize,

@@ -1,6 +1,11 @@
 import bookHistoryDao from '../../../../database/dao/BookHistoryDao'
 import { BookHistory } from '../../../../database/entities/BookHistory'
 import BookHistoryInfo from './BookHistoryInfo'
+import { ThemeStorageKey } from '../../../../common/constants/Theme'
+import { ThemeItem } from '../../../../common/model/Theme'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius
+} from '../../../../common/constants/DesignTokens'
 
 @Component
 export default struct BookHistoryContent {
@@ -26,17 +31,35 @@ export default struct BookHistoryContent {
     })
   }
 
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
   build() {
     if (this.bookHistory.length === 0){
-      Column() {
-        Image($r('app.media.no_record')).width(200).height(200)
+      Column({ space: InkSpacing.LG }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Row()
+            .width(100)
+            .height(100)
+            .borderRadius(InkRadius.FULL)
+            .backgroundColor(this.theme.secondColor)
+          Image($r('app.media.icon_no_source_find'))
+            .width(64)
+            .height(64)
+            .opacity(0.7)
+        }
+        .width(100)
+        .height(100)
+
         Text('暂无浏览记录')
-          .fontSize(12)
-          .fontColor('rgba(96, 96, 96, 0.6)')
-          .fontWeight(500)
-          .padding(5)
+          .fontSize(InkTypography.BODY)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK_LIGHT)
+
+        Text('去书架看看有什么好书吧')
+          .fontSize(InkTypography.CAPTION)
+          .fontColor(InkPalette.INK_MIST)
       }
-      .margin({ top: 120 })
+      .margin({ top: 80 })
     } else {
       Column(
         {space:10}

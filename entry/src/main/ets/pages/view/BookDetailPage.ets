@@ -5,6 +5,7 @@ import { router, SwipeRefresher } from '@kit.ArkUI'
 import NoteIndex from '../../componets/bookDetail/note/NoteIndex'
 import { chaptersItem } from '../../componets/dataList/ReaderChaptersItem'
 import { FileHandler } from '../../common/utils/FileHandler'
+import { BookContentHolder } from '../../common/utils/BookContentHolder'
 import ChaptersDataSource from '../../common/LazyIDataSource/ChaptersDataSource'
 import { Books } from '../../database/entities/Books'
 import { BookHistory } from '../../database/entities/BookHistory'
@@ -179,14 +180,15 @@ struct BookDetailPage {
                     .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
                   }
                   .onClick(() => {
+                    // Cache chapter list to avoid serialization overhead
+                    BookContentHolder.setChapters(this.txtFiles);
                     // 跳转到阅读器
                     router.pushUrl({
                       url: 'pages/view/Reader/ReaderPage2',
                       // 跳转到对应的章节，传index过去
                       params: {
                         bookData: this.bookData,
-                        clickBookChapter: index,
-                        txtFile: this.txtFiles
+                        clickBookChapter: index
                       }
                     })
                     if (this.txtFiles && this.txtFile.getListData()[index]) {
@@ -241,28 +243,32 @@ struct BookDetailPage {
             !this.bookData.isJoin ? this.addBookShelf() : ''
           })
 
-        Button('立即阅读')
+        Button(this.bookData.bookType === 2 ? '开始播放' : '立即阅读')
           .fontSize(InkTypography.BODY)
           .fontWeight(FontWeight.Medium)
           .width(140)
           .height(48)
           .borderRadius(InkRadius.BUTTON_LARGE)
-          .backgroundColor(this.txtFile.totalCount() > 0 ? this.theme.mainColor : InkPalette.INK_MIST)
+          .backgroundColor(this.bookData.bookType === 2 || this.txtFile.totalCount() > 0 ? this.theme.mainColor : InkPalette.INK_MIST)
           .fontColor(InkPalette.PAPER)
-          .enabled(this.txtFile.totalCount() > 0)
+          .enabled(this.bookData.bookType === 2 || this.txtFile.totalCount() > 0)
           .onClick(() => {
-            // 跳转到阅读器
-            router.pushUrl({
-              url: 'pages/view/Reader/ReaderPage2',
-              params: {
-                bookData: this.bookData,
-                // 后续持久化后再获取已经读到的章节序号，目前先传默认的0
-                clickBookChapter: 0,
-                txtFile: this.txtFiles
+            if (this.bookData.bookType === 2) {
+              // 有声书直接跳转播放器
+              router.pushUrl({
+                url: 'pages/view/Reader/ReaderPage2',
+                params: { bookData: this.bookData, clickBookChapter: 0 }
+              })
+            } else {
+              // 小说/漫画跳转阅读器
+              BookContentHolder.setChapters(this.txtFiles);
+              router.pushUrl({
+                url: 'pages/view/Reader/ReaderPage2',
+                params: { bookData: this.bookData, clickBookChapter: 0 }
+              })
+              if (this.txtFiles && this.txtFile.getListData()[0]) {
+                this.jumpReadPage(`${this.txtFile.getListData()[0].chapterTitleNumber} ${this.txtFile.getListData()[0].title}`, 0)
               }
-            })
-            if (this.txtFiles && this.txtFile.getListData()[0]) {
-              this.jumpReadPage(`${this.txtFile.getListData()[0].chapterTitleNumber} ${this.txtFile.getListData()[0].title}`, 0)
             }
           })
       }
@@ -379,12 +385,19 @@ struct BookDetailPage {
 
       // 小说标题区域 — 封面 + 信息 + 标签
       Row({ space: InkSpacing.XL }) {
-        Image(this.bookData.coverUrl)
-          .alt($r('app.media.icon_book_default_cover_ten'))
-          .width(80)
-          .height(107)
-          .borderRadius(InkRadius.BOOK_COVER)
-          .shadow(InkShadow.DEEP)
+        Stack() {
+          Image(this.bookData.coverUrl)
+            .alt($r('app.media.icon_book_default_cover_ten'))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Cover)
+            .borderRadius(InkRadius.BOOK_COVER)
+        }
+        .width(80)
+        .height(107)
+        .borderRadius(InkRadius.BOOK_COVER)
+        .shadow(InkShadow.DEEP)
+        .clip(true)
 
         Column({ space: InkSpacing.SM }) {
           Text(this.bookData.bookName.replace(new RegExp('\\..*', 'g'), ''))

@@ -11,6 +11,9 @@ import SourceCommon from '../../../../componets/source/SourceCommon'
 import BookSourceDao from '../../../../database/dao/BookSourceDao'
 import { BookSource } from '../../../../database/entities/BookSource'
 import ContentRefresh from './ContentRefresh'
+import {
+  InkPalette, InkTypography, InkSpacing
+} from '../../../../common/constants/DesignTokens'
 
 @Component
 export default struct BodyContent {
@@ -59,11 +62,14 @@ export default struct BodyContent {
         }
       ) {
         if (this.loading) {
-          Row() {
+          Row({ space: InkSpacing.SM }) {
             LoadingProgress()
               .color(this.theme.mainColor)
-              .width(30)
+              .width(20)
+              .height(20)
             Text('加载中...')
+              .fontSize(InkTypography.BODY_SMALL)
+              .fontColor(InkPalette.INK_MIST)
           }
         } else if (this.sourceList.length) {
           Scroll() {
@@ -86,8 +92,9 @@ export default struct BodyContent {
           .scrollable(ScrollDirection.Horizontal)
         } else {
           Text(`暂无${this.titleArray[this.currentIndex]}源`)
-            .fontSize(18)
-            .fontWeight(700)
+            .fontSize(InkTypography.BODY_LARGE)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(InkPalette.INK_MIST)
         }
 
         Row() {

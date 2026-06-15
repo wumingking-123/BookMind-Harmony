@@ -5,9 +5,11 @@ import { NetworkInput } from 'ets/componets/Reader/NetworkInput';
 import DownloadSettingDialog from '../../../componets/Reader/DownloadSettingDialog';
 import LayoutMoreDialog from '../../../componets/Reader/LayoutMoreDialog';
 import { MusicPlayer } from 'ets/componets/Reader/MusicPlayer';
+import { AudioPlayer } from 'ets/componets/Reader/AudioPlayer';
 import purificationView from './purificationView';
-import { chaptersItem } from 'ets/componets/dataList/ReaderChaptersItem';
-import { BookList } from 'ets/componets/dataList/bookList';
+import { Books } from '../../../database/entities/Books';
+import { BookContentHolder } from '../../../common/utils/BookContentHolder';
+import { InkPalette, InkSpacing, InkRadius } from '../../../common/constants/DesignTokens';
 import { CoverFlipView, } from '@ohos/readerLibrary';
 import {
   BGColorType,
@@ -26,33 +28,31 @@ import { ReaderProvider } from '@ohos/readerLibrary/src/main/ets/provider/config
 
 
 interface ParamsObj {
-  bookData: BookList,
-  clickBookChapter: number,
-  txtFile: chaptersItem[]
+  bookData: Books,
+  clickBookChapter: number
 }
 
 @Entry
 @Component
 struct ReaderPage2 {
+  @State bookData: Books | undefined = undefined
   currentChapters: number = 0
   chapterList: ReaderChapterItem[] = [];
   async aboutToAppear() {
-    //详情页加了个目录序号参数，所以修改了一下params的类型，不影响之前的bookData，但需要多‘.’一次。看看大佬们可以怎么优化一下，上个页面BookDetailPage
     let temp = router.getParams() as ParamsObj
-    console.log('router ReaderPage2:' + temp.bookData.fileLink)
-    this.chapterList = temp.txtFile.map((value) => {
+    this.bookData = temp.bookData
+    console.log('router ReaderPage2:' + (this.bookData?.bookUrl || ''))
+    
+    // 从 BookContentHolder 获取章节数据 (避免通过 router 传递大量数据)
+    let rawFile = BookContentHolder.getChapters();
+    if (!rawFile || rawFile.length === 0) {
+      console.error('BookContentHolder is empty, no chapters to display');
+      return;
+    }
+    this.chapterList = rawFile.map((value) => {
       return new ReaderChapterItem(value.number, value.title, value.chapterTitleNumber, value.content);
-    }) //txt小说
+    })
 
-    if (this.chapterList.length != 0) {
-      this.chapterList[0].paragraphList = this.chapterList[0].content.split('\n').map((value) => value + '\n');
-    }
-
-    if (this.chapterList.length >= 2) {
-      for (let index = 1; index < this.chapterList.length; index++) {
-        this.chapterList[index].paragraphList = this.chapterList[index].content.split('\n').map((value) => value + '\n');
-      }
-    }
     this.currentChapters = temp.clickBookChapter
 
     this.changeSystemBarStatue();
@@ -90,20 +90,43 @@ struct ReaderPage2 {
   }
 
   build() {
-    Row() {
-      ReaderProvider({
-        chapterList: this.chapterList,
-        child: this.contentBuilder
-      })
+    // 有声书显示播放器
+    if (this.bookData?.bookType === 2) {
+      Column() {
+        // 返回按钮
+        Row() {
+          Image($r('app.media.ic_public_return_left'))
+            .width(24)
+            .height(24)
+            .fillColor(InkPalette.INK)
+            .onClick(() => { router.back(); })
+        }
+        .width('100%')
+        .padding({ left: 16, top: 12 })
+
+        AudioPlayer({ bookData: this.bookData })
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor(InkPalette.PAPER)
+    } else {
+      // 小说/漫画显示阅读器
+      Row() {
+        ReaderProvider({
+          chapterList: this.chapterList,
+          currentChapterIndex: this.currentChapters,
+          child: this.contentBuilder
+        })
+      }
+      .height('100%')
+      .width('100%')
     }
-    .height('100%')
-    .width('100%')
   }
 
   @Builder
   contentBuilder() {
     Row() {
-      ContentContainer()
+      ContentContainer({ bookData: this.bookData })
     }
   }
 }
@@ -112,15 +135,17 @@ struct ReaderPage2 {
 // todo：研究确认一下
 @Component
 struct ContentContainer {
+  @Prop bookData: Books | undefined
   build() {
     Row() {
-      ReaderPageContent()
+      ReaderPageContent({ bookData: this.bookData })
     }
   }
 }
 
 @Component
 struct ReaderPageContent {
+  @Prop bookData: Books | undefined
   @State isShowSetting: boolean = true
   @State isShowContentSetting: boolean = false
   @State isShowDownload: boolean = false
@@ -147,6 +172,9 @@ struct ReaderPageContent {
   aboutToAppear(): void {
     this.screenW = px2vp(display.getDefaultDisplaySync().width);
     this.screenH = px2vp(display.getDefaultDisplaySync().height - (AppStorage.get('avoidHeight') as number));
+    if (this.bookData && this.bookData.bookType === 2) {
+      this.isShowListen = true;
+    }
   }
 
   get totalChapter(): number {
@@ -689,7 +717,7 @@ struct ReaderPageContent {
 
   @Builder
   BookListen() {
-    MusicPlayer({ WidthMinus: 118, isShowListen: this.isShowListen })
+    MusicPlayer({ WidthMinus: 118, isShowListen: this.isShowListen, bookData: this.bookData })
       .width("100%")
       .height("100%")
   }

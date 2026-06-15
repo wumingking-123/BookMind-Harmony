@@ -16,6 +16,9 @@ import rssSourcesUtils from '../../../../common/utils/rssSourcesUtils';
 import PreviewEffectImage from './PreviewEffectImage';
 import { ThemeItem } from '../../../../common/model/Theme';
 import { ThemeStorageKey } from '../../../../common/constants/Theme';
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius
+} from '../../../../common/constants/DesignTokens';
 
 @Entry
 @Component
@@ -157,19 +160,35 @@ struct SubscriptionSearch {
 
   @Builder
   noResultLog(){
-    Column({
-      space:32
-    }){
-      Image($r('app.media.icon_no_find_search')).width(121).height(110)
-      Text('暂无搜索结果')
-        .font({
-          size:14,
-          weight:400,
-          family:CommonConstants.FAMILY_PingFANG
-        })
-        .textAlign(TextAlign.Center)
-        .fontColor($r('app.string.color_black_45'))
+    Column({ space: InkSpacing.LG }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Row()
+          .width(100)
+          .height(100)
+          .borderRadius(InkRadius.FULL)
+          .backgroundColor(InkPalette.PAPER_WARM)
+        Image($r('app.media.icon_no_source_find'))
+          .width(70)
+          .height(70)
+          .opacity(0.7)
+      }
+      .width(100)
+      .height(100)
 
+      Text('暂无搜索结果')
+        .fontSize(InkTypography.BODY)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(InkPalette.INK_LIGHT)
+        .textAlign(TextAlign.Center)
+
+      Text('换个关键词试试吧')
+        .fontSize(InkTypography.CAPTION)
+        .fontColor(InkPalette.INK_MIST)
+        .textAlign(TextAlign.Center)
     }
+    .width('100%')
+    .padding({ top: InkSpacing.MASSIVE })
+    .alignItems(HorizontalAlign.Center)
+    .justifyContent(FlexAlign.Center)
   }
 }

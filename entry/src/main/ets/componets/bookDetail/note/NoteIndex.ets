@@ -9,6 +9,9 @@ import CommonConstants from '../../../common/constants/CommonConstants'
 import { NoteListVO } from '../../../componetsmodel/NoteListVO';
 import { NoteVO } from '../../../componetsmodel/NoteVO';
 import NoteListItem from './NoteListItem'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius
+} from '../../../common/constants/DesignTokens'
 
 @Component
 export default struct NoteIndex {
@@ -39,7 +42,7 @@ export default struct NoteIndex {
   build() {
     /*if (true) {
       Column() {
-        Image($r('app.media.ic_public_none'))
+        Image($r('app.media.icon_no_source_find'))
           .width(200)
           .height(168)
         Text('暂无笔记')
@@ -50,16 +53,31 @@ export default struct NoteIndex {
       }
     }*/
     if (this.noteList === undefined || this.noteList.length === 0) {
-      Column() {
-        Image($r('app.media.ic_public_none'))
-          .width(200)
-          .height(168)
+      Column({ space: InkSpacing.LG }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Row()
+            .width(100)
+            .height(100)
+            .borderRadius(InkRadius.FULL)
+            .backgroundColor(InkPalette.PAPER_WARM)
+          Image($r('app.media.icon_no_source_find'))
+            .width(64)
+            .height(64)
+            .opacity(0.6)
+        }
+        .width(100)
+        .height(100)
+
         Text('暂无笔记')
-          .fontSize(14)
-          .fontWeight(400)
-          .lineHeight(22)
-          .fontColor('#73000000')
+          .fontSize(InkTypography.BODY)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK_LIGHT)
+
+        Text('阅读时长按文字可添加笔记')
+          .fontSize(InkTypography.CAPTION)
+          .fontColor(InkPalette.INK_MIST)
       }
+      .padding({ top: InkSpacing.HUGE })
     } else {
       Column() {
         List({ space: 12 }) {

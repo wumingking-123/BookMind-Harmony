@@ -13,6 +13,7 @@ import { ThemeStorageKey } from '../common/constants/Theme'
 import { ThemeItem } from '../common/model/Theme'
 import { InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkMotion, InkLayout }
   from '../common/constants/DesignTokens'
+import { IconBookShelf, IconFind, IconSubscribe, IconMine } from '../componets/common/TabIcons'
 
 @Entry
 @Component
@@ -30,7 +31,6 @@ struct Main {
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   onPageShow(): void {
-    // initBookListData()
     setTimeout(() => {
       this.showReadShow = false
       this.isShow = false
@@ -39,12 +39,10 @@ struct Main {
     getContext(this).eventHub.on('SubscriptionBatchEdit', (params: boolean) => {
       this.ShowBar = params
       this.APP_INDEX_SCROLLABLE = !this.APP_INDEX_SCROLLABLE
-      console.log('SubscriptionBatchEdit:' + params)
     })
   }
 
   screenShot() {
-    // 切换回首页
     let index = this.currentTabIndex
     this.tabController.changeIndex(0)
     this.getUIContext().getComponentSnapshot().get('main', ((err: Error, pixmap: image.PixelMap) => {
@@ -54,12 +52,10 @@ struct Main {
       }
       AppStorage.setOrCreate('screen_shot', pixmap)
     }))
-    // 恢复当前页
     this.tabController.changeIndex(index)
   }
 
   aboutToAppear(): void {
-    // 注册监听截图事件 用于我的页面下主题设置预览
     emitter.on('screen_shot', () => {
       this.screenShot()
     })
@@ -67,31 +63,56 @@ struct Main {
 
   @State tabScale: number[] = [1.1, 1, 1, 1]
 
-  @Builder TabBuilder(index: number, name: string, iconSelect: Resource, iconLine: Resource) {
-    Column() {
-      Column({ space: 4 }) {
-        // Tab 图标 — 选中/未选中状态
-        Image(this.currentTabIndex === index ? iconSelect : iconLine)
-          .width(24)
-          .height(24)
-          .fillColor(this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST)
-          .scale({ x: this.tabScale[index], y: this.tabScale[index] })
+  // Tab 配置
+  tabNames: string[] = ['书架', '发现', '订阅', '我的']
 
-        // Tab 文字
-        Text(name)
-          .fontSize(InkTypography.MICRO + 1)
-          .fontWeight(this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Normal)
-          .fontColor(this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST)
+  @Builder TabBuilder(index: number, name: string) {
+    Column({ space: 3 }) {
+      // 矢量图标 — 根据 index 选择对应组件
+      if (index === 0) {
+        IconBookShelf({
+          color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
+          iconSize: 22
+        })
+          .scale({ x: this.tabScale[index], y: this.tabScale[index] })
+      } else if (index === 1) {
+        IconFind({
+          color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
+          iconSize: 22
+        })
+          .scale({ x: this.tabScale[index], y: this.tabScale[index] })
+      } else if (index === 2) {
+        IconSubscribe({
+          color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
+          iconSize: 22
+        })
+          .scale({ x: this.tabScale[index], y: this.tabScale[index] })
+      } else {
+        IconMine({
+          color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
+          iconSize: 22
+        })
+          .scale({ x: this.tabScale[index], y: this.tabScale[index] })
       }
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
+
+      // Tab 文字
+      Text(name)
+        .fontSize(10)
+        .fontWeight(this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST)
+
+      // 活跃指示点
+      Row()
+        .width(this.currentTabIndex === index ? 4 : 0)
+        .height(this.currentTabIndex === index ? 4 : 0)
+        .borderRadius(InkRadius.FULL)
+        .backgroundColor(this.theme.mainColor)
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .gesture(
-      // 长按锁定/解锁标签栏滚动
       LongPressGesture({ repeat: index === 0, duration: 1000 })
         .onAction((event: GestureEvent) => {
           if (event.repeat) {
@@ -102,46 +123,36 @@ struct Main {
     )
   }
 
-  // 底部导航栏配置
-  nav: NavItem[] = [
-    new NavItem(0, $r('app.media.HOME_theme'), $r('app.media.HOME_line'), '书架'),
-    new NavItem(1, $r('app.media.FIND_theme'), $r('app.media.FIND_line'), '发现'),
-    new NavItem(2, $r('app.media.SUB_theme'), $r('app.media.SUB_line'), '订阅'),
-    new NavItem(3, $r('app.media.MINE_theme'), $r('app.media.MINE_line'), '我的')
-  ]
-
   build() {
     Column() {
-      // 底部 TabBar 上方添加精致细微的轻墨分割线
+      // 分割线
       if (this.ShowBar) {
         Divider()
           .color(InkPalette.INK_WHISPER)
           .strokeWidth(0.5)
       }
 
-      // 主 Tab 容器 — 4 个页面
+      // 主 Tab 容器
       Tabs({
         barPosition: BarPosition.End,
         controller: this.tabController
       }) {
-        ForEach(this.nav, (item: NavItem) => {
+        ForEach(this.tabNames, (name: string, index: number) => {
           TabContent() {
             Column() {
-              if (item.index === 0) {
+              if (index === 0) {
                 BookShelf()
-              } else if (item.index === 1) {
+              } else if (index === 1) {
                 Find()
-              } else if (item.index === 2) {
+              } else if (index === 2) {
                 Subscription({ currentTabIndex: this.currentTabIndex })
               }
-              if (item.index === 3) {
+              if (index === 3) {
                 MyCenter()
               }
             }
           }
-          .tabBar(
-            this.TabBuilder(item.index, item.title, item.selectImg, item.unselected)
-          )
+          .tabBar(this.TabBuilder(index, name))
         })
       }
       .barBackgroundColor(InkPalette.PAPER)
@@ -149,13 +160,12 @@ struct Main {
       .scrollable(!this.APP_INDEX_SCROLLABLE)
       .barMode(BarMode.Fixed)
       .onChange((index) => {
-        // 先缩小旧 tab
+        // 两阶段动画：缩入 → 弹出
         animateTo({ duration: 80, curve: Curve.FastOutLinearIn }, () => {
           this.tabScale[this.currentTabIndex] = 1
           this.tabScale[index] = 0.85
         })
         this.currentTabIndex = index
-        // 再放大新 tab (延迟半帧让缩小先执行)
         setTimeout(() => {
           animateTo({ duration: 150, curve: Curve.LinearOutSlowIn }, () => {
             this.tabScale[index] = 1.1

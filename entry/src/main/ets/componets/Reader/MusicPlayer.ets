@@ -2,12 +2,14 @@ import { BusinessError } from '@ohos.base';
 import media from '@ohos.multimedia.media';
 import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
+import { Books } from '../../database/entities/Books';
 
 let avPlayer: media.AVPlayer;
 let seekTime: number = 15000
 
 @Component
 export struct MusicPlayer {
+  @Prop bookData: Books | undefined
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @StorageLink('WindowWidth') WindowWidth: number = 0
@@ -18,8 +20,6 @@ export struct MusicPlayer {
   @State MusicPlayingTime: number = 0 // 音乐目前播放时间
   @State MusicDuration: number = 100 // 音乐总时长
   @State isShowSpeed: boolean = false;
-
-  // private Player: media.AVPlayer = new media
 
   // 格式化时间
   formatMilliseconds(milliseconds: number): string {
@@ -33,29 +33,49 @@ export struct MusicPlayer {
     return `${minutes}:${formattedSeconds}`;
   }
 
-  async aboutToAppear() {
-    let audioSelectOptions = new picker.AudioSelectOptions();
-    let audioPicker = new picker.AudioViewPicker();
+  async selectFromPicker() {
+    try {
+      let audioSelectOptions = new picker.AudioSelectOptions();
+      let audioPicker = new picker.AudioViewPicker();
+      let audioSelectResult: Array<string> = await audioPicker.select(audioSelectOptions);
+      if (audioSelectResult && audioSelectResult.length > 0) {
+        console.info('AudioViewPicker.select successfully, audioSelectResult uri: ' + JSON.stringify(audioSelectResult));
+        avPlayer.url = 'fd://' + fs.openSync(audioSelectResult[0]).fd.toString();
+      }
+    } catch (err) {
+      console.error('AudioViewPicker select failed: ' + JSON.stringify(err));
+    }
+  }
 
-    media.createAVPlayer().then((video: media.AVPlayer) => {
+  async aboutToAppear() {
+    try {
+      let video: media.AVPlayer = await media.createAVPlayer();
       if (video != null) {
         avPlayer = video;
         console.info('createAVPlayer success');
+        
+        await this.setCallback(avPlayer);
+        this.timeDurationUpdateCallback(avPlayer);
+        
+        // Load the audiobook URL directly or via picker fallback
+        if (this.bookData && this.bookData.bookUrl) {
+          try {
+            let file = fs.openSync(this.bookData.bookUrl, fs.OpenMode.READ_ONLY);
+            avPlayer.url = 'fd://' + file.fd.toString();
+            console.info('MusicPlayer loaded url from bookData.bookUrl: ' + this.bookData.bookUrl);
+          } catch (err) {
+            console.error('MusicPlayer failed to open bookData.bookUrl: ' + JSON.stringify(err));
+            await this.selectFromPicker();
+          }
+        } else {
+          await this.selectFromPicker();
+        }
       } else {
-        console.error('createAVPlayer fail');
+        console.error('createAVPlayer returned null');
       }
-    }).catch((error: BusinessError) => {
-      console.error(`AVPlayer catchCallback, error message:${error.message}`);
-    });
-
-    // todo:这里暂时用 picker选本地音乐，音乐的 URL后期需要改成从上级组件传进来
-    await audioPicker.select(audioSelectOptions).then((audioSelectResult: Array<string>) => {
-      console.info('AudioViewPicker.select successfully, audioSelectResult uri: ' + JSON.stringify(audioSelectResult));
-      avPlayer.url = 'fd://' + fs.openSync(audioSelectResult[0]).fd.toString();
-    })
-
-    await this.setCallback(avPlayer)
-    this.timeDurationUpdateCallback(avPlayer)
+    } catch (error) {
+      console.error(`AVPlayer initialization error: ${(error as BusinessError).message}`);
+    }
   }
 
   build() {
@@ -66,7 +86,7 @@ export struct MusicPlayer {
             this.isShowListen = false
           })
         Blank(1)
-        Text("大奉打更人")
+        Text(this.bookData?.bookName || '有声书')
           .lineHeight(24)
           .fontColor("#FFFFFF")
           .font({
@@ -83,16 +103,16 @@ export struct MusicPlayer {
       Blank(1)
       Column() {
         Row() {
-          Text("第1章 牢狱之灾")
+          Text(this.bookData?.durChapterTitle || '有声书章节已载入')
         }
 
         Row() {
-          Text("卖报小郎君")
+          Text(this.bookData?.author || '本地导入')
           Button("搜作者")
         }
 
         Row() {
-          Text("许七安幽幽醒来，嗅到了空气中潮湿的腐臭")
+          Text("音频播放中，请戴上耳机，享受精彩内容。")
         }
       }
 

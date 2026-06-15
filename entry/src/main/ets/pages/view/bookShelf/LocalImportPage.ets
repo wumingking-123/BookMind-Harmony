@@ -3,6 +3,7 @@ import fs from '@ohos.file.fs';
 import { ThemeStorageKey } from '../../../common/constants/Theme';
 import { ThemeItem } from '../../../common/model/Theme';
 import { showMessage } from '../../../componets/common/promptShow';
+import { FileHandler } from '../../../common/utils/FileHandler';
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkMotion, InkLayout
 } from '../../../common/constants/DesignTokens';
@@ -12,15 +13,22 @@ class SmartScanItem {
   Type: string
   CreateTime: Date
   size: string
+  rawSize: number
+  uri: string
+  checked: boolean = false
 
   constructor(
     bookName: string,
     size: string,
+    rawSize: number,
+    uri: string,
     Type: string = 'EPUB',
     CreateTime: Date = new Date()
   ) {
     this.bookName = bookName
     this.size = size
+    this.rawSize = rawSize
+    this.uri = uri
     this.Type = Type
     this.CreateTime = CreateTime
   }
@@ -33,6 +41,14 @@ function formatDate(date: Date): string {
   return `${year}/${month}/${day}`;
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 @Entry
 @Component
 struct LocalImportPage {
@@ -42,6 +58,8 @@ struct LocalImportPage {
   @State SearchValue: string = ""
   SearchController: SearchController = new SearchController()
   @State SmartScanItemList: SmartScanItem[] = []
+  @State isAllSelected: boolean = false
+  
   menuList: string[] = [
     '按时间排序',
     '按名称排序',
@@ -51,22 +69,150 @@ struct LocalImportPage {
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
-  // 加载测试数据
-  onPageShow(): void {
+  // 触发文档选择器
+  async selectFiles() {
+    try {
+      const selectedUris = await FileHandler.documentPickerFile(20, [
+        '.txt', '.epub', '.pdf', '.mobi', '.azw', '.azw3', '.chm',
+        '.cbz', '.cbr', '.cb7',
+        '.m4b', '.mp3', '.wav', '.flac', '.m4a', '.ogg', '.opus'
+      ]);
+      
+      if (!selectedUris || selectedUris.length === 0) {
+        return;
+      }
+      
+      const newItems: SmartScanItem[] = [];
+      for (let i = 0; i < selectedUris.length; i++) {
+        const uri = selectedUris[i];
+        try {
+          const file = fs.openSync(uri, fs.OpenMode.READ_ONLY);
+          const stat = fs.statSync(file.fd);
+          const ext = file.name.substring(file.name.lastIndexOf('.')).toUpperCase().replace('.', '');
+          const createDate = stat.mtime ? new Date(stat.mtime * 1000) : new Date();
+          
+          newItems.push(new SmartScanItem(
+            file.name,
+            formatBytes(stat.size),
+            stat.size,
+            uri,
+            ext,
+            createDate
+          ));
+          fs.closeSync(file);
+        } catch (e) {
+          console.error(`读取选择文件详情失败: ${e.message}`);
+        }
+      }
+      
+      // 合并到已扫描列表，并默认选中
+      if (newItems.length > 0) {
+        newItems.forEach(item => item.checked = true);
+        this.SmartScanItemList = [...this.SmartScanItemList, ...newItems];
+        this.updateSelectAllState();
+      }
+    } catch (err) {
+      console.error(`选择文件失败: ${err.message}`);
+      showMessage('选择文件失败');
+    }
+  }
+
+  // 排序逻辑
+  sortList(index: number) {
+    if (index === 0) {
+      // 按时间
+      this.SmartScanItemList.sort((a, b) => b.CreateTime.getTime() - a.CreateTime.getTime());
+    } else if (index === 1) {
+      // 按名称
+      this.SmartScanItemList.sort((a, b) => a.bookName.localeCompare(b.bookName));
+    } else if (index === 2) {
+      // 按大小
+      this.SmartScanItemList.sort((a, b) => b.rawSize - a.rawSize);
+    }
+    // 强制触发更新
+    this.SmartScanItemList = [...this.SmartScanItemList];
+  }
+
+  // 全选/取消全选
+  toggleSelectAll(checked: boolean) {
+    this.isAllSelected = checked;
+    this.SmartScanItemList.forEach(item => {
+      item.checked = checked;
+    });
+    this.SmartScanItemList = [...this.SmartScanItemList];
+  }
+
+  // 更新全选框状态
+  updateSelectAllState() {
+    if (this.SmartScanItemList.length === 0) {
+      this.isAllSelected = false;
+      return;
+    }
+    this.isAllSelected = this.SmartScanItemList.every(item => item.checked);
+  }
+
+  // 执行批量导入
+  async doImport() {
+    const selectedItems = this.SmartScanItemList.filter(item => item.checked);
+    if (selectedItems.length === 0) {
+      showMessage('请选择要导入的文件');
+      return;
+    }
+    
+    let successCount = 0;
+    for (let i = 0; i < selectedItems.length; i++) {
+      const item = selectedItems[i];
+      const success = await FileHandler.importLocalFile(item.uri, this.currentTabIndex);
+      if (success) {
+        successCount++;
+      }
+    }
+    
+    showMessage(`成功导入 ${successCount} 本书籍`);
+    // 触发书架刷新
+    AppStorage.setOrCreate<number>('BOOK_IS_BOOK_REFRESHING', (AppStorage.get<number>('BOOK_IS_BOOK_REFRESHING') || 0) + 1);
+    
     setTimeout(() => {
-      this.SmartScanItemList = [
-        new SmartScanItem("大主宰.txt", "14.2MB", "TXT", new Date()),
-        new SmartScanItem("完美世界.epub", "8.5MB", "EPUB", new Date()),
-        new SmartScanItem("遮天.pdf", "24.1MB", "PDF", new Date()),
-        new SmartScanItem("宇宙职业选手.epub", "6.2MB", "EPUB", new Date()),
-      ]
-    }, 600)
+      router.back();
+    }, 800);
+  }
+
+  // 获取类型对应的背景色
+  getTypeBgColor(type: string): string {
+    const audioExts = ['MP3', 'WAV', 'FLAC', 'M4A', 'M4B', 'OGG', 'OPUS'];
+    const mangaExts = ['CBZ', 'CBR', 'CB7'];
+    if (audioExts.includes(type)) {
+      return InkPalette.INDIGO_MIST;
+    }
+    if (mangaExts.includes(type)) {
+      return InkPalette.CELADON_MIST;
+    }
+    if (type === 'PDF') {
+      return InkPalette.CINNABAR_GLOW;
+    }
+    return InkPalette.AMBER_GLOW;
+  }
+
+  // 获取类型对应的字体颜色
+  getTypeTextColor(type: string): string {
+    const audioExts = ['MP3', 'WAV', 'FLAC', 'M4A', 'M4B', 'OGG', 'OPUS'];
+    const mangaExts = ['CBZ', 'CBR', 'CB7'];
+    if (audioExts.includes(type)) {
+      return InkPalette.INDIGO;
+    }
+    if (mangaExts.includes(type)) {
+      return InkPalette.CELADON;
+    }
+    if (type === 'PDF') {
+      return InkPalette.CINNABAR;
+    }
+    return InkPalette.AMBER;
   }
 
   @Builder
   MenuBuilder() {
     Column() {
-      ForEach(this.menuList, (item: string, index) => {
+      ForEach(this.menuList, (item: string, index: number) => {
         Row({ space: InkSpacing.SM }) {
           if (index === this.menuList.length - 1) {
             Image($r("app.media.my_center_file_icon"))
@@ -82,7 +228,11 @@ struct LocalImportPage {
         .width("100%")
         .height(44)
         .onClick(() => {
-          // 菜单项点击
+          if (index === 3) {
+            this.selectFiles();
+          } else {
+            this.sortList(index);
+          }
         })
 
         if (index !== this.menuList.length - 1) {
@@ -100,8 +250,12 @@ struct LocalImportPage {
   BottomBar() {
     Row() {
       Row({ space: InkSpacing.XS }) {
-        CheckboxGroup({ group: 'checkboxGroup' })
+        Checkbox({ name: 'all', group: 'allSelectGroup' })
+          .select(this.isAllSelected)
           .selectedColor(this.theme.mainColor || InkPalette.CINNABAR)
+          .onChange((checked: boolean) => {
+            this.toggleSelectAll(checked);
+          })
         Text("全选")
           .fontSize(InkTypography.BODY)
           .fontColor(InkPalette.INK)
@@ -117,8 +271,7 @@ struct LocalImportPage {
         .height(36)
         .borderRadius(InkRadius.BUTTON)
         .onClick(() => {
-          showMessage("导入书架成功")
-          router.back()
+          this.doImport();
         })
     }
     .justifyContent(FlexAlign.SpaceBetween)
@@ -134,20 +287,12 @@ struct LocalImportPage {
       // 格式小标签
       Row() {
         Text(item.Type)
-          .fontColor(item.Type === 'EPUB' ? InkPalette.CELADON : (
-            item.Type === 'TXT' ? InkPalette.AMBER : (
-              item.Type === 'PDF' ? InkPalette.CINNABAR : InkPalette.INDIGO
-            )
-          ))
+          .fontColor(this.getTypeTextColor(item.Type))
           .fontSize(InkTypography.MICRO)
           .fontWeight(FontWeight.Bold)
       }
-      .backgroundColor(item.Type === 'EPUB' ? InkPalette.CELADON_MIST : (
-        item.Type === 'TXT' ? InkPalette.AMBER_GLOW : (
-          item.Type === 'PDF' ? InkPalette.CINNABAR_GLOW : InkPalette.INDIGO_MIST
-        )
-      ))
-      .width(36)
+      .backgroundColor(this.getTypeBgColor(item.Type))
+      .width(44)
       .height(36)
       .borderRadius(InkRadius.SM)
       .justifyContent(FlexAlign.Center)
@@ -170,9 +315,14 @@ struct LocalImportPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      Checkbox({ name: `${item.bookName}`, group: 'checkboxGroup' })
+      Checkbox({ name: `${item.bookName}`, group: 'fileSelectGroup' })
+        .select(item.checked)
         .selectedColor(this.theme.mainColor || InkPalette.CINNABAR)
         .size({ width: 18, height: 18 })
+        .onChange((checked: boolean) => {
+          item.checked = checked;
+          this.updateSelectAllState();
+        })
     }
     .width("100%")
     .padding(InkSpacing.MD)
@@ -201,12 +351,22 @@ struct LocalImportPage {
     .alignItems(HorizontalAlign.Center)
   }
 
+  // 过滤出符合搜索条件的内容
+  getFilteredList(): SmartScanItem[] {
+    if (!this.SearchValue) {
+      return this.SmartScanItemList;
+    }
+    return this.SmartScanItemList.filter(item => 
+      item.bookName.toLowerCase().includes(this.SearchValue.toLowerCase())
+    );
+  }
+
   @Builder
   FileListPanel() {
     Column() {
       if (this.SmartScanItemList.length > 0) {
         List() {
-          ForEach(this.SmartScanItemList, (item: SmartScanItem) => {
+          ForEach(this.getFilteredList(), (item: SmartScanItem) => {
             ListItem() {
               this.ScanShowItem(item)
             }
@@ -220,14 +380,36 @@ struct LocalImportPage {
         this.BottomBar()
       } else {
         Column({ space: InkSpacing.LG }) {
-          Image($r('app.media.no_record'))
-            .width(160)
-            .height(160)
-            .opacity(0.6)
-          Text('暂未扫描到可用书籍')
+          Stack({ alignContent: Alignment.Center }) {
+            Column()
+              .width(100)
+              .height(100)
+              .borderRadius(50)
+              .backgroundColor(InkPalette.PAPER_WARM)
+            Image($r('app.media.icon_no_source_find'))
+              .width(64)
+              .height(64)
+              .opacity(0.7)
+          }
+          .width(100)
+          .height(100)
+          
+          Text('暂未选择本地文件')
             .fontSize(InkTypography.BODY_SMALL)
             .fontColor(InkPalette.INK_MIST)
             .textAlign(TextAlign.Center)
+            
+          Button('选择并扫描本地文件')
+            .fontSize(InkTypography.BODY_SMALL)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Color.White)
+            .backgroundColor(this.theme.mainColor || InkPalette.CELADON)
+            .width(180)
+            .height(36)
+            .borderRadius(InkRadius.BUTTON)
+            .onClick(() => {
+              this.selectFiles();
+            })
         }
         .width('100%')
         .layoutWeight(1)
@@ -241,7 +423,7 @@ struct LocalImportPage {
 
   build() {
     Column() {
-      // 头部操作栏 — 统一且标准的导航顶栏
+      // 头部操作栏
       Row() {
         Row() {
           Image($r('app.media.ic_public_return_left'))
@@ -292,6 +474,9 @@ struct LocalImportPage {
           .backgroundColor(InkPalette.PAPER_WARM)
           .borderRadius(InkRadius.SEARCH)
           .width('100%')
+          .onChange((value: string) => {
+            this.SearchValue = value;
+          })
       }
       .padding({ left: InkSpacing.PAGE_HORIZONTAL, right: InkSpacing.PAGE_HORIZONTAL, bottom: InkSpacing.SM })
 

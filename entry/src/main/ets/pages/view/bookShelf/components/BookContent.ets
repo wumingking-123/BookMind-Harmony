@@ -5,6 +5,9 @@ import booksDao from '../../../../database/dao/BooksDao'
 import { Books } from '../../../../database/entities/Books'
 import BookInfoGrids from './BookInfoGrids'
 import BookInfos from './BookInfos'
+import {
+  InkPalette, InkTypography, InkSpacing, InkRadius
+} from '../../../../common/constants/DesignTokens'
 
 @Component
 export default struct BookContent {
@@ -89,22 +92,41 @@ export default struct BookContent {
   scroller: Scroller = new Scroller()
   build() {
     if (this.isLoading) {
-      Row(){
+      Row({ space: InkSpacing.SM }) {
         LoadingProgress()
           .color(this.theme.mainColor)
-          .width('50%')
+          .width(20)
+          .height(20)
         Text('加载中...')
+          .fontSize(InkTypography.BODY_SMALL)
+          .fontColor(InkPalette.INK_MIST)
       }
     } else if (this.bookList.length === 0){
-      Column() {
-        Image($r('app.media.no_record')).width(200).height(200)
+      Column({ space: InkSpacing.LG }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Row()
+            .width(120)
+            .height(120)
+            .borderRadius(InkRadius.FULL)
+            .backgroundColor(this.theme.secondColor)
+          Image($r('app.media.icon_no_source_find'))
+            .width(80)
+            .height(80)
+            .opacity(0.8)
+        }
+        .width(120)
+        .height(120)
+
         Text('暂无浏览记录')
-          .fontSize(12)
-          .fontColor('rgba(96, 96, 96, 0.6)')
-          .fontWeight(500)
-          .padding(5)
+          .fontSize(InkTypography.BODY_LARGE)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(InkPalette.INK_LIGHT)
+
+        Text('去发现更多精彩内容吧')
+          .fontSize(InkTypography.CAPTION)
+          .fontColor(InkPalette.INK_MIST)
       }
-      .margin({ top: 120 })
+      .margin({ top: 80 })
     } else {
       List({
         space:10,
