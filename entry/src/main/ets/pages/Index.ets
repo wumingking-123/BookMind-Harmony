@@ -72,25 +72,29 @@ struct Main {
       if (index === 0) {
         IconBookShelf({
           color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
-          iconSize: 22
+          iconSize: 22,
+          isSelected: this.currentTabIndex === index
         })
           .scale({ x: this.tabScale[index], y: this.tabScale[index] })
       } else if (index === 1) {
         IconFind({
           color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
-          iconSize: 22
+          iconSize: 22,
+          isSelected: this.currentTabIndex === index
         })
           .scale({ x: this.tabScale[index], y: this.tabScale[index] })
       } else if (index === 2) {
         IconSubscribe({
           color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
-          iconSize: 22
+          iconSize: 22,
+          isSelected: this.currentTabIndex === index
         })
           .scale({ x: this.tabScale[index], y: this.tabScale[index] })
       } else {
         IconMine({
           color: this.currentTabIndex === index ? this.theme.mainColor : InkPalette.INK_MIST,
-          iconSize: 22
+          iconSize: 22,
+          isSelected: this.currentTabIndex === index
         })
           .scale({ x: this.tabScale[index], y: this.tabScale[index] })
       }

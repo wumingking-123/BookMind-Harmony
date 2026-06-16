@@ -1,5 +1,6 @@
 import { promptAction } from '@kit.ArkUI'
 import { preferences } from '@kit.ArkData'
+import { Constants, FlipPageType, BG_COLOR_ARRAY, BGColorType } from '@ohos/readerLibrary/src/main/ets/common/constants/Constants'
 
 // 字体粗细枚举
 export enum FontWeightType {
@@ -22,6 +23,11 @@ export default struct LayoutMoreDialog {
   @Consume('fontType') fontType: string
   @Consume('isFirstLineIndent') isFirstLineIndent: boolean
   @Consume('letterSpacing') letterSpacing: number
+  @Consume('fontSize') fontSize: number
+  @Consume('lineHeightRatio') lineHeightRatio: number
+  @Consume('paragraphSpacing') paragraphSpacing: number
+  @Consume('bgColor') bgColor: string
+  @Consume('turnStyle') turnStyle: FlipPageType
 
   aboutToAppear() {
   }
@@ -190,6 +196,33 @@ export default struct LayoutMoreDialog {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
+      Divider().color('#F0F0F0')
+
+      // 恢复默认
+      Button('恢复默认设置')
+        .fontSize(14)
+        .fontColor('#E07A5F')
+        .backgroundColor('#F7F8FA')
+        .borderRadius(8)
+        .width('100%')
+        .height(40)
+        .border({ width: 1, color: '#E07A5F' })
+        .onClick(() => {
+          this.fontSize = Constants.INIT_FONT_SIZE
+          this.lineHeightRatio = Constants.INIT_LINE_HEIGHT_RATIO
+          this.paragraphSpacing = 0
+          this.ReaderPadding = 24
+          this.fontWeight = 400
+          this.fontType = 'simplified'
+          this.isFirstLineIndent = true
+          this.letterSpacing = 0
+          this.bgColor = BG_COLOR_ARRAY[BGColorType.WHITE]
+          this.turnStyle = FlipPageType.COVER_FLIP_PAGE
+          promptAction.showToast({
+            message: '已恢复默认设置',
+            duration: 1500
+          })
+        })
     }
     .padding({ left: 20, right: 20, bottom: 20 })
     .width('100%')

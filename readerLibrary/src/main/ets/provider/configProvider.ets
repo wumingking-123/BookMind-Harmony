@@ -35,11 +35,11 @@ export struct ReaderProvider {
 
 @Concurrent
 async function calChapterContent(width: number, height: number, targetParagraphList: string[], fontSize: number,
-  lineHeightRatio: number, paragraphSpacing: number): Promise<string[][]> {
+  lineHeightRatio: number, paragraphSpacing: number, letterSpacing: number): Promise<string[][]> {
   try {
     return await NovelContentParseHelper.calculateChapterContent(targetParagraphList,
       fontSize,
-      fontSize * lineHeightRatio, width, height, paragraphSpacing)
+      fontSize * lineHeightRatio, width, height, paragraphSpacing, letterSpacing)
   } catch (e) {
     console.info('loadNovel 出错 ' + e)
     return [];
@@ -60,23 +60,81 @@ struct ReaderSourceProvider {
   @Consume('isFirstLineIndent') @Watch('onConfigSizeChange') isFirstLineIndent: boolean
   @Consume('letterSpacing') @Watch('onConfigSizeChange') letterSpacing: number
   @Consume('readerPadding') @Watch('onConfigSizeChange') readerPadding: number
+
+  @Provide('renderFontSize') renderFontSize: number = Constants.INIT_FONT_SIZE;
+  @Provide('renderLineHeightRatio') renderLineHeightRatio: number = Constants.INIT_LINE_HEIGHT_RATIO;
+  @Provide('renderParagraphSpacing') renderParagraphSpacing: number = 0;
+  @Provide('renderFontWeight') renderFontWeight: number = 400;
+  @Provide('renderFontType') renderFontType: string = 'simplified';
+  @Provide('renderIsFirstLineIndent') renderIsFirstLineIndent: boolean = true;
+  @Provide('renderLetterSpacing') renderLetterSpacing: number = 0;
+  @Provide('renderReaderPadding') renderReaderPadding: number = 24;
+
   @Consume('currentPageIndex') currentPageIndex: number
-  @State targetStartPos: number = 0
+  @State targetStartPosRaw: number = 0
   @State private configVersion: number = 0
   private lastChapterIndex: number = 0
+  private configChangeTimeout: number = -1
+
+  private getTargetPosInUnformatted(): number {
+    let currentChapter = this.chapterList?.[this.currentChapterIndex];
+    if (!currentChapter?.chapterPageList?.[this.currentPageIndex]) {
+      return 0;
+    }
+    let formattedPos = currentChapter.chapterPageList[this.currentPageIndex].startIndex;
+    let formattedParagraphs = this.getFormattedParagraphs(currentChapter.paragraphList);
+    
+    let pStart = 0;
+    for (let i = 0; i < formattedParagraphs.length; i++) {
+      let pLen = formattedParagraphs[i].length;
+      if (formattedPos < pStart + pLen) {
+        let offsetInP = formattedPos - pStart;
+        let origOffset = offsetInP;
+        if (this.isFirstLineIndent && formattedParagraphs[i].startsWith('\u3000\u3000')) {
+          origOffset = Math.max(0, offsetInP - 2);
+        }
+        let originalStartPos = 0;
+        for (let j = 0; j < i; j++) {
+          originalStartPos += currentChapter.paragraphList[j].length;
+        }
+        return originalStartPos + origOffset;
+      }
+      pStart += pLen;
+    }
+    return 0;
+  }
 
   onConfigSizeChange() {
-    let currentChapter = this.chapterList?.[this.currentChapterIndex];
-    if (currentChapter?.chapterPageList?.[this.currentPageIndex]) {
-      this.targetStartPos = currentChapter.chapterPageList[this.currentPageIndex].startIndex;
-    }
+    this.targetStartPosRaw = this.getTargetPosInUnformatted();
     this.configVersion++;
-    this.forceCalChapterContent()
+    if (this.configChangeTimeout !== -1) {
+      clearTimeout(this.configChangeTimeout);
+    }
+    this.configChangeTimeout = setTimeout(() => {
+      this.forceCalChapterContent()
+    }, 300);
+  }
+
+  aboutToAppear(): void {
+    this.renderFontSize = this.fontSize;
+    this.renderLineHeightRatio = this.lineHeightRatio;
+    this.renderParagraphSpacing = this.paragraphSpacing;
+    this.renderFontWeight = this.fontWeight;
+    this.renderFontType = this.fontType;
+    this.renderIsFirstLineIndent = this.isFirstLineIndent;
+    this.renderLetterSpacing = this.letterSpacing;
+    this.renderReaderPadding = this.readerPadding;
+    this.lastChapterIndex = this.currentChapterIndex;
   }
 
   onDisplaySizeChange() {
     this.configVersion++;
-    this.forceCalChapterContent()
+    if (this.configChangeTimeout !== -1) {
+      clearTimeout(this.configChangeTimeout);
+    }
+    this.configChangeTimeout = setTimeout(() => {
+      this.forceCalChapterContent()
+    }, 300);
   }
 
   private getFormattedParagraphs(paragraphs: string[]): string[] {
@@ -138,9 +196,31 @@ struct ReaderSourceProvider {
       }
     }
     let paragraphsToCal = this.getFormattedParagraphs(this.chapterList[chapterIndex].paragraphList);
+    
+    let targetStartPos = 0;
+    if (restorePosition && chapterIndex === this.currentChapterIndex) {
+      let currentChapter = this.chapterList[chapterIndex];
+      let pStart = 0;
+      let formattedStartPos = 0;
+      for (let i = 0; i < currentChapter.paragraphList.length; i++) {
+        let pLen = currentChapter.paragraphList[i].length;
+        if (this.targetStartPosRaw < pStart + pLen) {
+          let offsetInP = this.targetStartPosRaw - pStart;
+          let formOffset = offsetInP;
+          if (this.isFirstLineIndent && paragraphsToCal[i].startsWith('\u3000\u3000')) {
+            formOffset = offsetInP + 2;
+          }
+          targetStartPos = formattedStartPos + formOffset;
+          break;
+        }
+        pStart += pLen;
+        formattedStartPos += paragraphsToCal[i].length;
+      }
+    }
+
     let taskVersion = this.configVersion;
     taskPool.execute(calChapterContent, width, height, paragraphsToCal, fontSize,
-      lineHeightRatio, this.paragraphSpacing).then((chapterList) => {
+      lineHeightRatio, this.paragraphSpacing, this.letterSpacing).then((chapterList) => {
       if (taskVersion !== this.configVersion) {
         console.info(`Discarding outdated calculation for chapter ${chapterIndex}`);
         return;
@@ -157,7 +237,17 @@ struct ReaderSourceProvider {
             startIndex += contentLength;
             return pageItem
           })
-          this.chapterList[chapterIndex].chapterPageList = newPages;
+          
+          let oldChapter = this.chapterList[chapterIndex];
+          let newChapter = new ReaderChapterItem(
+            oldChapter.number,
+            oldChapter.title,
+            oldChapter.chapterTitleNumber,
+            oldChapter.content,
+            oldChapter.paragraphList,
+            newPages
+          );
+          this.chapterList[chapterIndex] = newChapter;
 
           if (chapterIndex === this.currentChapterIndex) {
             let newPageIndex = 0;
@@ -165,7 +255,7 @@ struct ReaderSourceProvider {
             if (pageList.length > 0) {
               if (restorePosition) {
                 for (let i = 0; i < pageList.length; i++) {
-                  if (this.targetStartPos >= pageList[i].startIndex) {
+                  if (targetStartPos >= pageList[i].startIndex) {
                     newPageIndex = i;
                   } else {
                     break;
@@ -183,6 +273,16 @@ struct ReaderSourceProvider {
               }
             }
             this.currentPageIndex = newPageIndex;
+            
+            // Sync render properties with the successfully calculated configuration
+            this.renderFontSize = this.fontSize;
+            this.renderLineHeightRatio = this.lineHeightRatio;
+            this.renderParagraphSpacing = this.paragraphSpacing;
+            this.renderFontWeight = this.fontWeight;
+            this.renderFontType = this.fontType;
+            this.renderIsFirstLineIndent = this.isFirstLineIndent;
+            this.renderLetterSpacing = this.letterSpacing;
+            this.renderReaderPadding = this.readerPadding;
           }
           this.chapterList = Array.from(this.chapterList)
         }
@@ -227,10 +327,6 @@ struct ReaderSourceProvider {
           this.fontSize, this.lineHeightRatio, true, false, false);
       }
     }
-  }
-
-  aboutToAppear(): void {
-    this.lastChapterIndex = this.currentChapterIndex;
   }
 
   build() {

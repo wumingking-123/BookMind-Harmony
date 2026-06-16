@@ -183,14 +183,15 @@ struct BookDetailPage {
                     // Cache chapter list to avoid serialization overhead
                     BookContentHolder.setChapters(this.txtFiles);
                     // 跳转到阅读器
-                    router.pushUrl({
-                      url: 'pages/view/Reader/ReaderPage2',
-                      // 跳转到对应的章节，传index过去
-                      params: {
-                        bookData: this.bookData,
-                        clickBookChapter: index
-                      }
-                    })
+                     router.pushUrl({
+                       url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                         ? 'pages/view/Reader/ReaderPageKit'
+                         : 'pages/view/Reader/ReaderPage2',
+                       params: {
+                         bookData: this.bookData,
+                         clickBookChapter: index
+                       }
+                     })
                     if (this.txtFiles && this.txtFile.getListData()[index]) {
                       this.jumpReadPage(`${item.chapterTitleNumber} ${item.title}`, index)
                     }
@@ -263,7 +264,9 @@ struct BookDetailPage {
               // 小说/漫画跳转阅读器
               BookContentHolder.setChapters(this.txtFiles);
               router.pushUrl({
-                url: 'pages/view/Reader/ReaderPage2',
+                url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                  ? 'pages/view/Reader/ReaderPageKit'
+                  : 'pages/view/Reader/ReaderPage2',
                 params: { bookData: this.bookData, clickBookChapter: 0 }
               })
               if (this.txtFiles && this.txtFile.getListData()[0]) {

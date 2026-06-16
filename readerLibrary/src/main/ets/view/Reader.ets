@@ -9,38 +9,39 @@ import { NovelChapterOperateHelper } from '../common/helper/NovelChapterOperateH
 @Component
 export struct Reader {
   @Consume('bgColor') bgColor: string;
-  @Consume('fontSize') fontSize: number;
-  @Consume('lineHeightRatio') lineHeightRatio: number;
+  @Consume('renderFontSize') fontSize: number;
+  @Consume('renderLineHeightRatio') lineHeightRatio: number;
   @Consume('turnStyle') turnStyle: FlipPageType;
   @Consume('displaySize') displaySize: number[];
-  @Consume('readerPadding') readerPadding: number;
-  @Consume('fontWeight') fontWeight: number;
-  @Consume('fontType') fontType: string;
-  @Consume('isFirstLineIndent') isFirstLineIndent: boolean;
-  @Consume('letterSpacing') letterSpacing: number;
+  @Consume('renderReaderPadding') readerPadding: number;
+  @Consume('renderFontWeight') fontWeight: number;
+  @Consume('renderFontType') fontType: string;
+  @Consume('renderIsFirstLineIndent') isFirstLineIndent: boolean;
+  @Consume('renderLetterSpacing') letterSpacing: number;
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('currentChapterIndex') currentChapterIndex: number;
   @Consume('chapterList') chapterList: ReaderChapterItem[];
-  @Consume('paragraphSpacing') paragraphSpacing: number;
+  @Consume('renderParagraphSpacing') paragraphSpacing: number;
   @Prop content: string = '';
   @Prop lineContentList: string[] = [];
   @Prop isCurrentPage: boolean = true;
 
-  get fontColor(): string {
-    return this.bgColor === '#2C2C2C' ? '#9E9E9E' : '#1C1C1E';
+  getFontColor(bgColor: string): string {
+    const upper = bgColor.toUpperCase();
+    return (upper === '#2C2C2C' || upper === '#1A1A1A') ? '#EDE4D3' : '#1C1C1E';
   }
 
   build() {
     Column() {
       Column() {
         ForEach(this.lineContentList && this.lineContentList.length > 0 ? this.lineContentList : [this.content], (line: string) => {
-          if (line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
+          if (line && line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
             Image(line.trim().substring(5, line.trim().length - 1))
               .objectFit(ImageFit.Contain)
               .width('100%')
               .height(180)
               .margin({ top: 8, bottom: 8 })
-          } else if (line !== '' && line !== '\n') {
+          } else if (line && line !== '' && line !== '\n') {
             Text(line.endsWith('\n') ? line.slice(0, -1) : line)
               .textOverflow({ overflow: TextOverflow.Clip })
               .align(Alignment.TopStart)
@@ -49,7 +50,7 @@ export struct Reader {
               })
               .fontWeight(this.fontWeight)
               .letterSpacing(this.letterSpacing)
-              .fontColor(this.fontColor)
+              .fontColor(this.getFontColor(this.bgColor))
               .lineHeight(this.fontSize * this.lineHeightRatio)
               .width("100%")
               .margin({ bottom: line.endsWith('\n') ? this.paragraphSpacing : 0 })
@@ -86,37 +87,38 @@ export struct Reader {
 @Component
 export struct ReaderForCurlView {
   @Consume('bgColor') bgColor: string;
-  @Consume('fontSize') fontSize: number;
-  @Consume('lineHeightRatio') lineHeightRatio: number;
+  @Consume('renderFontSize') fontSize: number;
+  @Consume('renderLineHeightRatio') lineHeightRatio: number;
   @Consume('turnStyle') turnStyle: FlipPageType;
   @Consume('displaySize') displaySize: number[];
-  @Consume('readerPadding') readerPadding: number;
-  @Consume('fontWeight') fontWeight: number;
-  @Consume('fontType') fontType: string;
-  @Consume('isFirstLineIndent') isFirstLineIndent: boolean;
-  @Consume('letterSpacing') letterSpacing: number;
+  @Consume('renderReaderPadding') readerPadding: number;
+  @Consume('renderFontWeight') fontWeight: number;
+  @Consume('renderFontType') fontType: string;
+  @Consume('renderIsFirstLineIndent') isFirstLineIndent: boolean;
+  @Consume('renderLetterSpacing') letterSpacing: number;
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('currentChapterIndex') currentChapterIndex: number;
   @Consume('chapterList') chapterList: ReaderChapterItem[];
-  @Consume('paragraphSpacing') paragraphSpacing: number;
+  @Consume('renderParagraphSpacing') paragraphSpacing: number;
   @Prop content: string = '';
   @Prop lineContentList: string[] = [];
 
-  get fontColor(): string {
-    return this.bgColor === '#2C2C2C' ? '#9E9E9E' : '#1C1C1E';
+  getFontColor(bgColor: string): string {
+    const upper = bgColor.toUpperCase();
+    return (upper === '#2C2C2C' || upper === '#1A1A1A') ? '#EDE4D3' : '#1C1C1E';
   }
 
   build() {
     Column() {
       Column() {
         ForEach(this.lineContentList && this.lineContentList.length > 0 ? this.lineContentList : [this.content], (line: string) => {
-          if (line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
+          if (line && line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
             Image(line.trim().substring(5, line.trim().length - 1))
               .objectFit(ImageFit.Contain)
               .width('100%')
               .height(180)
               .margin({ top: 8, bottom: 8 })
-          } else if (line !== '' && line !== '\n') {
+          } else if (line && line !== '' && line !== '\n') {
             Text(line.endsWith('\n') ? line.slice(0, -1) : line)
               .textOverflow({ overflow: TextOverflow.Clip })
               .align(Alignment.TopStart)
@@ -125,7 +127,7 @@ export struct ReaderForCurlView {
               })
               .fontWeight(this.fontWeight)
               .letterSpacing(this.letterSpacing)
-              .fontColor(this.fontColor)
+              .fontColor(this.getFontColor(this.bgColor))
               .lineHeight(this.fontSize * this.lineHeightRatio)
               .width("100%")
               .margin({ bottom: line.endsWith('\n') ? this.paragraphSpacing : 0 })
@@ -168,8 +170,9 @@ export struct ReaderBottom {
   @Consume('chapterList') chapterList: ReaderChapterItem[];
   @Consume('bgColor') bgColor: string;
 
-  get fontColor(): string {
-    return this.bgColor === '#2C2C2C' ? '#9E9E9E' : '#1C1C1E';
+  getFontColor(bgColor: string): string {
+    const upper = bgColor.toUpperCase();
+    return (upper === '#2C2C2C' || upper === '#1A1A1A') ? '#EDE4D3' : '#1C1C1E';
   }
 
   build() {
@@ -177,17 +180,17 @@ export struct ReaderBottom {
       TextClock({ timeZoneOffset: -8 })
         .format('hh:mm')
         .fontSize(12)
-        .fontColor(this.fontColor)
+        .fontColor(this.getFontColor(this.bgColor))
         .onDateChange((value) => {
           /// todo: 更新到SimulateDrawManager
         })
         .fontWeight(400)
       /// todo:电池状态监听与更新到SimulateDrawManager
-      battery({ color: this.fontColor })
+      battery({ color: this.getFontColor(this.bgColor) })
       Blank(0)
       Text(`${this.currentPageIndex + 1}/${this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1}` + "\u3000" + `${(this.chapterList.length > 0 ? (this.currentChapterIndex + ((this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1) > 0 ? this.currentPageIndex / (this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1) : 0)) / this.chapterList.length * 100 : 0).toFixed(1)}%`)
         .fontSize(12)
-        .fontColor(this.fontColor)
+        .fontColor(this.getFontColor(this.bgColor))
     }.padding({
       top: 16,
     }).id(this.containerId)
@@ -208,7 +211,7 @@ export class SimulateDrawManager {
   private context: DrawingRenderingContext;
   private fontSize: number;
   private lineHeight: number;
-  private chapterList: ReaderChapterItem[];
+  public chapterList: ReaderChapterItem[];
   private currentChapterIndex: number;
   private currentPageIndex: number;
   private bgColor: string;
@@ -485,7 +488,8 @@ abstract class SimulationDrawHelper {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
       canvas.drawColor(preColor)
       const brush = new drawing.Brush();
-      let fontColorRGB = this.bgColor === '#2C2C2C' ? [158, 158, 158] : [28, 28, 30];
+      let isNight = this.bgColor.toUpperCase() === '#2C2C2C' || this.bgColor.toUpperCase() === '#1A1A1A';
+      let fontColorRGB = isNight ? [237, 228, 211] : [28, 28, 30];
       brush.setColor({
         alpha: 255,
         red: fontColorRGB[0],
@@ -536,7 +540,8 @@ abstract class SimulationDrawHelper {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
       canvas.drawColor(preColor)
       const brush = new drawing.Brush();
-      let fontColorRGB = this.bgColor === '#2C2C2C' ? [158, 158, 158] : [28, 28, 30];
+      let isNight = this.bgColor.toUpperCase() === '#2C2C2C' || this.bgColor.toUpperCase() === '#1A1A1A';
+      let fontColorRGB = isNight ? [237, 228, 211] : [28, 28, 30];
       brush.setColor({
         alpha: 255,
         red: fontColorRGB[0],

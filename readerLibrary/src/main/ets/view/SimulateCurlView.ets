@@ -20,15 +20,15 @@ export struct SimulateCurlView {
   private animatorResult: AnimatorResult | undefined | null
   @Consume('screenW') screenW: number;
   @Consume('currentPageIndex') currentPageIndex: number;
-  @Consume('chapterList') chapterList: ReaderChapterItem[];
+  @Consume('chapterList') @Watch('onChapterListChanged') chapterList: ReaderChapterItem[];
   @Consume('currentChapterIndex') currentChapterIndex: number;
-  @Consume('fontSize') @Watch('onFontSizeChanged') fontSize: number;
-  @Consume('lineHeightRatio') @Watch('onLineHeightRatioChanged') lineHeightRatio: number;
+  @Consume('renderFontSize') @Watch('onFontSizeChanged') fontSize: number;
+  @Consume('renderLineHeightRatio') @Watch('onLineHeightRatioChanged') lineHeightRatio: number;
   @Consume('bgColor') @Watch('onBgColorChanged') bgColor: string;
-  @Consume('readerPadding') @Watch('onReaderPaddingChanged') readerPadding: number;
+  @Consume('renderReaderPadding') @Watch('onReaderPaddingChanged') readerPadding: number;
   @Provide('batteryPixelMap') @Watch('setBatteryPixelMap') batteryPixelMap: image.PixelMap | null = null;
   @Consume('displaySize') @Watch('onTextDisplaySizeChanged') displaySize: number[];
-  @Consume('paragraphSpacing') @Watch('onParagraphSpacingChanged') paragraphSpacing: number;
+  @Consume('renderParagraphSpacing') @Watch('onParagraphSpacingChanged') paragraphSpacing: number;
   drawManager: SimulateDrawManager | null = null;
   isTurnNext: boolean | null = null;
   animationEndValue: number | null = null;
@@ -40,6 +40,14 @@ export struct SimulateCurlView {
       NovelChapterOperateHelper.nextPageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
     this.prePageIndex =
       NovelChapterOperateHelper.prePageIndex(this.chapterList, this.currentChapterIndex, this.currentPageIndex);
+  }
+
+  onChapterListChanged() {
+    this.calPageIndex();
+    if (this.drawManager !== null) {
+      this.drawManager.chapterList = this.chapterList;
+      this.drawManager.draw();
+    }
   }
 
   aboutToDisappear(): void {

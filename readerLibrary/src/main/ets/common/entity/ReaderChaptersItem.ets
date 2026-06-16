@@ -6,8 +6,8 @@ export class ReaderChapterItem {
   paragraphList: string[]
   chapterPageList: ReaderChapterPageItem[]
 
-  constructor(number: number, title = '', chapterTitleNumber = '', content = '', paragraphList = [],
-    chapterPageList = []) {
+  constructor(number: number, title = '', chapterTitleNumber = '', content = '', paragraphList: string[] = [],
+    chapterPageList: ReaderChapterPageItem[] = []) {
     this.number = number
     this.content = content
     this.chapterTitleNumber = chapterTitleNumber

@@ -15,12 +15,14 @@ export class NovelContentParseHelper {
    * @return {Promise<string>} 章节中每页的内容列表 The list of content for each page in chapter
    */
   static async calculateChapterContent(paragraphList: string[], fontSize: number, lineHeight: number,
-    measureContentWidth: number, measureContentHeight: number, paragraphSpacing: number = 0): Promise<string[][]> {
+    measureContentWidth: number, measureContentHeight: number, paragraphSpacing: number = 0,
+    letterSpacing: number = 0): Promise<string[][]> {
     let tempParagraphList = paragraphList.slice()
     let wordSize = measure.measureTextSize({
       textContent: '测', // 随便找的测试文字，用来测试一个字有多大。
       fontSize: fontSize,
-      lineHeight: lineHeight
+      lineHeight: lineHeight,
+      letterSpacing: `${letterSpacing}px`
     });
     let pageIndex = 0;
     let pageContent: string[][] = [];
@@ -29,7 +31,7 @@ export class NovelContentParseHelper {
       try {
         let pageParagraphList =
           await NovelContentParseHelper.calculateParagraphForPage(tempParagraphList, measureContentHeight,
-            measureContentWidth, wordSize, fontSize, lineHeight, paragraphSpacing)
+            measureContentWidth, wordSize, fontSize, lineHeight, paragraphSpacing, letterSpacing)
 
         pageContent[pageIndex] = pageParagraphList
         pageIndex++;
@@ -64,7 +66,8 @@ export class NovelContentParseHelper {
    * @return {Promise<string>} 每页的段落列表 The list of content for each page in chapter
    */
   static calculateParagraphForPage(paragraphs: string[], targetHeight: number, targetWidth: number,
-    wordSize: SizeOptions, fontSize: number, lineHeight: number, paragraphSpacing: number = 0): Promise<string[]> {
+    wordSize: SizeOptions, fontSize: number, lineHeight: number, paragraphSpacing: number = 0,
+    letterSpacing: number = 0): Promise<string[]> {
     return new Promise((resolve, reject) => {
       let constraintWidth = targetWidth;
 
@@ -103,14 +106,14 @@ export class NovelContentParseHelper {
         // 检查是否为图片占位符
         let isImage = currentTarget.trim().startsWith('[img:') && currentTarget.trim().endsWith(']');
         if (isImage) {
-          let imgLinesNeeded = 8; // 图片占用的行高度相当于8行文本
+          // 图片实际渲染高度: 180vp + 上下各8vp margin = 196vp
+          let imgHeightPx = vp2px(180 + 16);
+          let imgLinesNeeded = Math.max(1, Math.ceil(imgHeightPx / wordHeight));
           let imgHeightNeeded = wordHeight * imgLinesNeeded;
           if (accumulatedHeight === 0 || accumulatedHeight + imgHeightNeeded <= constraintHeight) {
             result[currentLineIndex] = currentTarget.trim();
             for (let i = 1; i < imgLinesNeeded; i++) {
-              if (currentLineIndex + i < imgLinesNeeded) {
-                result[currentLineIndex + i] = '';
-              }
+              result[currentLineIndex + i] = '';
             }
             currentLineIndex += imgLinesNeeded;
             accumulatedHeight += imgHeightNeeded;
@@ -139,7 +142,7 @@ export class NovelContentParseHelper {
         }
 
         let heightLimit = wordHeight * 1.15;
-        let currentTargetHeight = NovelContentParseHelper.measureTextHeight(currentTarget, constraintWidth, fontSize, lineHeight);
+        let currentTargetHeight = NovelContentParseHelper.measureTextHeight(currentTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
 
         if (currentTargetHeight <= heightLimit) {
           result[currentLineIndex] = currentTarget + (isNeedAddLineFeed ? lineFeed : '');
@@ -159,7 +162,7 @@ export class NovelContentParseHelper {
           }
 
           let tempCurrentTarget = currentTarget.substring(0, currentPos)
-          let testHeight = NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize, lineHeight);
+          let testHeight = NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
 
           if (testHeight <= heightLimit) {
             while (true) {
@@ -168,7 +171,7 @@ export class NovelContentParseHelper {
                 break;
               }
               let nextTarget = currentTarget.substring(0, nextPos);
-              let nextHeight = NovelContentParseHelper.measureTextHeight(nextTarget, constraintWidth, fontSize, lineHeight);
+              let nextHeight = NovelContentParseHelper.measureTextHeight(nextTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
               if (nextHeight > heightLimit) {
                 break;
               }
@@ -182,7 +185,7 @@ export class NovelContentParseHelper {
                 break;
               }
               let prevTarget = currentTarget.substring(0, prevPos);
-              let prevHeight = NovelContentParseHelper.measureTextHeight(prevTarget, constraintWidth, fontSize, lineHeight);
+              let prevHeight = NovelContentParseHelper.measureTextHeight(prevTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
               if (prevHeight <= heightLimit) {
                 currentPos = prevPos;
                 tempCurrentTarget = prevTarget;
@@ -207,6 +210,7 @@ export class NovelContentParseHelper {
           if (remaining.length === 0 || remaining === lineFeed) {
             if (isNeedAddLineFeed) {
               accumulatedHeight += paragraphSpacingPx;
+              result[currentLineIndex - 1] += lineFeed;
             }
             paragraphs.splice(0, 1);
           } else {
@@ -229,12 +233,14 @@ export class NovelContentParseHelper {
    * @param {number} lineHeight 展示内容的行高 the line height of display config
    * @return {number} 测量的文字高度 The height of given text
    */
-  static measureTextHeight(content: string, constraintWidth: number, fontSize: number, lineHeight: number): number {
+  static measureTextHeight(content: string, constraintWidth: number, fontSize: number, lineHeight: number,
+    letterSpacing: number = 0): number {
     let height = measure.measureTextSize({
       textContent: content,
       constraintWidth: `${constraintWidth}px`,
       fontSize: fontSize,
-      lineHeight: lineHeight
+      lineHeight: lineHeight,
+      letterSpacing: `${letterSpacing}px`
     }).height
 
     return typeof height === 'number' ? height : 0;
