@@ -2,6 +2,8 @@ import BookGroupsDao from './dao/BookGroupsDao'
 import bookHistoryDao from './dao/BookHistoryDao'
 import BooksDao from './dao/BooksDao'
 import BookSourceDao from './dao/BookSourceDao'
+import BookMarkDao from './dao/BookMarkDao'
+import chaptersDao from './dao/ChaptersDao'
 import rssSourceGroupDao from './dao/rssSourceGroupDao'
 import rssSourcesHistoryDao from './dao/RssSourcesHistoryDao'
 import SubscriptionDao from './dao/SubscriptionDao'
@@ -17,6 +19,8 @@ class DataBase {
     await worksListsDao.initWorksListsTable()
     await bookHistoryDao.initBookHistoryTable()
     await rssSourceGroupDao.initBookSourceGroupTable()
+    await BookMarkDao.initBookMarkTable()
+    await chaptersDao.initChaptersTable()
   }
 }
 

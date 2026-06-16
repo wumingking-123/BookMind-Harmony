@@ -216,4 +216,3 @@ export default struct DownloadSettingDialog {
     this.isShowDownload = false
   }
 }
-

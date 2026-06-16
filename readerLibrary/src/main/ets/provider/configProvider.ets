@@ -17,6 +17,7 @@ export struct ReaderProvider {
   curPosition: number = 0
   turnStyle: FlipPageType = FlipPageType.COVER_FLIP_PAGE
   chapterList: ReaderChapterItem[] = [];
+  fontWeight: number = 400
 
   build() {
     Row() {
@@ -27,7 +28,8 @@ export struct ReaderProvider {
         bgColor: this.bgColor,
         child: this.child,
         chapterList: this.chapterList,
-        currentChapterIndex: this.currentChapterIndex
+        currentChapterIndex: this.currentChapterIndex,
+        fontWeight: this.fontWeight
       })
     }
   }

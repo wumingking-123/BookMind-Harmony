@@ -3,9 +3,26 @@
     "products": [
       {
         "name": "default",
-        "compatibleSdkVersion": "6.0.2(22)",
+        // 绑定上方 signingConfigs 里 name="default" 的签名
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.0(12)",
         "runtimeOS": "HarmonyOS",
-        "targetSdkVersion": "6.0.2(22)"
+        "targetSdkVersion": "5.0.0(12)"
+      }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\a1957\\.ohos\\config\\default_BookMind-Harmony_n46z4ce2WSNcpSADwNijLoVNEmSLo-QmfVUcsb0HAWA=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B1D531BDB5CA0188A4BCD85532520E196CFBF182490EC32ED27DDC4D9814E4052B87DD4D8D226D6",
+          "profile": "C:\\Users\\a1957\\.ohos\\config\\default_BookMind-Harmony_n46z4ce2WSNcpSADwNijLoVNEmSLo-QmfVUcsb0HAWA=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\a1957\\.ohos\\config\\default_BookMind-Harmony_n46z4ce2WSNcpSADwNijLoVNEmSLo-QmfVUcsb0HAWA=.p12",
+          "storePassword": "0000001B5FAAB91263C77B7D87DB40BEBCA4720146923860031517FF012839C69E33469E84D9943A17A05E"
+        }
       }
     ]
   },
@@ -24,11 +41,11 @@
     },
     {
       "name": "colorLibrary",
-      "srcPath": "./commons/colorLibrary",
+      "srcPath": "./commons/colorLibrary"
     },
     {
       "name": "readerLibrary",
-      "srcPath": "./readerLibrary",
+      "srcPath": "./readerLibrary"
     }
   ]
 }

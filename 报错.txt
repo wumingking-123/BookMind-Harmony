@@ -1,0 +1,6 @@
+https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started，https://developer.huawei.com/consum
+  er/cn/doc/harmonyos-guides/arkts-coding-style-guide，https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/a
+  rkts-migration-background，https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/typescript-to-arkts-migrati
+  on-guide，https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-more-cases，https://developer.huawei.c
+  om/consumer/cn/doc/harmonyos-guides/arkts-high-performance-programming，报错依旧放在报错.txt中，你去这几个网站学习一
+  下吧，再来改

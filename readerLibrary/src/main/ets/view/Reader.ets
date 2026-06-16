@@ -96,6 +96,7 @@ export struct ReaderForCurlView {
   @Consume('renderFontType') fontType: string;
   @Consume('renderIsFirstLineIndent') isFirstLineIndent: boolean;
   @Consume('renderLetterSpacing') letterSpacing: number;
+  @Consume('batteryPixelMap') batteryPixelMap: image.PixelMap | null;
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('currentChapterIndex') currentChapterIndex: number;
   @Consume('chapterList') chapterList: ReaderChapterItem[];

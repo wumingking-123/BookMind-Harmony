@@ -65,7 +65,7 @@ export default struct LayoutMoreDialog {
           .fontSize(15)
           .fontColor('#1F2329')
           .width(70)
-        
+
         Slider({
           value: this.ReaderPadding,
           max: 40,
@@ -83,7 +83,7 @@ export default struct LayoutMoreDialog {
             this.ReaderPadding = value
             this.saveSettings()
           })
-        
+
         Text(`${this.ReaderPadding.toFixed(0)}`)
           .fontSize(14)
           .fontColor('#646A73')
@@ -99,7 +99,7 @@ export default struct LayoutMoreDialog {
           .fontSize(15)
           .fontColor('#1F2329')
           .width(70)
-        
+
         Slider({
           value: this.letterSpacing,
           max: 10,
@@ -117,7 +117,7 @@ export default struct LayoutMoreDialog {
             this.letterSpacing = value
             this.saveSettings()
           })
-        
+
         Text(`${this.letterSpacing.toFixed(1)}`)
           .fontSize(14)
           .fontColor('#646A73')
@@ -175,7 +175,7 @@ export default struct LayoutMoreDialog {
           Text('首行缩进')
             .fontSize(15)
             .fontColor('#1F2329')
-          
+
           Text('段落首行空两格')
             .fontSize(12)
             .fontColor('#8F959E')
@@ -274,4 +274,3 @@ export default struct LayoutMoreDialog {
       })
   }
 }
-

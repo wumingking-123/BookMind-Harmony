@@ -101,6 +101,15 @@ struct BookDetailPage {
       if (!this.bookData.isJoin) {
         this.bookData.isJoin = await booksUtil.isExistBooks(this.bookData.bookUrl, this.bookData.bookName)
       }
+      // 从数据库读取最新的阅读进度
+      if (this.bookData.id) {
+        let savedBooks = await booksUtil.getBookByIds(this.bookData.id)
+        if (savedBooks.length > 0) {
+          this.bookData.durChapterIndex = savedBooks[0].durChapterIndex
+          this.bookData.durChapterTitle = savedBooks[0].durChapterTitle
+          this.bookData.durChapterPos = savedBooks[0].durChapterPos
+        }
+      }
       let temp = await FileHandler.readFile(this.bookData?.bookUrl || '') // txt小说
       this.txtFile.pushAllData(temp)
       this.txtFiles = this.txtFile.getListData()
@@ -275,11 +284,8 @@ struct BookDetailPage {
             }
           })
       }
-      .justifyContent(FlexAlign.Center)
-      .width('100%')
-      .padding({ top: InkSpacing.MD, bottom: InkSpacing.MD })
     }
-    .padding({ left: InkSpacing.XL, right: InkSpacing.XL, bottom: InkSpacing.MD })
+    .padding({ left: InkSpacing.XL, right: InkSpacing.XL, top: InkSpacing.MD, bottom: InkSpacing.MD })
     .width('100%')
     .height('100%')
     .backgroundColor(InkPalette.PAPER)
@@ -497,5 +503,26 @@ struct BookDetailPage {
     bookHistory.durChapterTitle = durChapterTitle
     bookHistory.durChapterIndex = durChapterIndex
     bookHistoryUtils.addBooks(bookHistory)
+  }
+
+  startReadOrPlay() {
+    let savedIndex = this.bookData.durChapterIndex || 0
+    if (savedIndex >= this.txtFiles.length) {
+      savedIndex = 0
+    }
+    let chapterItem = this.txtFile.getListData()[savedIndex]
+    if (this.bookData.bookType !== 2) {
+      BookContentHolder.setChapters(this.txtFiles)
+    }
+    router.pushUrl({
+      url: 'pages/view/Reader/ReaderPage2',
+      params: {
+        bookData: this.bookData,
+        clickBookChapter: savedIndex
+      }
+    })
+    if (this.txtFiles && chapterItem) {
+      this.jumpReadPage(`${chapterItem.chapterTitleNumber} ${chapterItem.title}`, savedIndex)
+    }
   }
 }

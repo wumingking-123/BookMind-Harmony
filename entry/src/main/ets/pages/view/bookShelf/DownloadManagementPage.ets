@@ -3,25 +3,8 @@ import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
 import { ThemeItem } from '../../../common/model/Theme';
 import { ThemeStorageKey } from '../../../common/constants/Theme';
-
-class DownloadItem {
-  bookName: string
-  downloadNumber: number
-  Total: number
-  Type: string
-
-  constructor(
-    bookName: string,
-    downloadNumber: number,
-    Total: number,
-    Type: string,
-  ) {
-    this.bookName = bookName
-    this.downloadNumber = downloadNumber
-    this.Total = Total
-    this.Type = Type
-  }
-}
+import downloadManager from '../../../common/utils/DownloadManager';
+import { DownloadTask, DownloadStatus } from '../../../common/model/DownloadTask';
 
 PersistentStorage.persistProp('ExportSettingList', [false, false, false, false, false]);
 
@@ -37,25 +20,29 @@ struct DownloadManagementPage {
   @State isShowExportSetting: boolean = false
   @StorageLink('ExportSettingList') ExportSettingList: Array<boolean> = [false, false, false, false, false]
   @State questionsList: Array<string> = ["全部", "小说", "漫画", "有声书", "有声书", "有声书"]
-  @State DownloadingItemList: DownloadItem[] = [
-    new DownloadItem("斗破苍穹", 12, 100, "EPUB"),
-    new DownloadItem("斗破苍穹", 70, 150, "TXT"),
-    new DownloadItem("斗破苍穹", 50, 200, "PDF"),
-    new DownloadItem("斗破苍穹", 50, 200, "PDF"),
-  ]
-  @State DownloadFinishItemList: DownloadItem[] = [
-    new DownloadItem("斗破苍穹完成", 12, 100, "EPUB"),
-    new DownloadItem("斗破苍穹完成", 70, 150, "TXT"),
-    new DownloadItem("斗破苍穹完成", 50, 200, "PDF"),
-  ]
-  @State ExportFinishList: DownloadItem[] = [
-    new DownloadItem("斗破苍穹导出", 12, 100, "EPUB"),
-    new DownloadItem("斗破苍穹导出", 70, 150, "TXT"),
-    new DownloadItem("斗破苍穹导出", 50, 200, "PDF"),
-  ]
+  @State downloadingTasks: DownloadTask[] = []
+  @State completedTasks: DownloadTask[] = []
 
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
+  aboutToAppear(): void {
+    this.refreshTasks();
+    downloadManager.onProgress(() => {
+      this.refreshTasks();
+    });
+  }
+
+  aboutToDisappear(): void {
+    downloadManager.offProgress(() => {
+      this.refreshTasks();
+    });
+  }
+
+  private refreshTasks(): void {
+    this.downloadingTasks = downloadManager.getDownloadingTasks();
+    this.completedTasks = downloadManager.getCompletedTasks();
+  }
 
   build() {
     Stack() {
@@ -110,9 +97,9 @@ struct DownloadManagementPage {
         TabContent() {
           Column() {
             // 下载-下载中
-            if (this.DownloadingItemList.length > 0) {
+            if (this.downloadingTasks.length > 0) {
               Row() {
-                Text(`下载中 (${this.DownloadingItemList.length})`)
+                Text(`下载中 (${this.downloadingTasks.length})`)
                   .opacity(0.45)
                   .lineHeight(20)
                   .font({
@@ -121,7 +108,7 @@ struct DownloadManagementPage {
                   })
                 Blank(1)
                 if (this.IsEdit) {
-                  CheckboxGroup({ group: 'DownloadingItemList' })
+                  CheckboxGroup({ group: 'downloadingTasks' })
                 } else {
                   Text("全部暂停")
                     .lineHeight(20)
@@ -129,6 +116,10 @@ struct DownloadManagementPage {
                     .font({
                       size: 12,
                       weight: 500
+                    })
+                    .onClick(() => {
+                      downloadManager.pauseAll();
+                      this.refreshTasks();
                     })
                 }
               }
@@ -138,14 +129,14 @@ struct DownloadManagementPage {
                 bottom: 12
               })
 
-              ForEach(this.DownloadingItemList, (item: DownloadItem) => {
-                this.ShowItem(item, "Downloading", 0)
+              ForEach(this.downloadingTasks, (task: DownloadTask) => {
+                this.ShowTaskItem(task, "Downloading")
               })
             }
             // 下载-已下载
-            if (this.DownloadFinishItemList.length > 0) {
+            if (this.completedTasks.length > 0) {
               Row() {
-                Text(`已下载 (${this.DownloadFinishItemList.length})`)
+                Text(`已下载 (${this.completedTasks.length})`)
                   .opacity(0.45)
                   .lineHeight(20)
                   .font({
@@ -154,7 +145,7 @@ struct DownloadManagementPage {
                   })
                 Blank(1)
                 if (this.IsEdit) {
-                  CheckboxGroup({ group: 'DownloadFinishItemList' })
+                  CheckboxGroup({ group: 'completedTasks' })
                 }
               }
               .width("100%")
@@ -163,11 +154,23 @@ struct DownloadManagementPage {
                 bottom: 12
               })
 
-              ForEach(this.DownloadFinishItemList, (item: DownloadItem) => {
-                this.ShowItem(item, "DownloadFinish", 0)
+              ForEach(this.completedTasks, (task: DownloadTask) => {
+                this.ShowTaskItem(task, "DownloadFinish")
               })
               Blank(1)
               Divider()
+            }
+
+            // 空状态
+            if (this.downloadingTasks.length === 0 && this.completedTasks.length === 0) {
+              Column() {
+                Text('暂无下载任务')
+                  .fontSize(14)
+                  .fontColor('#999999')
+              }
+              .width('100%')
+              .height(200)
+              .justifyContent(FlexAlign.Center)
             }
           }
           .margin({
@@ -185,9 +188,9 @@ struct DownloadManagementPage {
         TabContent() {
           Column() {
             // 导出-已下载
-            if (this.DownloadFinishItemList.length > 0 && !this.IsEdit) {
+            if (this.completedTasks.length > 0 && !this.IsEdit) {
               Row() {
-                Text(`已下载 (${this.DownloadFinishItemList.length})`)
+                Text(`已下载 (${this.completedTasks.length})`)
                   .opacity(0.45)
                   .lineHeight(20)
                   .font({
@@ -210,45 +213,21 @@ struct DownloadManagementPage {
                 bottom: 12
               })
 
-              ForEach(this.DownloadFinishItemList, (item: DownloadItem) => {
-                this.ShowItem(item, "DownloadFinish", 1)
+              ForEach(this.completedTasks, (task: DownloadTask) => {
+                this.ShowTaskItem(task, "ExportReady")
               })
             }
 
-            // 导出-已导出
-            if (this.ExportFinishList.length > 0) {
-              Row() {
-                Text(`已导出 (${this.ExportFinishList.length})`)
-                  .opacity(0.45)
-                  .lineHeight(20)
-                  .font({
-                    size: 12,
-                    weight: 500
-                  })
-                Blank(1)
-                if (this.IsEdit) {
-                  CheckboxGroup({ group: 'ExportFinishList' })
-                } else {
-                  Text("查看文件")
-                    .lineHeight(20)
-                    .fontColor(this.theme.mainColor)
-                    .font({
-                      size: 12,
-                      weight: 500
-                    })
-                }
+            // 空状态
+            if (this.completedTasks.length === 0) {
+              Column() {
+                Text('暂无可导出的任务')
+                  .fontSize(14)
+                  .fontColor('#999999')
               }
-              .width("100%")
-              .padding({
-                top: 12,
-                bottom: 12
-              })
-
-              ForEach(this.ExportFinishList, (item: DownloadItem) => {
-                this.ShowItem(item, "ExportFinish", 1)
-              })
-              Blank(1)
-              Divider()
+              .width('100%')
+              .height(200)
+              .justifyContent(FlexAlign.Center)
             }
 
           }
@@ -276,20 +255,19 @@ struct DownloadManagementPage {
   }
 
   @Builder
-  ShowItem(item: DownloadItem, itemType: string, currentTab: number) { // currentTab: 0 下载;1 导出
+  ShowTaskItem(task: DownloadTask, itemType: string) {
     Row({ space: 12 }) {
       Flex({
         direction: FlexDirection.Row,
         alignItems: ItemAlign.Center,
         justifyContent: FlexAlign.Center
       }) {
-        Text(item.Type)
+        Text(task.bookSource?.bookSourceType === 0 ? 'TXT' : task.bookSource?.bookSourceType === 1 ? 'MP3' : 'IMG')
           .fontColor("#188BFF")
           .font({
             size: 10,
             weight: 700,
           })
-
       }
       .backgroundColor("#D8ECFF")
       .width(32)
@@ -302,7 +280,7 @@ struct DownloadManagementPage {
 
       Column() {
         Row() {
-          Text(item.bookName)
+          Text(task.bookName)
             .lineHeight(22)
             .font({
               size: 14,
@@ -313,7 +291,15 @@ struct DownloadManagementPage {
 
         Row() {
           if (itemType === "Downloading") {
-            Text(`${item.downloadNumber}/${item.Total}`)
+            Text(`${task.downloadedChapters}/${task.totalChapters}`)
+              .lineHeight(18)
+              .opacity(0.45)
+              .font({
+                size: 10,
+                weight: 500,
+              })
+          } else if (itemType === "DownloadFinish") {
+            Text(`全书已下载`)
               .lineHeight(18)
               .opacity(0.45)
               .font({
@@ -321,7 +307,7 @@ struct DownloadManagementPage {
                 weight: 500,
               })
           } else {
-            Text(`全书已下载`)
+            Text(`可导出`)
               .lineHeight(18)
               .opacity(0.45)
               .font({
@@ -336,24 +322,27 @@ struct DownloadManagementPage {
 
       Blank(1)
       if (!this.IsEdit && itemType === "Downloading") {
-        Progress({ value: item.downloadNumber / item.Total * 100, type: ProgressType.Ring })
+        Progress({
+          value: task.totalChapters > 0 ? task.downloadedChapters / task.totalChapters * 100 : 0,
+          type: ProgressType.Ring
+        })
           .width(32)
       } else if (this.IsEdit && itemType === "Downloading") {
-        Checkbox({ name: `${item.bookName}`, group: 'DownloadingItemList' })
-      } else if (this.IsEdit && itemType === "DownloadFinish" && currentTab === 0) {
-        // 下载页的已下载
-        Checkbox({ name: `${item.bookName}`, group: 'DownloadFinishItemList' })
-      } else if (itemType === "DownloadFinish" && currentTab === 1) {
-        // 导出页的已下载
-        Progress({ value: 50, total: 100, type: ProgressType.Capsule })
+        Checkbox({ name: task.id, group: 'downloadingTasks' })
+      } else if (this.IsEdit && itemType === "DownloadFinish") {
+        Checkbox({ name: task.id, group: 'completedTasks' })
+      } else if (itemType === "ExportReady") {
+        Progress({
+          value: 0,
+          total: 100,
+          type: ProgressType.Capsule
+        })
           .color(this.theme.mainColor)
           .backgroundColor("#FFAF7A")
-          .value(50)
+          .value(0)
           .width(68)
           .height(28)
-          .style({ content: '50%', font: { size: 12, weight: 500 }, fontColor: "#FFFFFF", })
-      } else if (this.IsEdit && itemType === "ExportFinish") {
-        Checkbox({ name: `${item.bookName}`, group: 'ExportFinishList' })
+          .style({ content: '导出', font: { size: 12, weight: 500 }, fontColor: "#FFFFFF" })
       }
     }
     .padding({
@@ -361,6 +350,17 @@ struct DownloadManagementPage {
       bottom: 10
     })
     .width("100%")
+    .onClick(() => {
+      if (itemType === "Downloading" && !this.IsEdit) {
+        // 暂停/恢复
+        if (task.status === DownloadStatus.DOWNLOADING) {
+          downloadManager.pauseTask(task.id);
+        } else if (task.status === DownloadStatus.PAUSED) {
+          downloadManager.resumeTask(task.id);
+        }
+        this.refreshTasks();
+      }
+    })
   }
 
   @Builder

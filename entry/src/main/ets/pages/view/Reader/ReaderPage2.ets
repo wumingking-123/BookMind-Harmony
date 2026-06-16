@@ -27,6 +27,8 @@ import {
   ReaderChapterItem,
 } from '@ohos/readerLibrary/src/main/ets/common/entity/ReaderChaptersItem';
 import { ReaderProvider } from '@ohos/readerLibrary/src/main/ets/provider/configProvider';
+import bookMarkUtils from '../../../common/utils/BookMarkUtils';
+import { BookMark } from '../../../database/entities/BookMark';
 
 export interface ReaderBookmark {
   chapterIndex: number;
@@ -51,7 +53,7 @@ struct ReaderPage2 {
     let temp = router.getParams() as ParamsObj
     this.bookData = temp.bookData
     console.log('router ReaderPage2:' + (this.bookData?.bookUrl || ''))
-    
+
     // 从 BookContentHolder 获取章节数据 (避免通过 router 传递大量数据)
     let rawFile = BookContentHolder.getChapters();
     if (!rawFile || rawFile.length === 0) {
@@ -216,6 +218,7 @@ struct ReaderPageContent {
   @State isShowPurification: boolean = false // 保留给 purificationView 的 @Link
   @State isAutoRead: boolean = false
   @State isFontChanged: boolean = false
+  @State isShowSource: boolean = false
   @State screenH: number = 0
   @State screenW: number = 0
   @State readerPadding: number = 24 // 边距
@@ -262,6 +265,8 @@ struct ReaderPageContent {
     if (this.bookData && this.bookData.bookType === 2) {
       this.isShowListen = true;
     }
+    this.checkCurrentBookMark()
+    this.loadBookMarkList()
     this.loadBrightness()
     this.changeSystemBarStatue()
     this.sliderFontSize = this.fontSize
@@ -295,7 +300,6 @@ struct ReaderPageContent {
   }
 
   aboutToDisappear(): void {
-    // 清理自动阅读定时器
     if (this.autoReadTimer !== -1) {
       clearInterval(this.autoReadTimer)
       this.autoReadTimer = -1
@@ -772,6 +776,64 @@ struct ReaderPageContent {
     });
   }
 
+  // 书签相关方法
+  async checkCurrentBookMark() {
+    let bookData = AppStorage.get<Books>('readerBookData')
+    if (bookData) {
+      this.isCurrentBookMarked = await bookMarkUtils.isBookMarked(
+        bookData.bookName, bookData.author, this.currentChapterIndex)
+    }
+  }
+
+  async loadBookMarkList() {
+    let bookData = AppStorage.get<Books>('readerBookData')
+    if (bookData) {
+      this.bookMarkList = await bookMarkUtils.getBookMarks(bookData.bookName, bookData.author)
+    }
+  }
+
+  async toggleBookMark() {
+    let bookData = AppStorage.get<Books>('readerBookData')
+    if (!bookData) return
+
+    if (this.isCurrentBookMarked) {
+      let marks = await bookMarkUtils.getBookMarks(bookData.bookName, bookData.author)
+      let currentMark = marks.find(m => m.chapterIndex === this.currentChapterIndex)
+      if (currentMark) {
+        await bookMarkUtils.deleteBookMark(currentMark.time)
+      }
+      this.isCurrentBookMarked = false
+      promptAction.showToast({ message: '已取消书签', duration: 1500 })
+    } else {
+      let ch = this.chapterList[this.currentChapterIndex]
+      let mark = new BookMark()
+      mark.bookName = bookData.bookName
+      mark.bookAuthor = bookData.author
+      mark.chapterIndex = this.currentChapterIndex
+      mark.chapterPos = this.currentPageIndex
+      mark.chapterName = `${ch?.chapterTitleNumber ?? ''} ${ch?.title ?? ''}`
+      mark.bookText = ch?.paragraphList?.[0]?.substring(0, 50) ?? ''
+      mark.content = ''
+      await bookMarkUtils.addBookMark(mark)
+      this.isCurrentBookMarked = true
+      promptAction.showToast({ message: '已添加书签', duration: 1500 })
+    }
+    this.loadBookMarkList()
+  }
+
+  jumpToBookMark(mark: BookMark) {
+    this.currentChapterIndex = mark.chapterIndex
+    this.currentPageIndex = mark.chapterPos
+    this.isShowBookMarkList = false
+    this.isShowSetting = false
+  }
+
+  async deleteBookMarkItem(mark: BookMark) {
+    await bookMarkUtils.deleteBookMark(mark.time)
+    this.loadBookMarkList()
+    this.checkCurrentBookMark()
+  }
+
   get totalChapter(): number {
     return this.chapterList.length;
   }
@@ -1097,16 +1159,23 @@ struct ReaderPageContent {
                       this.currentLuminance = value
                       this.setBrightness(value)
                     })
-                  
-                  Row({ space: 6 }) {
-                    Checkbox()
-                      .select(this.followSystemBrightness)
-                      .selectedColor('#A89B7E')
-                      .unselectedColor(this.isNightMode ? '#555555' : '#D0D0D0')
-                      .width(14)
-                      .height(14)
-                      .onChange((value) => {
-                        this.followSystemBrightness = value
+                  Image($r('app.media.brightness_high'))
+                    .width(18)
+                    .height(18)
+                    .fillColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
+
+                  Button(this.followSystemBrightness ? '跟随系统' : '手动调节')
+                    .fontSize(11)
+                    .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
+                    .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)')
+                    .borderRadius(6)
+                    .height(28)
+                    .padding({ left: 10, right: 10 })
+                    .onClick(() => {
+                      this.followSystemBrightness = !this.followSystemBrightness
+                      promptAction.showToast({
+                        message: this.followSystemBrightness ? '已跟随系统亮度' : '已切换手动调节',
+                        duration: 1500
                       })
                     Text('系统亮度')
                       .fontSize(12)
@@ -1315,6 +1384,7 @@ struct ReaderPageContent {
                 this.isShowContentSetting = !this.isShowContentSetting
               })
             }
+
             .width("100%")
             .height(56)
             .padding({ bottom: this.bottomRectHeight })
@@ -1400,6 +1470,7 @@ struct ReaderPageContent {
       this.currentPageIndex = 0;
     }
   }
+
 
 
   @Builder

@@ -70,15 +70,12 @@ class searchUtils{
     let parse = parseURLUtil.processRuleUrl();
     if (typeof parse !== 'string') {
       urls = parse.url
-      // body = await requestUtil.requestHtml(parse)
+      body = await requestUtil.requestHtml(parse)
     } else {
       urls = parse
-      // let res = await requestUtil.requestUrlHtml(parse)
-      // if (res === undefined) return []
-      // if (networkUtil.checkContentType(res)) {
-      //   console.log('Json数据')
-      // }
-      // body = res
+      let res = await requestUtil.requestUrlHtml(parse)
+      if (res === undefined) return []
+      body = res
     }
     if (bookSource.ruleSearch) {
       xmlAnalysis.init(new XmlAnalysisData({

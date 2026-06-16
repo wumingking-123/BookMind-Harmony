@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "Bash(python *)",
+      "WebFetch(domain:developer.huawei.com)",
+      "WebSearch"
+    ]
+  }
+}
