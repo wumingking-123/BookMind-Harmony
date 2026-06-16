@@ -11,6 +11,7 @@ export struct UpDownFlipView {
   @Consume('chapterList') @Watch('onChapterListChanged') chapterList: ReaderChapterItem[];
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('currentChapterIndex') currentChapterIndex: number;
+  @Consume('bgColor') bgColor: string;
   @State private offsetY: number = 0;
   private isFirst: boolean = false;
 
@@ -78,6 +79,7 @@ export struct UpDownFlipView {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor(this.bgColor)
     .clip(true)
     .gesture(
       PanGesture({ direction: PanDirection.Vertical })

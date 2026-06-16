@@ -11,6 +11,7 @@ export struct CoverFlipView {
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('currentChapterIndex') currentChapterIndex: number;
   @Consume('chapterList') @Watch('onChapterListChanged') chapterList: ReaderChapterItem[];
+  @Consume('bgColor') bgColor: string;
   private isFirst: boolean = false;
   // 记录手势开始时的翻页方向，防止 animateTo 结束时取值错误
   private pendingDirection: number = 0; // -1 = 向前, 1 = 向后, 0 = 无
@@ -131,6 +132,7 @@ export struct CoverFlipView {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor(this.bgColor)
     .clip(true)
     .gesture(
       PanGesture({ direction: PanDirection.Horizontal })

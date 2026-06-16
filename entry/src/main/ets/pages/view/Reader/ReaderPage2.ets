@@ -1,4 +1,5 @@
 import { display, promptAction, router, window } from '@kit.ArkUI';
+import { preferences } from '@kit.ArkData';
 import sourceView from './sourceView';
 import { NetworkInput } from 'ets/componets/Reader/NetworkInput';
 import DownloadSettingDialog from '../../../componets/Reader/DownloadSettingDialog';
@@ -56,19 +57,27 @@ struct ReaderPage2 {
 
     this.currentChapters = temp.clickBookChapter
 
-    this.changeSystemBarStatue();
+    // 获取并设置初始背景颜色，避免闪烁
+    let initialColor = BG_COLOR_ARRAY[BGColorType.WHITE];
+    try {
+      const pref = await preferences.getPreferences(getContext(this), 'readerSettings');
+      initialColor = await pref.get('bgColor', BG_COLOR_ARRAY[BGColorType.WHITE]) as string;
+    } catch (e) {
+      console.error('Failed to load initial bgColor preference:', e);
+    }
+    this.changeSystemBarStatue(initialColor);
   }
 
 
-  changeSystemBarStatue(): void {
+  changeSystemBarStatue(color: string = BG_COLOR_ARRAY[BGColorType.WHITE]): void {
     window.getLastWindow(getContext(this), (err, data) => {
       const errCode = err.code;
       if (errCode) {
         return;
       }
       let SystemBarProperties: window.SystemBarProperties = {
-        statusBarColor: BG_COLOR_ARRAY[BGColorType.WHITE],
-        navigationBarColor: BG_COLOR_ARRAY[BGColorType.WHITE],
+        statusBarColor: color,
+        navigationBarColor: color,
         navigationBarContentColor: Constants.TRANSPARENT
       };
       try {
@@ -78,7 +87,7 @@ struct ReaderPage2 {
             console.error('Failed to set the system bar properties. Cause: ' + JSON.stringify(err));
             return;
           }
-          data.setWindowBackgroundColor(BG_COLOR_ARRAY[BGColorType.WHITE]);
+          data.setWindowBackgroundColor(color);
         });
       } catch (exception) {
         console.error('Failed to set the system bar properties. Cause: ' + JSON.stringify(exception));
@@ -164,17 +173,36 @@ struct ReaderPageContent {
   @State followSystemBrightness: boolean = true
   @State isNightMode: boolean = false
   private autoReadTimer: number = -1
-  @Consume('fontSize') fontSize: number
-  @Consume('lineHeightRatio') lineHeightRatio: number
-  @Consume('bgColor') bgColor: string
+  @Consume('fontSize') @Watch('onFontSizeChanged') fontSize: number
+  @Consume('lineHeightRatio') @Watch('onLineHeightRatioChanged') lineHeightRatio: number
+  @Consume('bgColor') @Watch('onBgColorChanged') bgColor: string
   @Consume('chapterList') chapterList: ReaderChapterItem[]
   @Consume('turnStyle') turnStyle: FlipPageType
   @Consume('currentPageIndex') @Watch('onFlush') currentPageIndex: number
-  @Consume('paragraphSpacing') paragraphSpacing: number
-  @Consume('currentChapterIndex') currentChapterIndex: number
+  @Consume('paragraphSpacing') @Watch('onParagraphSpacingChanged') paragraphSpacing: number
+  @Consume('currentChapterIndex') @Watch('onChapterIndexChanged') currentChapterIndex: number
   @Consume('currentLuminance') currentLuminance: number
+  @Consume('fontWeight') @Watch('onFontWeightChanged') fontWeight: number
+  @Consume('fontType') @Watch('onFontTypeChanged') fontType: string
+  @Consume('letterSpacing') @Watch('onLetterSpacingChanged') letterSpacing: number
+  @State sliderFontSize: number = 20
+  @State sliderChapterIndex: number = 0
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
+  @State isShowCatalog: boolean = false
+  @State isBookmarked: boolean = false
+  @State catalogSearchKey: string = ""
+  @State sessionMinutes: number = 1
+  @State isShowMoreMenu: boolean = false
+  private sessionStartTime: number = Date.now()
+  private sessionTimerId: number = -1
+  private catalogScroller: Scroller = new Scroller()
+  @State panelFontSize: number = 20
+  @State panelFontWeight: number = 400
+  @State panelFontType: string = 'simplified'
+  @State panelParagraphSpacing: number = 0
+  @State panelLetterSpacing: number = 0
+  @State panelLineHeightRatio: number = 1.8
 
   aboutToAppear(): void {
     this.screenW = px2vp(display.getDefaultDisplaySync().width);
@@ -183,6 +211,22 @@ struct ReaderPageContent {
       this.isShowListen = true;
     }
     this.loadBrightness()
+    this.changeSystemBarStatue()
+    this.sliderFontSize = this.fontSize
+    this.sliderChapterIndex = this.currentChapterIndex
+    this.sessionStartTime = Date.now()
+    this.sessionTimerId = setInterval(() => {
+      this.sessionMinutes = Math.max(1, Math.floor((Date.now() - this.sessionStartTime) / 60000) + 1);
+    }, 30000)
+    this.checkBookmarkState()
+    
+    // 初始化设置面板本地状态
+    this.panelFontSize = this.fontSize
+    this.panelFontWeight = this.fontWeight
+    this.panelFontType = this.fontType
+    this.panelParagraphSpacing = this.paragraphSpacing
+    this.panelLetterSpacing = this.letterSpacing
+    this.panelLineHeightRatio = this.lineHeightRatio
   }
 
   aboutToDisappear(): void {
@@ -191,6 +235,359 @@ struct ReaderPageContent {
       clearInterval(this.autoReadTimer)
       this.autoReadTimer = -1
     }
+    if (this.sessionTimerId !== -1) {
+      clearInterval(this.sessionTimerId)
+      this.sessionTimerId = -1
+    }
+  }
+
+  onBgColorChanged() {
+    this.changeSystemBarStatue();
+  }
+
+  onFontSizeChanged() {
+    this.panelFontSize = this.fontSize
+    this.sliderFontSize = this.fontSize
+  }
+
+  onLineHeightRatioChanged() {
+    this.panelLineHeightRatio = this.lineHeightRatio
+  }
+
+  onParagraphSpacingChanged() {
+    this.panelParagraphSpacing = this.paragraphSpacing
+  }
+
+  onFontWeightChanged() {
+    this.panelFontWeight = this.fontWeight
+  }
+
+  onFontTypeChanged() {
+    this.panelFontType = this.fontType
+  }
+
+  onLetterSpacingChanged() {
+    this.panelLetterSpacing = this.letterSpacing
+  }
+
+  onChapterIndexChanged() {
+    this.sliderChapterIndex = this.currentChapterIndex
+    this.checkBookmarkState()
+  }
+
+  async checkBookmarkState() {
+    if (!this.bookData) {
+      return;
+    }
+    try {
+      const pref = await preferences.getPreferences(getContext(this), 'readerSettings');
+      const key = `bookmark_${this.bookData.id}_${this.currentChapterIndex}_${this.currentPageIndex}`;
+      this.isBookmarked = await pref.get(key, false) as boolean;
+    } catch (e) {
+      console.error('Failed to check bookmark state:', e);
+    }
+  }
+
+  async toggleBookmark() {
+    if (!this.bookData) {
+      return;
+    }
+    try {
+      const pref = await preferences.getPreferences(getContext(this), 'readerSettings');
+      const key = `bookmark_${this.bookData.id}_${this.currentChapterIndex}_${this.currentPageIndex}`;
+      this.isBookmarked = !this.isBookmarked;
+      await pref.put(key, this.isBookmarked);
+      await pref.flush();
+      promptAction.showToast({
+        message: this.isBookmarked ? '已添加书签' : '已取消书签',
+        duration: 1500
+      });
+    } catch (e) {
+      console.error('Failed to toggle bookmark:', e);
+    }
+  }
+
+  calculateReadPercentage(): string {
+    if (!this.chapterList || this.chapterList.length === 0) {
+      return '0';
+    }
+    const currentChapterPages = this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1;
+    const currentChapterProgress = currentChapterPages > 0 ? this.currentPageIndex / currentChapterPages : 0;
+    const progress = (this.currentChapterIndex + currentChapterProgress) / this.chapterList.length;
+    return (progress * 100).toFixed(0);
+  }
+
+  @Builder
+  NumberAdjuster(label: string, value: string | number, onMinus: () => void, onPlus: () => void) {
+    Column({ space: 4 }) {
+      Text(label)
+        .fontSize(11)
+        .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
+      Row() {
+        Text('—')
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
+          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+          .onClick(() => onMinus())
+        
+        Text(String(value))
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+        
+        Text('+')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
+          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+          .onClick(() => onPlus())
+      }
+      .width('100%')
+      .height(34)
+      .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
+      .borderRadius(6)
+    }
+    .layoutWeight(1)
+  }
+
+  @Builder
+  FontSelector() {
+    Column({ space: 4 }) {
+      Text('字体')
+        .fontSize(11)
+        .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
+      Row() {
+        Text(this.panelFontType === 'traditional' ? '系统繁中' : '系统预设')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+      }
+      .width('100%')
+      .height(34)
+      .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
+      .borderRadius(6)
+      .onClick(() => {
+        this.panelFontType = this.panelFontType === 'traditional' ? 'simplified' : 'traditional';
+        this.fontType = this.panelFontType;
+        promptAction.showToast({
+          message: this.fontType === 'traditional' ? '已切换至系统繁体' : '已切换至系统简体',
+          duration: 1500
+        });
+      })
+    }
+    .layoutWeight(1)
+  }
+
+  @Builder
+  MoreMenuBuilder() {
+    Column() {
+      Row() {
+        Image($r('app.media.close'))
+          .width(20)
+          .height(20)
+          .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
+          .onClick(() => {
+            this.isShowMoreMenu = false;
+          })
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Start)
+      .padding({ top: 16, left: 16, right: 16, bottom: 8 })
+
+      Row({ space: 16 }) {
+        Image(this.bookData?.coverUrl || $r('app.media.book_cover'))
+          .width(54)
+          .height(72)
+          .borderRadius(4)
+          .objectFit(ImageFit.Cover)
+          .shadow({ radius: 6, color: 'rgba(0,0,0,0.15)', offsetY: 2 })
+
+        Column({ space: 6 }) {
+          Text(this.bookData?.bookName || '未知书籍')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Text(this.bookData?.author || '未知作者')
+            .fontSize(13)
+            .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
+
+          Text(`累计 ${this.sessionMinutes} 分钟 · 平均 ${Math.floor(1200 / Math.max(1, this.sessionMinutes))} 字/分钟`)
+            .fontSize(11)
+            .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, bottom: 20 })
+
+      Divider().color(this.isNightMode ? 'rgba(255,255,255,0.08)' : '#F0F0F0')
+
+      List() {
+        ListItem() {
+          this.MoreMenuRow($r('app.media.my_center_theme_icon'), '主题', () => {
+            this.isShowMoreMenu = false;
+            this.isShowBgColorDialog = true;
+          })
+        }
+
+        ListItem() {
+          this.MoreMenuRow($r('app.media.my_center_purify_icon'), '删除或替换文字', () => {
+            this.isShowMoreMenu = false;
+            this.isShowPurification = true;
+          })
+        }
+
+        ListItem() {
+          this.MoreMenuRow($r('app.media.style_icon'), `调节边距 (当前: ${this.readerPadding}vp)`, () => {
+            if (this.readerPadding === 16) {
+              this.readerPadding = 24;
+            } else if (this.readerPadding === 24) {
+              this.readerPadding = 32;
+            } else {
+              this.readerPadding = 16;
+            }
+            promptAction.showToast({ message: `边距已调整为 ${this.readerPadding}vp`, duration: 1500 });
+          })
+        }
+
+        ListItem() {
+          this.MoreMenuRow($r('app.media.my_center_set_icon'), '其他设置', () => {
+            this.isShowMoreMenu = false;
+            this.isShowFlipModeDialog = true;
+          })
+        }
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .padding({ left: 16, right: 16 })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(this.isNightMode ? '#252527' : '#F6F5F2')
+  }
+
+  @Builder
+  MoreMenuRow(icon: Resource, title: string, onClick: () => void) {
+    Row() {
+      Image(icon)
+        .width(20)
+        .height(20)
+        .fillColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
+        .margin({ right: 12 })
+      
+      Text(title)
+        .fontSize(14)
+        .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
+        .layoutWeight(1)
+
+      Image($r('app.media.ic_public_right'))
+        .width(16)
+        .height(16)
+        .fillColor(this.isNightMode ? '#555555' : '#D0D0D0')
+    }
+    .width('100%')
+    .height(48)
+    .onClick(() => onClick())
+  }
+
+  @Builder
+  CatalogBuilder() {
+    Column() {
+      Row() {
+        Search({ placeholder: '搜索章节...', value: this.catalogSearchKey })
+          .width('100%')
+          .height(36)
+          .onChange((val) => {
+            this.catalogSearchKey = val;
+          })
+      }
+      .padding({ left: 16, right: 16, top: 16, bottom: 8 })
+
+      List({ scroller: this.catalogScroller }) {
+        ForEach(this.chapterList.filter(item => item.title.includes(this.catalogSearchKey) || String(item.chapterTitleNumber).includes(this.catalogSearchKey)), (item: ReaderChapterItem) => {
+          ListItem() {
+            Row() {
+              Text(`${item.chapterTitleNumber || ''} ${item.title || ''}`.replace(new RegExp('\\s{1,}', 'g'), ' '))
+                .fontSize(14)
+                .fontColor(this.currentChapterIndex === this.chapterList.indexOf(item)
+                  ? '#A89B7E' 
+                  : (this.isNightMode ? '#EDE4D3' : '#1F2329'))
+                .fontWeight(this.currentChapterIndex === this.chapterList.indexOf(item)
+                  ? FontWeight.Bold 
+                  : FontWeight.Normal)
+                .layoutWeight(1)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+              if (this.currentChapterIndex === this.chapterList.indexOf(item)) {
+                Image($r('app.media.ic_select'))
+                  .width(16)
+                  .height(16)
+                  .fillColor('#A89B7E')
+              }
+            }
+            .width('100%')
+            .height(44)
+            .padding({ left: 16, right: 16 })
+            .onClick(() => {
+              const realIndex = this.chapterList.indexOf(item);
+              if (realIndex !== -1) {
+                this.currentChapterIndex = realIndex;
+                this.currentPageIndex = 0;
+                this.isShowCatalog = false;
+                this.isShowSetting = false;
+              }
+            })
+          }
+        })
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .onAppear(() => {
+        setTimeout(() => {
+          this.catalogScroller.scrollToIndex(this.currentChapterIndex);
+        }, 100);
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(this.isNightMode ? '#252527' : '#F6F5F2')
+  }
+
+  changeSystemBarStatue(): void {
+    const color = this.bgColor || BG_COLOR_ARRAY[BGColorType.WHITE];
+    window.getLastWindow(getContext(this), (err, data) => {
+      const errCode = err.code;
+      if (errCode) {
+        return;
+      }
+      let SystemBarProperties: window.SystemBarProperties = {
+        statusBarColor: color,
+        navigationBarColor: color,
+        navigationBarContentColor: Constants.TRANSPARENT
+      };
+      try {
+        data.setWindowSystemBarProperties(SystemBarProperties, (err: BusinessError) => {
+          const errCode: number = err.code;
+          if (errCode) {
+            console.error('Failed to set the system bar properties. Cause: ' + JSON.stringify(err));
+            return;
+          }
+          data.setWindowBackgroundColor(color);
+        });
+      } catch (exception) {
+        console.error('Failed to set the system bar properties. Cause: ' + JSON.stringify(exception));
+      }
+    });
   }
 
   get totalChapter(): number {
@@ -361,40 +758,45 @@ struct ReaderPageContent {
               .alignItems(HorizontalAlign.Start)
 
               Row({ space: 16 }) {
-                Image($r("app.media.refresh"))
-                  .width(22)
-                  .height(22)
-                  .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
-                  .onClick(() => {
-                    promptAction.showToast({
-                      message: '正在刷新章节...',
-                      duration: 1500
+                if (!this.bookData?.isLocalBook) {
+                  Image($r("app.media.refresh"))
+                    .width(22)
+                    .height(22)
+                    .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
+                    .onClick(() => {
+                      promptAction.showToast({
+                        message: '正在刷新章节...',
+                        duration: 1500
+                      })
                     })
-                  })
-                
-                Image($r("app.media.down"))
-                  .width(22)
-                  .height(22)
-                  .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
-                  .onClick(() => {
-                    this.isShowDownload = true
-                  })
-                  .bindSheet($$this.isShowDownload, this.DownloadDialog(), {
-                    height: 500,
-                    showClose: true,
-                    dragBar: true,
-                    blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
-                  })
+                  
+                  Image($r("app.media.down"))
+                    .width(22)
+                    .height(22)
+                    .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
+                    .onClick(() => {
+                      this.isShowDownload = true
+                    })
+                    .bindSheet($$this.isShowDownload, this.DownloadDialog(), {
+                      height: 500,
+                      showClose: true,
+                      dragBar: true,
+                      blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
+                    })
+                }
                 
                 Image($r("app.media.more"))
                   .width(22)
                   .height(22)
                   .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
                   .onClick(() => {
-                    promptAction.showToast({
-                      message: '更多功能开发中',
-                      duration: 1500
-                    })
+                    this.isShowMoreMenu = true
+                  })
+                  .bindSheet($$this.isShowMoreMenu, this.MoreMenuBuilder(), {
+                    height: 380,
+                    showClose: false,
+                    dragBar: true,
+                    blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
                   })
               }
             }
@@ -402,11 +804,13 @@ struct ReaderPageContent {
             .width("100%")
 
             // 搜索框
-            Row() {
-              NetworkInput()
+            if (!this.bookData?.isLocalBook) {
+              Row() {
+                NetworkInput()
+              }
+              .padding({ left: 20, right: 20, bottom: 16 })
+              .width("100%")
             }
-            .padding({ left: 20, right: 20, bottom: 16 })
-            .width("100%")
           }
           .width("100%")
           .backgroundColor(this.isNightMode ? 'rgba(30, 30, 32, 0.96)' : 'rgba(250, 247, 240, 0.96)')
@@ -436,123 +840,60 @@ struct ReaderPageContent {
             // ==================== 子面板 1: 进度面板 ====================
             if (!this.isShowContentSetting) {
               Column({ space: 16 }) {
-                // 换源和净化
                 Row({ space: 12 }) {
-                  Button({ type: ButtonType.Normal }) {
-                    Row({ space: 6 }) {
-                      Image($r("app.media.change_source_icon"))
-                        .width(16)
-                        .height(16)
-                        .fillColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                      Text("换源")
-                        .fontSize(13)
-                        .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
-                        .fontWeight(500)
-                    }
-                  }
-                  .borderRadius(8)
-                  .height(38)
-                  .layoutWeight(1)
-                  .backgroundColor(this.isNightMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)')
-                  .bindSheet($$this.isShowSource, this.sourceViewBuilder(), {
-                    height: '95%',
-                    showClose: true,
-                    dragBar: true,
-                    maskColor: 'rgba(0,0,0,0.6)',
-                  })
-                  .onClick(() => {
-                    this.isShowSource = true
-                  })
-
-                  Button({ type: ButtonType.Normal }) {
-                    Row({ space: 6 }) {
-                      Image($r("app.media.purify_icon"))
-                        .width(16)
-                        .height(16)
-                        .fillColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                      Text("净化")
-                        .fontSize(13)
-                        .fontColor(this.isNightMode ? '#EDE4D3' : '#1A1612')
-                        .fontWeight(500)
-                    }
-                  }
-                  .borderRadius(8)
-                  .height(38)
-                  .layoutWeight(1)
-                  .backgroundColor(this.isNightMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)')
-                  .bindSheet($$this.isShowPurification, this.purificationViewBuilder(), {
-                    height: '40%',
-                    showClose: true,
-                    dragBar: true,
-                    maskColor: 'rgba(0,0,0,0.6)',
-                  })
-                  .onClick(() => {
-                    this.isShowPurification = true
-                  })
-                }
-                .width("100%")
-
-                // 进度控制滑块
-                Row({ space: 12 }) {
-                  Text("上一章")
-                    .fontSize(13)
-                    .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
-                    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-                    .borderRadius(6)
-                    .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
+                  Image($r("app.media.ic_public_return_left"))
+                    .width(20)
+                    .height(20)
+                    .fillColor(this.isNightMode ? '#EDE4D3' : '#6B5E52')
                     .opacity(this.currentChapterIndex > 0 ? 1 : 0.4)
                     .onClick(() => {
                       if (this.currentChapterIndex > 0) {
                         this.currentChapterIndex--
                         this.currentPageIndex = 0
+                        this.sliderChapterIndex = this.currentChapterIndex
                         promptAction.showToast({ message: '上一章', duration: 1000 })
                       }
                     })
 
                   Slider({
-                    value: this.currentChapterIndex,
+                    value: this.sliderChapterIndex,
                     max: this.totalChapter - 1,
                     min: 0,
                     step: 1,
                     style: SliderStyle.InSet
                   })
-                    .trackThickness(6)
+                    .trackThickness(10)
                     .selectedColor('#A89B7E')
-                    .blockColor('#A89B7E')
-                    .trackBorderRadius(3)
-                    .blockSize({ width: 20, height: 20 })
+                    .blockColor('#E07A5F')
+                    .trackBorderRadius(5)
+                    .blockSize({ width: 14, height: 14 })
                     .layoutWeight(1)
-                    .onChange((value) => {
-                      this.currentChapterIndex = Number(value.toFixed(0))
-                      this.currentPageIndex = 0
+                    .onChange((value, mode) => {
+                      this.sliderChapterIndex = Number(value.toFixed(0))
+                      if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
+                        this.currentChapterIndex = this.sliderChapterIndex
+                        this.currentPageIndex = 0
+                      }
                     })
 
-                  Text("下一章")
-                    .fontSize(13)
-                    .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
-                    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-                    .borderRadius(6)
-                    .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
+                  Image($r("app.media.ic_public_right"))
+                    .width(20)
+                    .height(20)
+                    .fillColor(this.isNightMode ? '#EDE4D3' : '#6B5E52')
                     .opacity(this.currentChapterIndex < this.totalChapter - 1 ? 1 : 0.4)
                     .onClick(() => {
                       if (this.currentChapterIndex < this.totalChapter - 1) {
                         this.currentChapterIndex++
                         this.currentPageIndex = 0
+                        this.sliderChapterIndex = this.currentChapterIndex
                         promptAction.showToast({ message: '下一章', duration: 1000 })
                       }
                     })
                 }
                 .width('100%')
-
-                // 进度百分比信息
-                Text(`第 ${this.currentChapterIndex + 1} 章 / 共 ${this.totalChapter} 章`)
-                  .fontSize(12)
-                  .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
-                  .textAlign(TextAlign.Center)
-                  .width('100%')
               }
               .width("100%")
-              .padding({ left: 20, right: 20, top: 8, bottom: 8 })
+              .padding({ left: 20, right: 20, top: 16, bottom: 8 })
             }
 
             // ==================== 子面板 2: 样式面板 ====================
@@ -584,301 +925,182 @@ struct ReaderPageContent {
                       this.setBrightness(value)
                     })
                   
-                  Image($r('app.media.brightness_high'))
-                    .width(18)
-                    .height(18)
-                    .fillColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
-
-                  Button(this.followSystemBrightness ? '跟随系统' : '手动调节')
-                    .fontSize(11)
-                    .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
-                    .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)')
-                    .borderRadius(6)
-                    .height(28)
-                    .padding({ left: 10, right: 10 })
-                    .onClick(() => {
-                      this.followSystemBrightness = !this.followSystemBrightness
-                      promptAction.showToast({
-                        message: this.followSystemBrightness ? '已跟随系统亮度' : '已切换手动调节',
-                        duration: 1500
+                  Row({ space: 6 }) {
+                    Checkbox()
+                      .select(this.followSystemBrightness)
+                      .selectedColor('#A89B7E')
+                      .unselectedColor(this.isNightMode ? '#555555' : '#D0D0D0')
+                      .width(14)
+                      .height(14)
+                      .onChange((value) => {
+                        this.followSystemBrightness = value
                       })
-                    })
+                    Text('系统亮度')
+                      .fontSize(12)
+                      .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
+                  }
+                  .onClick(() => {
+                    this.followSystemBrightness = !this.followSystemBrightness
+                  })
                 }
                 .width('100%')
 
-                // 字号调节行
+                // Middle controls: Font selector, Word size, Font Weight
                 Row({ space: 12 }) {
-                  Text('A-')
-                    .fontSize(13)
-                    .fontWeight(FontWeight.Medium)
-                    .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
-                    .width(24)
-                    .textAlign(TextAlign.Center)
-                    .onClick(() => {
-                      if (this.fontSize > 12) this.fontSize--
-                    })
-                  
-                  Slider({
-                    value: this.fontSize,
-                    max: 48,
-                    min: 12,
-                    step: 1,
-                    style: SliderStyle.InSet
-                  })
-                    .trackThickness(6)
-                    .selectedColor('#A89B7E')
-                    .blockColor('#A89B7E')
-                    .trackBorderRadius(3)
-                    .blockSize({ width: 20, height: 20 })
-                    .layoutWeight(1)
-                    .onChange((value) => {
-                      this.fontSize = value
-                    })
-                  
-                  Text('A+')
-                    .fontSize(18)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
-                    .width(24)
-                    .textAlign(TextAlign.Center)
-                    .onClick(() => {
-                      if (this.fontSize < 48) this.fontSize++
-                    })
+                  this.FontSelector()
 
-                  Text(`${this.fontSize.toFixed(0)}px`)
-                    .fontSize(12)
-                    .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
-                    .width(36)
-                    .textAlign(TextAlign.End)
+                  this.NumberAdjuster('字号', this.panelFontSize, () => {
+                    if (this.panelFontSize > 12) {
+                      this.panelFontSize--
+                      this.fontSize = this.panelFontSize
+                    }
+                  }, () => {
+                    if (this.panelFontSize < 48) {
+                      this.panelFontSize++
+                      this.fontSize = this.panelFontSize
+                    }
+                  })
+
+                  this.NumberAdjuster('字重', (this.panelFontWeight / 400).toFixed(1), () => {
+                    if (this.panelFontWeight > 300) {
+                      this.panelFontWeight -= 100
+                      this.fontWeight = this.panelFontWeight
+                    }
+                  }, () => {
+                    if (this.panelFontWeight < 800) {
+                      this.panelFontWeight += 100
+                      this.fontWeight = this.panelFontWeight
+                    }
+                  })
                 }
                 .width('100%')
 
-                // 间距和段落设置
-                Row({ space: 8 }) {
-                  Button('紧凑')
-                    .layoutWeight(1)
-                    .fontSize(12)
-                    .height(32)
-                    .fontColor(this.lineHeightRatio === 1.6 ? '#FFFFFF' : (this.isNightMode ? '#EDE4D3' : '#6B5E52'))
-                    .backgroundColor(this.lineHeightRatio === 1.6 ? '#A89B7E' : (this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'))
-                    .borderRadius(6)
-                    .onClick(() => {
-                      this.lineHeightRatio = 1.6
-                      this.paragraphSpacing = 0
-                      promptAction.showToast({ message: '已切换紧凑排版', duration: 1000 })
-                    })
-                  
-                  Button('适中')
-                    .layoutWeight(1)
-                    .fontSize(12)
-                    .height(32)
-                    .fontColor(this.lineHeightRatio === 1.8 ? '#FFFFFF' : (this.isNightMode ? '#EDE4D3' : '#6B5E52'))
-                    .backgroundColor(this.lineHeightRatio === 1.8 ? '#A89B7E' : (this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'))
-                    .borderRadius(6)
-                    .onClick(() => {
-                      this.lineHeightRatio = 1.8
-                      this.paragraphSpacing = 2
-                      promptAction.showToast({ message: '已切换适中排版', duration: 1000 })
-                    })
-                  
-                  Button('宽松')
-                    .layoutWeight(1)
-                    .fontSize(12)
-                    .height(32)
-                    .fontColor(this.lineHeightRatio === 2.0 ? '#FFFFFF' : (this.isNightMode ? '#EDE4D3' : '#6B5E52'))
-                    .backgroundColor(this.lineHeightRatio === 2.0 ? '#A89B7E' : (this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'))
-                    .borderRadius(6)
-                    .onClick(() => {
-                      this.lineHeightRatio = 2.0
-                      this.paragraphSpacing = 4
-                      promptAction.showToast({ message: '已切换宽松排版', duration: 1000 })
-                    })
-                  
-                  Button('更多设置')
-                    .layoutWeight(1.2)
-                    .fontSize(12)
-                    .height(32)
-                    .fontColor('#A89B7E')
-                    .backgroundColor(this.isNightMode ? 'rgba(168,155,126,0.15)' : '#F7F4F0')
-                    .borderRadius(6)
-                    .border({ width: 1, color: '#A89B7E' })
-                    .bindSheet($$this.isShowMoreLayout, this.LayoutMoreDialogBuilder(), {
-                      height: 520,
-                      showClose: true,
-                      dragBar: true,
-                      blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
-                    })
-                    .onClick(() => {
-                      this.isShowMoreLayout = true
-                    })
-                }
-                .width('100%')
-
-                // 背景、翻页、自动控制行
-                Row({ space: 8 }) {
-                  Button() {
-                    Row({ space: 4 }) {
-                      Image($r('app.media.background'))
-                        .width(14)
-                        .height(14)
-                        .fillColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                      Text('阅读背景')
-                        .fontSize(12)
-                        .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
+                // Spacings row: Paragraph spacing, Letter spacing, Line height ratio
+                Row({ space: 12 }) {
+                  this.NumberAdjuster('段距', this.panelParagraphSpacing, () => {
+                    if (this.panelParagraphSpacing > 0) {
+                      this.panelParagraphSpacing--
+                      this.paragraphSpacing = this.panelParagraphSpacing
                     }
-                  }
-                  .layoutWeight(1)
-                  .height(34)
-                  .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
-                  .borderRadius(6)
-                  .bindSheet($$this.isShowBgColorDialog, this.BgColorDialogBuilder(), {
-                    height: 420,
-                    showClose: true,
-                    dragBar: true,
-                    blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
-                  })
-                  .onClick(() => {
-                    this.isShowBgColorDialog = true
+                  }, () => {
+                    if (this.panelParagraphSpacing < 20) {
+                      this.panelParagraphSpacing++
+                      this.paragraphSpacing = this.panelParagraphSpacing
+                    }
                   })
 
-                  Button() {
-                    Row({ space: 4 }) {
-                      Image($r('app.media.flip_mode'))
-                        .width(14)
-                        .height(14)
-                        .fillColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                      Text('翻页模式')
-                        .fontSize(12)
-                        .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
+                  this.NumberAdjuster('字距', this.panelLetterSpacing.toFixed(1), () => {
+                    if (this.panelLetterSpacing > -2) {
+                      this.panelLetterSpacing -= 0.5
+                      this.letterSpacing = this.panelLetterSpacing
                     }
-                  }
-                  .layoutWeight(1)
-                  .height(34)
-                  .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
-                  .borderRadius(6)
-                  .bindSheet($$this.isShowFlipModeDialog, this.FlipModeDialogBuilder(), {
-                    height: 480,
-                    showClose: true,
-                    dragBar: true,
-                    blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
-                  })
-                  .onClick(() => {
-                    this.isShowFlipModeDialog = true
+                  }, () => {
+                    if (this.panelLetterSpacing < 10) {
+                      this.panelLetterSpacing += 0.5
+                      this.letterSpacing = this.panelLetterSpacing
+                    }
                   })
 
-                  Button() {
-                    Row({ space: 4 }) {
-                      Image(this.isAutoRead ? $r('app.media.pause') : $r('app.media.play'))
-                        .width(14)
-                        .height(14)
-                        .fillColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                      Text(this.isAutoRead ? '暂停滚页' : '自动阅读')
-                        .fontSize(12)
-                        .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
+                  this.NumberAdjuster('行距', this.panelLineHeightRatio.toFixed(1), () => {
+                    if (this.panelLineHeightRatio > 1.2) {
+                      this.panelLineHeightRatio -= 0.1
+                      this.lineHeightRatio = this.panelLineHeightRatio
                     }
-                  }
-                  .layoutWeight(1)
-                  .height(34)
-                  .backgroundColor(this.isNightMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
-                  .borderRadius(6)
-                  .onClick(() => {
-                    this.toggleAutoRead()
+                  }, () => {
+                    if (this.panelLineHeightRatio < 3.0) {
+                      this.panelLineHeightRatio += 0.1
+                      this.lineHeightRatio = this.panelLineHeightRatio
+                    }
                   })
                 }
                 .width('100%')
               }
               .width("100%")
-              .padding({ left: 20, right: 20, top: 8, bottom: 8 })
+              .padding({ left: 20, right: 20, top: 16, bottom: 8 })
             }
 
             Divider().color(this.isNightMode ? 'rgba(255,255,255,0.1)' : '#F0F0F0').margin({ top: 8, bottom: 8 })
 
             // ==================== 底部固定导航栏 ====================
-            Grid() {
-              GridItem() {
-                Column({ space: 4 }) {
-                  Image($r("app.media.catalog"))
-                    .width(22)
-                    .height(22)
-                    .fillColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
-                  Text("目录")
-                    .fontSize(11)
-                    .fontColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                }
+            Row() {
+              // 1. 目录
+              Column({ space: 4 }) {
+                Image($r("app.media.catalog"))
+                  .width(22)
+                  .height(22)
+                  .fillColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
+                Text("目录")
+                  .fontSize(11)
+                  .fontColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
               }
-              .onClick(() => {
-                promptAction.showToast({ message: '目录功能开发中', duration: 1500 })
-              })
-
-              GridItem() {
-                Column({ space: 4 }) {
-                  Image($r("app.media.refresh")) // 用刷新图标临时表达进度
-                    .width(22)
-                    .height(22)
-                    .fillColor(!this.isShowContentSetting ? '#A89B7E' : (this.isNightMode ? '#8A7D71' : '#6B5E52'))
-                  Text("进度")
-                    .fontSize(11)
-                    .fontColor(!this.isShowContentSetting ? '#A89B7E' : (this.isNightMode ? '#A89B8C' : '#6B5E52'))
-                }
-              }
-              .onClick(() => {
-                this.isShowContentSetting = false
-              })
-
-              GridItem() {
-                Column({ space: 4 }) {
-                  Image($r("app.media.listen"))
-                    .width(22)
-                    .height(22)
-                    .fillColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
-                  Text("听书")
-                    .fontSize(11)
-                    .fontColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                }
-              }
-              .bindContentCover($$this.isShowListen, this.BookListen(), {
-                modalTransition: ModalTransition.DEFAULT,
-                backgroundColor: "rgba(51, 106, 128, 0.75)"
+              .layoutWeight(1)
+              .bindSheet($$this.isShowCatalog, this.CatalogBuilder(), {
+                height: '80%',
+                showClose: true,
+                dragBar: true,
+                blurStyle: BlurStyle.COMPONENT_ULTRA_THIN
               })
               .onClick(() => {
-                if (this.bookData?.bookType === 2) {
-                  this.isShowListen = true
-                } else {
-                  promptAction.showToast({ message: '当前书籍不支持听书', duration: 1500 })
-                }
+                this.isShowCatalog = true
               })
 
-              GridItem() {
-                Column({ space: 4 }) {
-                  Image(this.isNightMode ? $r("app.media.day_icon") : $r("app.media.night_icon"))
-                    .width(22)
-                    .height(22)
-                    .fillColor(this.isNightMode ? '#A89B7E' : '#6B5E52')
-                  Text(this.isNightMode ? "日间" : "夜间")
-                    .fontSize(11)
-                    .fontColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
-                }
+              // 2. 已读百分比
+              Column() {
+                Text(`已读 ${this.calculateReadPercentage()}%`)
+                  .fontSize(12)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
               }
+              .layoutWeight(1)
+
+              // 3. 夜间/日间
+              Column({ space: 4 }) {
+                Image(this.isNightMode ? $r("app.media.day_icon") : $r("app.media.night_icon"))
+                  .width(22)
+                  .height(22)
+                  .fillColor(this.isNightMode ? '#A89B7E' : '#6B5E52')
+                Text(this.isNightMode ? "日间" : "夜间")
+                  .fontSize(11)
+                  .fontColor(this.isNightMode ? '#A89B8C' : '#6B5E52')
+              }
+              .layoutWeight(1)
               .onClick(() => {
                 this.toggleNightMode()
               })
 
-              GridItem() {
-                Column({ space: 4 }) {
-                  Image(this.isShowContentSetting ? $r("app.media.my_center_set_icon_fill") : $r("app.media.my_center_set_icon"))
-                    .width(22)
-                    .height(22)
-                    .fillColor(this.isShowContentSetting ? '#A89B7E' : (this.isNightMode ? '#8A7D71' : '#6B5E52'))
-                  Text("设置")
-                    .fontSize(11)
-                    .fontColor(this.isShowContentSetting ? '#A89B7E' : (this.isNightMode ? '#A89B8C' : '#6B5E52'))
-                }
+              // 4. 书签
+              Column({ space: 4 }) {
+                 Path()
+                  .width(22)
+                  .height(22)
+                  .commands('M4 2 h14 v18 l-7 -5 l-7 5 Z')
+                  .fill(this.isBookmarked ? '#A89B7E' : Constants.TRANSPARENT)
+                  .stroke(this.isBookmarked ? Constants.TRANSPARENT : (this.isNightMode ? '#8A7D71' : '#6B5E52'))
+                  .strokeWidth(2)
+                Text("书签")
+                  .fontSize(11)
+                  .fontColor(this.isBookmarked ? '#A89B7E' : (this.isNightMode ? '#A89B8C' : '#6B5E52'))
               }
+              .layoutWeight(1)
               .onClick(() => {
-                this.isShowContentSetting = true
+                this.toggleBookmark()
+              })
+
+              // 5. 设置
+              Column({ space: 4 }) {
+                Image(this.isShowContentSetting ? $r("app.media.my_center_set_icon_fill") : $r("app.media.my_center_set_icon"))
+                  .width(22)
+                  .height(22)
+                  .fillColor(this.isShowContentSetting ? '#A89B7E' : (this.isNightMode ? '#8A7D71' : '#6B5E52'))
+                Text("设置")
+                  .fontSize(11)
+                  .fontColor(this.isShowContentSetting ? '#A89B7E' : (this.isNightMode ? '#A89B8C' : '#6B5E52'))
+              }
+              .layoutWeight(1)
+              .onClick(() => {
+                this.isShowContentSetting = !this.isShowContentSetting
               })
             }
-            .columnsTemplate("1fr 1fr 1fr 1fr 1fr")
             .width("100%")
             .height(56)
             .padding({ bottom: this.bottomRectHeight })

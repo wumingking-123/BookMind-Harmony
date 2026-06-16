@@ -18,7 +18,7 @@ export class NovelChapterOperateHelper {
     } else {
       if (pageIndex >= curChapter.chapterPageList.length - 1) {
         let nextChapter = chapterList[chapterIndex + 1];
-        if (!nextChapter || !nextChapter.chapterPageList || nextChapter.chapterPageList.length === 0) {
+        if (!nextChapter) {
           return null;
         }
         return [chapterIndex + 1, 0];
@@ -45,10 +45,11 @@ export class NovelChapterOperateHelper {
     } else {
       if (pageIndex <= 0) {
         let preChapter = chapterList[chapterIndex - 1];
-        if (!preChapter || !preChapter.chapterPageList || preChapter.chapterPageList.length === 0) {
+        if (!preChapter) {
           return null;
         }
-        return [chapterIndex - 1, preChapter.chapterPageList.length - 1];
+        let prePageIdx = (preChapter.chapterPageList && preChapter.chapterPageList.length > 0) ? preChapter.chapterPageList.length - 1 : 0;
+        return [chapterIndex - 1, prePageIdx];
       } else {
         return [chapterIndex, pageIndex - 1];
       }

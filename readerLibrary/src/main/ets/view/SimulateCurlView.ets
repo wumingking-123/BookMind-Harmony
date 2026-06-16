@@ -22,13 +22,13 @@ export struct SimulateCurlView {
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('chapterList') chapterList: ReaderChapterItem[];
   @Consume('currentChapterIndex') currentChapterIndex: number;
-  @Consume('fontSize') fontSize: number;
-  @Consume('lineHeightRatio') lineHeightRatio: number;
-  @Consume('bgColor') bgColor: string;
-  @Consume('readerPadding') readerPadding: number;
+  @Consume('fontSize') @Watch('onFontSizeChanged') fontSize: number;
+  @Consume('lineHeightRatio') @Watch('onLineHeightRatioChanged') lineHeightRatio: number;
+  @Consume('bgColor') @Watch('onBgColorChanged') bgColor: string;
+  @Consume('readerPadding') @Watch('onReaderPaddingChanged') readerPadding: number;
   @Provide('batteryPixelMap') @Watch('setBatteryPixelMap') batteryPixelMap: image.PixelMap | null = null;
   @Consume('displaySize') @Watch('onTextDisplaySizeChanged') displaySize: number[];
-  @Consume('paragraphSpacing') paragraphSpacing: number;
+  @Consume('paragraphSpacing') @Watch('onParagraphSpacingChanged') paragraphSpacing: number;
   drawManager: SimulateDrawManager | null = null;
   isTurnNext: boolean | null = null;
   animationEndValue: number | null = null;
@@ -112,6 +112,36 @@ export struct SimulateCurlView {
     }
   }
 
+  onBgColorChanged() {
+    if (this.drawManager !== null) {
+      this.drawManager.updateBgColor(this.bgColor);
+    }
+  }
+
+  onFontSizeChanged() {
+    if (this.drawManager !== null) {
+      this.drawManager.updateFontSizeAndLineHeight(this.fontSize, this.fontSize * this.lineHeightRatio);
+    }
+  }
+
+  onLineHeightRatioChanged() {
+    if (this.drawManager !== null) {
+      this.drawManager.updateFontSizeAndLineHeight(this.fontSize, this.fontSize * this.lineHeightRatio);
+    }
+  }
+
+  onReaderPaddingChanged() {
+    if (this.drawManager !== null) {
+      this.drawManager.setReaderPadding(this.readerPadding);
+    }
+  }
+
+  onParagraphSpacingChanged() {
+    if (this.drawManager !== null) {
+      this.drawManager.updateParagraphSpacing(this.paragraphSpacing);
+    }
+  }
+
   startAnimation(isRecover: boolean, isTurnNext: boolean) {
     this.animationEndValue = (isTurnNext !== isRecover) ? 1.0 : -1.0;
     let options: AnimatorOptions = {
@@ -162,6 +192,7 @@ export struct SimulateCurlView {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor(this.bgColor)
     .align(Alignment.Center)
     .gesture(
       PanGesture()

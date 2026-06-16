@@ -26,6 +26,10 @@ export struct Reader {
   @Prop lineContentList: string[] = [];
   @Prop isCurrentPage: boolean = true;
 
+  get fontColor(): string {
+    return this.bgColor === '#2C2C2C' ? '#9E9E9E' : '#1C1C1E';
+  }
+
   build() {
     Column() {
       Column() {
@@ -45,7 +49,7 @@ export struct Reader {
               })
               .fontWeight(this.fontWeight)
               .letterSpacing(this.letterSpacing)
-              .fontColor($r('sys.color.black'))
+              .fontColor(this.fontColor)
               .lineHeight(this.fontSize * this.lineHeightRatio)
               .width("100%")
               .margin({ bottom: line.endsWith('\n') ? this.paragraphSpacing : 0 })
@@ -98,6 +102,10 @@ export struct ReaderForCurlView {
   @Prop content: string = '';
   @Prop lineContentList: string[] = [];
 
+  get fontColor(): string {
+    return this.bgColor === '#2C2C2C' ? '#9E9E9E' : '#1C1C1E';
+  }
+
   build() {
     Column() {
       Column() {
@@ -117,7 +125,7 @@ export struct ReaderForCurlView {
               })
               .fontWeight(this.fontWeight)
               .letterSpacing(this.letterSpacing)
-              .fontColor($r('sys.color.black'))
+              .fontColor(this.fontColor)
               .lineHeight(this.fontSize * this.lineHeightRatio)
               .width("100%")
               .margin({ bottom: line.endsWith('\n') ? this.paragraphSpacing : 0 })
@@ -158,22 +166,28 @@ export struct ReaderBottom {
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('currentChapterIndex') currentChapterIndex: number;
   @Consume('chapterList') chapterList: ReaderChapterItem[];
+  @Consume('bgColor') bgColor: string;
+
+  get fontColor(): string {
+    return this.bgColor === '#2C2C2C' ? '#9E9E9E' : '#1C1C1E';
+  }
 
   build() {
     Row({ space: 4 }) {
       TextClock({ timeZoneOffset: -8 })
         .format('hh:mm')
         .fontSize(12)
+        .fontColor(this.fontColor)
         .onDateChange((value) => {
           /// todo: 更新到SimulateDrawManager
         })
         .fontWeight(400)
       /// todo:电池状态监听与更新到SimulateDrawManager
-      battery()
+      battery({ color: this.fontColor })
       Blank(0)
       Text(`${this.currentPageIndex + 1}/${this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1}` + "\u3000" + `${(this.chapterList.length > 0 ? (this.currentChapterIndex + ((this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1) > 0 ? this.currentPageIndex / (this.chapterList[this.currentChapterIndex]?.chapterPageList?.length ?? 1) : 0)) / this.chapterList.length * 100 : 0).toFixed(1)}%`)
         .fontSize(12)
-        .fontColor($r('sys.color.black'))
+        .fontColor(this.fontColor)
     }.padding({
       top: 16,
     }).id(this.containerId)
@@ -214,6 +228,28 @@ export class SimulateDrawManager {
     this.currentPageIndex = currentPageIndex;
     this.bgColor = bgColor;
     this.paragraphSpacing = paragraphSpacing;
+  }
+
+  updateBgColor(bgColor: string) {
+    this.bgColor = bgColor;
+    if (this.currentDrawHelper !== null) {
+      this.currentDrawHelper.updateBgColor(bgColor);
+    }
+  }
+
+  updateFontSizeAndLineHeight(fontSize: number, lineHeight: number) {
+    this.fontSize = fontSize;
+    this.lineHeight = lineHeight;
+    if (this.currentDrawHelper !== null) {
+      this.currentDrawHelper.updateFontSizeAndLineHeight(fontSize, lineHeight);
+    }
+  }
+
+  updateParagraphSpacing(spacing: number) {
+    this.paragraphSpacing = spacing;
+    if (this.currentDrawHelper !== null) {
+      this.currentDrawHelper.updateParagraphSpacing(spacing);
+    }
   }
 
   setReaderPadding(padding: number) {
@@ -362,6 +398,19 @@ abstract class SimulationDrawHelper {
   protected paragraphSpacing: number;
   protected context: DrawingRenderingContext;
 
+  updateBgColor(bgColor: string) {
+    this.bgColor = bgColor;
+  }
+
+  updateFontSizeAndLineHeight(fontSize: number, lineHeight: number) {
+    this.fontSize = fontSize;
+    this.lineHeight = lineHeight;
+  }
+
+  updateParagraphSpacing(spacing: number) {
+    this.paragraphSpacing = spacing;
+  }
+
   constructor(hostManager: SimulateDrawManager, context: DrawingRenderingContext, fontSize: number, lineHeight: number,
     chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string, paragraphSpacing: number) {
     this.hostManager = hostManager;
@@ -436,11 +485,12 @@ abstract class SimulationDrawHelper {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
       canvas.drawColor(preColor)
       const brush = new drawing.Brush();
+      let fontColorRGB = this.bgColor === '#2C2C2C' ? [158, 158, 158] : [28, 28, 30];
       brush.setColor({
         alpha: 255,
-        red: 0,
-        green: 0,
-        blue: 0
+        red: fontColorRGB[0],
+        green: fontColorRGB[1],
+        blue: fontColorRGB[2]
       });
       const font = new drawing.Font();
       font.setSize(fp2px(this.fontSize));
@@ -486,11 +536,12 @@ abstract class SimulationDrawHelper {
     if (canIUse('SystemCapability.Graphics.Drawing')) {
       canvas.drawColor(preColor)
       const brush = new drawing.Brush();
+      let fontColorRGB = this.bgColor === '#2C2C2C' ? [158, 158, 158] : [28, 28, 30];
       brush.setColor({
         alpha: 255,
-        red: 0,
-        green: 0,
-        blue: 0
+        red: fontColorRGB[0],
+        green: fontColorRGB[1],
+        blue: fontColorRGB[2]
       });
       const font = new drawing.Font();
       font.setSize(fp2px(this.fontSize));

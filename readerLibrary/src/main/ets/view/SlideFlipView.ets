@@ -10,6 +10,7 @@ export struct SlideFlipView {
   @Consume('chapterList') @Watch('onChapterListChanged') chapterList: ReaderChapterItem[];
   @Consume('currentPageIndex') currentPageIndex: number;
   @Consume('currentChapterIndex') currentChapterIndex: number;
+  @Consume('bgColor') bgColor: string;
   @State private offsetX: number = 0;
   private isFirst: boolean = false;
 
@@ -75,6 +76,7 @@ export struct SlideFlipView {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor(this.bgColor)
     .clip(true)
     .gesture(
       PanGesture({ direction: PanDirection.Horizontal })

@@ -35,11 +35,11 @@ export struct ReaderProvider {
 
 @Concurrent
 async function calChapterContent(width: number, height: number, targetParagraphList: string[], fontSize: number,
-  lineHeightRatio: number): Promise<string[][]> {
+  lineHeightRatio: number, paragraphSpacing: number): Promise<string[][]> {
   try {
     return await NovelContentParseHelper.calculateChapterContent(targetParagraphList,
       fontSize,
-      fontSize * lineHeightRatio, width, height)
+      fontSize * lineHeightRatio, width, height, paragraphSpacing)
   } catch (e) {
     console.info('loadNovel 出错 ' + e)
     return [];
@@ -62,16 +62,20 @@ struct ReaderSourceProvider {
   @Consume('readerPadding') @Watch('onConfigSizeChange') readerPadding: number
   @Consume('currentPageIndex') currentPageIndex: number
   @State targetStartPos: number = 0
+  @State private configVersion: number = 0
+  private lastChapterIndex: number = 0
 
   onConfigSizeChange() {
     let currentChapter = this.chapterList?.[this.currentChapterIndex];
     if (currentChapter?.chapterPageList?.[this.currentPageIndex]) {
       this.targetStartPos = currentChapter.chapterPageList[this.currentPageIndex].startIndex;
     }
+    this.configVersion++;
     this.forceCalChapterContent()
   }
 
   onDisplaySizeChange() {
+    this.configVersion++;
     this.forceCalChapterContent()
   }
 
@@ -113,7 +117,7 @@ struct ReaderSourceProvider {
   }
 
   private calContentOfTargetChapter(width: number, height: number, chapterIndex: number, fontSize: number,
-    lineHeightRatio: number, forceUpdate: boolean) {
+    lineHeightRatio: number, forceUpdate: boolean, restorePosition: boolean, isBackwards: boolean) {
     if (!this.chapterList || !this.chapterList[chapterIndex]) {
       return
     }
@@ -134,8 +138,13 @@ struct ReaderSourceProvider {
       }
     }
     let paragraphsToCal = this.getFormattedParagraphs(this.chapterList[chapterIndex].paragraphList);
+    let taskVersion = this.configVersion;
     taskPool.execute(calChapterContent, width, height, paragraphsToCal, fontSize,
-      lineHeightRatio).then((chapterList) => {
+      lineHeightRatio, this.paragraphSpacing).then((chapterList) => {
+      if (taskVersion !== this.configVersion) {
+        console.info(`Discarding outdated calculation for chapter ${chapterIndex}`);
+        return;
+      }
       if (Array.isArray(chapterList)) {
         let startIndex = 0
         let result: string[][] = chapterList as string[][]
@@ -154,15 +163,23 @@ struct ReaderSourceProvider {
             let newPageIndex = 0;
             let pageList = newPages;
             if (pageList.length > 0) {
-              for (let i = 0; i < pageList.length; i++) {
-                if (this.targetStartPos >= pageList[i].startIndex) {
-                  newPageIndex = i;
-                } else {
-                  break;
+              if (restorePosition) {
+                for (let i = 0; i < pageList.length; i++) {
+                  if (this.targetStartPos >= pageList[i].startIndex) {
+                    newPageIndex = i;
+                  } else {
+                    break;
+                  }
                 }
-              }
-              if (newPageIndex >= pageList.length) {
-                newPageIndex = pageList.length - 1;
+                if (newPageIndex >= pageList.length) {
+                  newPageIndex = pageList.length - 1;
+                }
+              } else {
+                if (isBackwards) {
+                  newPageIndex = pageList.length - 1;
+                } else {
+                  newPageIndex = 0;
+                }
               }
             }
             this.currentPageIndex = newPageIndex;
@@ -174,19 +191,22 @@ struct ReaderSourceProvider {
   }
 
   calChapterContent() {
+    let isBackwards = this.currentChapterIndex < this.lastChapterIndex;
+    this.lastChapterIndex = this.currentChapterIndex;
+    this.configVersion++;
     let width = this.displaySize[0];
     let height = this.displaySize[1];
 
     if (width !== 0 && height !== 0 && this.chapterList.length !== 0) {
       this.calContentOfTargetChapter(width, height, this.currentChapterIndex,
-        this.fontSize, this.lineHeightRatio, false);
+        this.fontSize, this.lineHeightRatio, false, false, isBackwards);
       if (this.currentChapterIndex > 0) {
         this.calContentOfTargetChapter(width, height, this.currentChapterIndex - 1,
-          this.fontSize, this.lineHeightRatio, false);
+          this.fontSize, this.lineHeightRatio, false, false, false);
       }
       if (this.currentChapterIndex < this.chapterList.length - 1) {
         this.calContentOfTargetChapter(width, height, this.currentChapterIndex + 1,
-          this.fontSize, this.lineHeightRatio, false);
+          this.fontSize, this.lineHeightRatio, false, false, false);
       }
     }
   }
@@ -197,19 +217,20 @@ struct ReaderSourceProvider {
 
     if (width !== 0 && height !== 0 && this.chapterList.length !== 0) {
       this.calContentOfTargetChapter(width, height, this.currentChapterIndex,
-        this.fontSize, this.lineHeightRatio, true);
+        this.fontSize, this.lineHeightRatio, true, true, false);
       if (this.currentChapterIndex > 0) {
         this.calContentOfTargetChapter(width, height, this.currentChapterIndex - 1,
-          this.fontSize, this.lineHeightRatio, true);
+          this.fontSize, this.lineHeightRatio, true, false, false);
       }
       if (this.currentChapterIndex < this.chapterList.length - 1) {
         this.calContentOfTargetChapter(width, height, this.currentChapterIndex + 1,
-          this.fontSize, this.lineHeightRatio, true);
+          this.fontSize, this.lineHeightRatio, true, false, false);
       }
     }
   }
 
   aboutToAppear(): void {
+    this.lastChapterIndex = this.currentChapterIndex;
   }
 
   build() {

@@ -15,7 +15,7 @@ export class NovelContentParseHelper {
    * @return {Promise<string>} 章节中每页的内容列表 The list of content for each page in chapter
    */
   static async calculateChapterContent(paragraphList: string[], fontSize: number, lineHeight: number,
-    measureContentWidth: number, measureContentHeight: number): Promise<string[][]> {
+    measureContentWidth: number, measureContentHeight: number, paragraphSpacing: number = 0): Promise<string[][]> {
     let tempParagraphList = paragraphList.slice()
     let wordSize = measure.measureTextSize({
       textContent: '测', // 随便找的测试文字，用来测试一个字有多大。
@@ -29,7 +29,7 @@ export class NovelContentParseHelper {
       try {
         let pageParagraphList =
           await NovelContentParseHelper.calculateParagraphForPage(tempParagraphList, measureContentHeight,
-            measureContentWidth, wordSize, fontSize, lineHeight)
+            measureContentWidth, wordSize, fontSize, lineHeight, paragraphSpacing)
 
         pageContent[pageIndex] = pageParagraphList
         pageIndex++;
@@ -64,7 +64,7 @@ export class NovelContentParseHelper {
    * @return {Promise<string>} 每页的段落列表 The list of content for each page in chapter
    */
   static calculateParagraphForPage(paragraphs: string[], targetHeight: number, targetWidth: number,
-    wordSize: SizeOptions, fontSize: number, lineHeight: number,): Promise<string[]> {
+    wordSize: SizeOptions, fontSize: number, lineHeight: number, paragraphSpacing: number = 0): Promise<string[]> {
     return new Promise((resolve, reject) => {
       let constraintWidth = targetWidth;
 
@@ -85,10 +85,6 @@ export class NovelContentParseHelper {
       if (constraintHeight <= 0) {
         constraintHeight = targetHeight;
       }
-      let maxLines = Math.floor(constraintHeight / wordHeight);
-      if (maxLines <= 0) {
-        maxLines = 1;
-      }
 
       // 断句对象
       let breakIterator = I18n.getLineInstance('cn');
@@ -96,24 +92,28 @@ export class NovelContentParseHelper {
       let result: string[] = [];
 
       let currentLineIndex = 0;
+      let accumulatedHeight = 0;
+      let paragraphSpacingPx = vp2px(paragraphSpacing);
 
       const lineFeed = '\n';
 
-      while (currentLineIndex < maxLines && paragraphs.length != 0) {
+      while (accumulatedHeight + wordHeight <= constraintHeight && paragraphs.length != 0) {
         let currentTarget = paragraphs[0]
         
         // 检查是否为图片占位符
         let isImage = currentTarget.trim().startsWith('[img:') && currentTarget.trim().endsWith(']');
         if (isImage) {
           let imgLinesNeeded = 8; // 图片占用的行高度相当于8行文本
-          if (currentLineIndex === 0 || currentLineIndex + imgLinesNeeded <= maxLines) {
+          let imgHeightNeeded = wordHeight * imgLinesNeeded;
+          if (accumulatedHeight === 0 || accumulatedHeight + imgHeightNeeded <= constraintHeight) {
             result[currentLineIndex] = currentTarget.trim();
             for (let i = 1; i < imgLinesNeeded; i++) {
-              if (currentLineIndex + i < maxLines) {
+              if (currentLineIndex + i < imgLinesNeeded) {
                 result[currentLineIndex + i] = '';
               }
             }
             currentLineIndex += imgLinesNeeded;
+            accumulatedHeight += imgHeightNeeded;
             paragraphs.splice(0, 1);
           } else {
             // 空间不够，留到下一页
@@ -130,6 +130,10 @@ export class NovelContentParseHelper {
         if (currentTarget.length === 0) {
           result[currentLineIndex] = isNeedAddLineFeed ? lineFeed : '';
           currentLineIndex++;
+          accumulatedHeight += wordHeight;
+          if (isNeedAddLineFeed) {
+            accumulatedHeight += paragraphSpacingPx;
+          }
           paragraphs.splice(0, 1);
           continue;
         }
@@ -140,6 +144,10 @@ export class NovelContentParseHelper {
         if (currentTargetHeight <= heightLimit) {
           result[currentLineIndex] = currentTarget + (isNeedAddLineFeed ? lineFeed : '');
           currentLineIndex++
+          accumulatedHeight += wordHeight;
+          if (isNeedAddLineFeed) {
+            accumulatedHeight += paragraphSpacingPx;
+          }
           paragraphs.splice(0, 1)
         } else {
           breakIterator.setLineBreakText(currentTarget)
@@ -193,9 +201,13 @@ export class NovelContentParseHelper {
 
           result[currentLineIndex] = tempCurrentTarget;
           currentLineIndex++
+          accumulatedHeight += wordHeight;
           
           let remaining = paragraphs[0].substring(tempCurrentTarget.length);
           if (remaining.length === 0 || remaining === lineFeed) {
+            if (isNeedAddLineFeed) {
+              accumulatedHeight += paragraphSpacingPx;
+            }
             paragraphs.splice(0, 1);
           } else {
             paragraphs[0] = remaining;
