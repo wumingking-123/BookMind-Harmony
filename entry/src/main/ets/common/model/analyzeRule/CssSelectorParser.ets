@@ -20,7 +20,7 @@ export class CssSelectorParser {
     selector = selector.trim();
 
     // 按空格和>分割，保留分隔符
-    const tokens = this.tokenize(selector);
+    const tokens = CssSelectorParser.tokenize(selector);
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
@@ -29,7 +29,7 @@ export class CssSelectorParser {
         continue;
       }
 
-      const part = this.parseToken(token);
+      const part = CssSelectorParser.parseToken(token);
       if (i > 0 && tokens[i - 1] === '>') {
         part.combinator = 'child';
       } else if (i > 0 && tokens[i - 1] === '+') {
@@ -114,8 +114,9 @@ export class CssSelectorParser {
 
     // 伪类选择器 :nth-child(n)
     if (token.includes(':')) {
-      const [tag, pseudo] = token.split(':');
-      return { type: 'pseudo', value: pseudo || tag };
+      const parts: string[] = token.split(':');
+      const pseudo: string = parts.length > 1 ? parts[1] : parts[0];
+      return { type: 'pseudo', value: pseudo };
     }
 
     // 标签选择器
@@ -126,7 +127,7 @@ export class CssSelectorParser {
    * 应用选择器匹配HTML
    */
   static applySelector(html: string, selector: string): string[] {
-    const parts = this.parseSelector(selector);
+    const parts = CssSelectorParser.parseSelector(selector);
     if (parts.length === 0) return [];
 
     let results: string[] = [html];
@@ -135,7 +136,7 @@ export class CssSelectorParser {
       const newResults: string[] = [];
 
       for (const htmlFragment of results) {
-        const matched = this.matchPart(htmlFragment, part);
+        const matched = CssSelectorParser.matchPart(htmlFragment, part);
         newResults.push(...matched);
       }
 
@@ -164,10 +165,10 @@ export class CssSelectorParser {
         return HtmlParser.matchByAttributeSelector(html, part.value);
 
       case 'pseudo':
-        return this.matchPseudo(html, part.value);
+        return CssSelectorParser.matchPseudo(html, part.value);
 
       case 'universal':
-        return this.matchAllElements(html);
+        return CssSelectorParser.matchAllElements(html);
 
       default:
         return [];

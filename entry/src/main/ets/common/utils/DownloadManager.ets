@@ -79,12 +79,13 @@ class DownloadManager {
   private startNextTask(): void {
     if (this.activeTasks.size >= this.maxConcurrent) return;
 
-    for (const [id, task] of this.tasks) {
-      if (task.status === DownloadStatus.PENDING && !this.activeTasks.has(id)) {
+    let found = false;
+    this.tasks.forEach((task: DownloadTask, id: string) => {
+      if (!found && task.status === DownloadStatus.PENDING && !this.activeTasks.has(id)) {
+        found = true;
         this.executeTask(task);
-        break;
       }
-    }
+    });
   }
 
   /**
@@ -101,7 +102,7 @@ class DownloadManager {
       const tocAnalysis = new TocAnalysis();
       tocAnalysis.init(new TocAnalysisData({
         body: tocBody,
-        bookSource: task.bookSource,
+        bookSource: task.bookSource!,
         bookUrl: task.bookUrl
       }));
 
@@ -136,7 +137,7 @@ class DownloadManager {
 
       // 5. 逐章下载内容
       for (let i = 0; i < task.chapters.length; i++) {
-        if (task.status === DownloadStatus.PAUSED) {
+        if ((task.status as DownloadStatus) === DownloadStatus.PAUSED) {
           break;
         }
 
@@ -149,7 +150,7 @@ class DownloadManager {
           const contentAnalysis = new ContentAnalysis();
           contentAnalysis.init(new ContentAnalysisData({
             body: chapterBody,
-            bookSource: task.bookSource,
+            bookSource: task.bookSource!,
             chapterUrl: chapter.url
           }));
 
@@ -167,7 +168,7 @@ class DownloadManager {
       }
 
       // 6. 完成
-      if (task.status !== DownloadStatus.PAUSED) {
+      if ((task.status as DownloadStatus) !== DownloadStatus.PAUSED) {
         task.status = DownloadStatus.COMPLETED;
       }
     } catch (e) {
@@ -225,13 +226,13 @@ class DownloadManager {
    * 暂停所有任务
    */
   pauseAll(): void {
-    for (const [id, task] of this.tasks) {
+    this.tasks.forEach((task: DownloadTask, id: string) => {
       if (task.status === DownloadStatus.DOWNLOADING) {
         task.status = DownloadStatus.PAUSED;
         this.activeTasks.delete(id);
         this.notifyProgress(task);
       }
-    }
+    });
   }
 
   /**

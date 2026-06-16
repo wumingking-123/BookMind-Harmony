@@ -262,52 +262,11 @@ struct BookDetailPage {
           .fontColor(InkPalette.PAPER)
           .enabled(this.bookData.bookType === 2 || this.txtFile.totalCount() > 0)
           .onClick(() => {
-if (this.bookData.bookType === 2) {
-  // 有声书直接跳转播放器，从记录位置打开
-  let savedIndex = this.bookData.durChapterIndex || 0
-  if (savedIndex >= this.txtFiles.length) {
-    savedIndex = 0
-  }
-  let chapterItem = this.txtFile.getListData()[savedIndex]
-  router.pushUrl({
-    url: 'pages/view/Reader/ReaderPage2',
-    params: {
-      bookData: this.bookData,
-      clickBookChapter: savedIndex,
-      txtFile: this.txtFiles
-    }
-  })
-  if (this.txtFiles && chapterItem) {
-    this.jumpReadPage(`${chapterItem.chapterTitleNumber} ${chapterItem.title}`, savedIndex)
-  }
-} else {
-  // 小说/漫画 读取历史章节，实现续读
-  let savedIndex = this.bookData.durChapterIndex || 0
-  if (savedIndex >= this.txtFiles.length) {
-    savedIndex = 0
-  }
-  let chapterItem = this.txtFile.getListData()[savedIndex]
-  BookContentHolder.setChapters(this.txtFiles);
-  router.pushUrl({
-    url: 'pages/view/Reader/ReaderPage2',
-    params: {
-      bookData: this.bookData,
-      clickBookChapter: savedIndex,
-      txtFile: this.txtFiles
-    }
-  })
-  if (this.txtFiles && chapterItem) {
-    this.jumpReadPage(`${chapterItem.chapterTitleNumber} ${chapterItem.title}`, savedIndex)
-  }
-}
-            }
+            this.startReadOrPlay()
           })
       }
-      .justifyContent(FlexAlign.Center)
-      .width('100%')
-      .padding({ top: InkSpacing.MD, bottom: InkSpacing.MD })
     }
-    .padding({ left: InkSpacing.XL, right: InkSpacing.XL, bottom: InkSpacing.MD })
+    .padding({ left: InkSpacing.XL, right: InkSpacing.XL, top: InkSpacing.MD, bottom: InkSpacing.MD })
     .width('100%')
     .height('100%')
     .backgroundColor(InkPalette.PAPER)
@@ -525,5 +484,26 @@ if (this.bookData.bookType === 2) {
     bookHistory.durChapterTitle = durChapterTitle
     bookHistory.durChapterIndex = durChapterIndex
     bookHistoryUtils.addBooks(bookHistory)
+  }
+
+  startReadOrPlay() {
+    let savedIndex = this.bookData.durChapterIndex || 0
+    if (savedIndex >= this.txtFiles.length) {
+      savedIndex = 0
+    }
+    let chapterItem = this.txtFile.getListData()[savedIndex]
+    if (this.bookData.bookType !== 2) {
+      BookContentHolder.setChapters(this.txtFiles)
+    }
+    router.pushUrl({
+      url: 'pages/view/Reader/ReaderPage2',
+      params: {
+        bookData: this.bookData,
+        clickBookChapter: savedIndex
+      }
+    })
+    if (this.txtFiles && chapterItem) {
+      this.jumpReadPage(`${chapterItem.chapterTitleNumber} ${chapterItem.title}`, savedIndex)
+    }
   }
 }

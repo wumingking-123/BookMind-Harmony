@@ -31,6 +31,13 @@ export interface ContentResult {
   content: string;
 }
 
+interface ContentRule {
+  content?: string;
+  title?: string;
+  nextContentUrl?: string;
+  replaceRegex?: string;
+}
+
 export class ContentAnalysis {
   private contentData: ContentAnalysisData = new ContentAnalysisData();
   private maxPages: number = 20; // 最大分页数
@@ -96,11 +103,11 @@ export class ContentAnalysis {
    * 解析单页内容
    */
   private parseContent(body: string, rule: object): ContentResult {
-    const contentRule = rule as { content?: string; title?: string };
+    const contentRule = rule as ContentRule;
     const analyzer = new RuleAnalyzer();
     analyzer.init(new RuleAnalyzerData({
       body: body,
-      bookSource: this.contentData.bookSource
+      bookSource: this.contentData.bookSource!
     }));
 
     // 提取标题
@@ -125,7 +132,7 @@ export class ContentAnalysis {
     const analyzer = new RuleAnalyzer();
     analyzer.init(new RuleAnalyzerData({
       body: body,
-      bookSource: this.contentData.bookSource
+      bookSource: this.contentData.bookSource!
     }));
 
     const nextUrl = analyzer.extractAttribute(body, nextContentUrlRule);

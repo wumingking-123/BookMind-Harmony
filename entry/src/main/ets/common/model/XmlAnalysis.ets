@@ -21,12 +21,12 @@ export class XmlAnalysisData {
   variable?: string
   searchUrl: string = ''
 
-  constructor(xmlDate?: IXmlAnalysis) {
-    this.baseUrl = xmlDate?.baseUrl || ''
-    this.body = xmlDate?.body || ''
-    this.bookSource = xmlDate?.bookSource
-    this.variable = xmlDate?.variable
-    this.searchUrl = xmlDate?.searchUrl || ''
+  constructor(data?: IXmlAnalysis) {
+    this.baseUrl = data?.baseUrl || ''
+    this.body = data?.body || ''
+    this.bookSource = data?.bookSource
+    this.variable = data?.variable
+    this.searchUrl = data?.searchUrl || ''
   }
 }
 
@@ -53,7 +53,7 @@ export class XmlAnalysis {
     const analyzer = new RuleAnalyzer()
     analyzer.init(new RuleAnalyzerData({
       body: this.xmlDate.body,
-      bookSource: this.xmlDate.bookSource
+      bookSource: this.xmlDate.bookSource!
     }))
 
     // 1. 获取书籍列表元素

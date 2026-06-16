@@ -26,6 +26,12 @@ export class TocAnalysisData {
   }
 }
 
+interface TocRule {
+  chapterList?: string;
+  chapterName?: string;
+  chapterUrl?: string;
+}
+
 export class TocAnalysis {
   private tocData: TocAnalysisData = new TocAnalysisData();
   private maxPages: number = 50; // 最大分页数，防止无限循环
@@ -79,11 +85,11 @@ export class TocAnalysis {
    */
   private parseChapterList(body: string, rule: object, startIndex: number): BookChapter[] {
     const chapters: BookChapter[] = [];
-    const tocRule = rule as { chapterList?: string; chapterName?: string; chapterUrl?: string };
+    const tocRule = rule as TocRule;
     const analyzer = new RuleAnalyzer();
     analyzer.init(new RuleAnalyzerData({
       body: body,
-      bookSource: this.tocData.bookSource
+      bookSource: this.tocData.bookSource!
     }));
 
     // 获取章节列表元素
@@ -124,7 +130,7 @@ export class TocAnalysis {
     const analyzer = new RuleAnalyzer();
     analyzer.init(new RuleAnalyzerData({
       body: body,
-      bookSource: this.tocData.bookSource
+      bookSource: this.tocData.bookSource!
     }));
 
     const nextUrl = analyzer.extractAttribute(body, nextTocUrlRule);

@@ -10,12 +10,17 @@ import { JsonPathParser } from './JsonPathParser';
 
 export interface IRuleAnalyzer {
   body: string  //请求内容
-  bookSource: BookSource//书源
+  bookSource?: BookSource//书源
 }
 
 export class RuleAnalyzerData {
   body: string = ''  //请求内容
   bookSource?: BookSource//书源
+
+  constructor(data?: IRuleAnalyzer) {
+    this.body = data?.body || ''
+    this.bookSource = data?.bookSource
+  }
 }
 
 interface SourceRule {
@@ -114,9 +119,10 @@ export class RuleAnalyzer {
     if (rules.length === 0) return [];
 
     let currentHtml = this.ruleAnalyzerData.body;
+    let matched: string[] = [];
 
     for (const sourceRule of rules) {
-      let matched: string[] = [];
+      matched = [];
 
       switch (sourceRule.type) {
         case 'css':
@@ -252,7 +258,7 @@ export class RuleAnalyzer {
    */
   private applyJsonRule(body: string, path: string): string[] {
     try {
-      const jsonObj = JSON.parse(body);
+      const jsonObj: Object = JSON.parse(body) as Object;
       return JsonPathParser.evaluate(jsonObj, path);
     } catch (e) {
       console.log('JSON解析失败: ' + e);

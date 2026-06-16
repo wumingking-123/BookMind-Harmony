@@ -4,61 +4,143 @@
  */
 export class JsonPathParser {
   /**
+   * 将JSON对象转换为Map（ArkTS兼容方式）
+   * 使用JSON.stringify replacer收集键值对
+   */
+  private static convertToMap(obj: Object): Map<string, Object> {
+    const result = new Map<string, Object>();
+    const jsonStr = JSON.stringify(obj);
+    if (!jsonStr || jsonStr.charAt(0) !== '{') return result;
+
+    // 使用replacer收集所有键
+    const collectedKeys: string[] = [];
+    JSON.stringify(obj, (key: string, value: Object) => {
+      if (key !== '') {
+        collectedKeys.push(key);
+      }
+      return value;
+    });
+
+    // 对每个键，通过构造子JSON提取值
+    for (let i = 0; i < collectedKeys.length; i++) {
+      const k = collectedKeys[i];
+      const subJson = JSON.stringify(obj, (key: string, value: Object) => {
+        if (key === '' || key === k) {
+          return value;
+        }
+        return undefined;
+      });
+      if (subJson && subJson !== '{}') {
+        // 从子JSON中提取值
+        const parsed = JSON.parse(subJson) as Map<string, Object>;
+        if (parsed.has(k)) {
+          result.set(k, parsed.get(k)!);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * 将JSON数组转换为Map（索引为键）
+   */
+  private static convertArrayToMap(arr: Object[]): Map<string, Object> {
+    const result = new Map<string, Object>();
+    for (let i = 0; i < arr.length; i++) {
+      result.set(String(i), arr[i]);
+    }
+    return result;
+  }
+
+  /**
    * 评估JSON路径表达式
    * @param obj JSON对象
    * @param path 路径表达式，如 $.data.list[0].name
    * @returns 匹配的结果数组
    */
-  static evaluate(obj: object, path: string): string[] {
+  static evaluate(obj: Object, path: string): string[] {
     if (!path || !obj) return [];
 
     // 移除 $ 前缀
     let cleanPath = path.startsWith('$.') ? path.substring(2) : path;
     if (cleanPath === '$') return [JSON.stringify(obj)];
 
-    const segments = this.parsePath(cleanPath);
-    let current: unknown[] = [obj];
+    const segments = JsonPathParser.parsePath(cleanPath);
+
+    // 使用Map存储当前层级数据
+    let currentMaps: Map<string, Object>[] = [JsonPathParser.convertToMap(obj)];
 
     for (const segment of segments) {
-      const next: unknown[] = [];
+      const nextMaps: Map<string, Object>[] = [];
 
-      for (const item of current) {
-        if (item === null || item === undefined) continue;
+      for (let ci = 0; ci < currentMaps.length; ci++) {
+        const itemMap = currentMaps[ci];
 
         if (segment.type === 'property') {
-          if (typeof item === 'object' && !Array.isArray(item)) {
-            const obj = item as Record<string, unknown>;
-            if (segment.name in obj) {
-              next.push(obj[segment.name]);
+          const name = segment.name!;
+          if (itemMap.has(name)) {
+            const val = itemMap.get(name)!;
+            if (Array.isArray(val)) {
+              nextMaps.push(JsonPathParser.convertArrayToMap(val));
+            } else if (typeof val === 'object' && val !== null) {
+              nextMaps.push(JsonPathParser.convertToMap(val));
             }
           }
         } else if (segment.type === 'index') {
-          if (Array.isArray(item)) {
-            if (segment.index >= 0 && segment.index < item.length) {
-              next.push(item[segment.index]);
+          const idx = segment.index!;
+          const key = String(idx);
+          if (itemMap.has(key)) {
+            const val = itemMap.get(key)!;
+            if (Array.isArray(val)) {
+              nextMaps.push(JsonPathParser.convertArrayToMap(val));
+            } else if (typeof val === 'object' && val !== null) {
+              nextMaps.push(JsonPathParser.convertToMap(val));
             }
           }
         } else if (segment.type === 'wildcard') {
-          if (Array.isArray(item)) {
-            next.push(...item);
-          } else if (typeof item === 'object') {
-            next.push(...Object.values(item as Record<string, unknown>));
+          const keys: string[] = [];
+          itemMap.forEach((_value: Object, key: string) => {
+            keys.push(key);
+          });
+          for (let ki = 0; ki < keys.length; ki++) {
+            const val = itemMap.get(keys[ki])!;
+            if (Array.isArray(val)) {
+              nextMaps.push(JsonPathParser.convertArrayToMap(val));
+            } else if (typeof val === 'object' && val !== null) {
+              nextMaps.push(JsonPathParser.convertToMap(val));
+            }
           }
         } else if (segment.type === 'recursive') {
-          // 递归搜索所有层级
-          const found = this.recursiveSearch(item, segment.name);
-          next.push(...found);
+          const found = JsonPathParser.recursiveSearch(itemMap, segment.name!);
+          for (let ri = 0; ri < found.length; ri++) {
+            const val = found[ri];
+            if (Array.isArray(val)) {
+              nextMaps.push(JsonPathParser.convertArrayToMap(val));
+            } else if (typeof val === 'object' && val !== null) {
+              nextMaps.push(JsonPathParser.convertToMap(val));
+            }
+          }
         }
       }
 
-      current = next;
+      currentMaps = nextMaps;
     }
 
-    return current.map(item => {
-      if (typeof item === 'string') return item;
-      if (typeof item === 'number' || typeof item === 'boolean') return String(item);
-      return JSON.stringify(item);
-    });
+    // 从最终的Map中提取字符串结果
+    const result: string[] = [];
+    for (let mi = 0; mi < currentMaps.length; mi++) {
+      const m = currentMaps[mi];
+      m.forEach((val: Object, _key: string) => {
+        if (typeof val === 'string') {
+          result.push(val);
+        } else if (typeof val === 'number' || typeof val === 'boolean') {
+          result.push(String(val));
+        } else {
+          result.push(JSON.stringify(val));
+        }
+      });
+    }
+    return result;
   }
 
   /**
@@ -74,11 +156,11 @@ export class JsonPathParser {
         // 检查是否是递归搜索 ..
         if (i < path.length && path[i] === '.') {
           i++;
-          const name = this.readPropertyName(path, i);
+          const name = JsonPathParser.readPropertyName(path, i);
           segments.push({ type: 'recursive', name });
           i += name.length;
         } else {
-          const name = this.readPropertyName(path, i);
+          const name = JsonPathParser.readPropertyName(path, i);
           segments.push({ type: 'property', name });
           i += name.length;
         }
@@ -111,7 +193,7 @@ export class JsonPathParser {
           i++; // skip ]
         }
       } else {
-        const name = this.readPropertyName(path, i);
+        const name = JsonPathParser.readPropertyName(path, i);
         if (name) {
           segments.push({ type: 'property', name });
           i += name.length;
@@ -140,28 +222,26 @@ export class JsonPathParser {
   /**
    * 递归搜索
    */
-  private static recursiveSearch(obj: unknown, propertyName: string): unknown[] {
-    const results: unknown[] = [];
+  private static recursiveSearch(objMap: Map<string, Object>, propertyName: string): Object[] {
+    const results: Object[] = [];
 
-    const search = (current: unknown) => {
-      if (current === null || current === undefined) return;
+    const search = (currentMap: Map<string, Object>) => {
+      currentMap.forEach((val: Object, key: string) => {
+        if (key === propertyName) {
+          results.push(val);
+        }
 
-      if (Array.isArray(current)) {
-        for (const item of current) {
-          search(item);
+        if (Array.isArray(val)) {
+          const arrMap = JsonPathParser.convertArrayToMap(val);
+          search(arrMap);
+        } else if (typeof val === 'object' && val !== null) {
+          const childMap = JsonPathParser.convertToMap(val);
+          search(childMap);
         }
-      } else if (typeof current === 'object') {
-        const obj = current as Record<string, unknown>;
-        if (propertyName in obj) {
-          results.push(obj[propertyName]);
-        }
-        for (const value of Object.values(obj)) {
-          search(value);
-        }
-      }
+      });
     };
 
-    search(obj);
+    search(objMap);
     return results;
   }
 }

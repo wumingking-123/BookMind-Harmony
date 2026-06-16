@@ -15,7 +15,7 @@ export class HtmlParser {
    * 按属性匹配元素
    */
   static matchByAttribute(html: string, attrName: string, attrValue: string): string[] {
-    const regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["']${this.escapeRegex(attrValue)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+    const regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["']${HtmlParser.escapeRegex(attrValue)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
     return html.match(regex) || [];
   }
 
@@ -23,7 +23,7 @@ export class HtmlParser {
    * 按class匹配元素
    */
   static matchByClass(html: string, className: string): string[] {
-    const regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bclass\\s*=\\s*["'][^"']*\\b${this.escapeRegex(className)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+    const regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bclass\\s*=\\s*["'][^"']*\\b${HtmlParser.escapeRegex(className)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
     return html.match(regex) || [];
   }
 
@@ -31,7 +31,7 @@ export class HtmlParser {
    * 按id匹配元素
    */
   static matchById(html: string, id: string): string[] {
-    const regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bid\\s*=\\s*["']${this.escapeRegex(id)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+    const regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bid\\s*=\\s*["']${HtmlParser.escapeRegex(id)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
     return html.match(regex) || [];
   }
 
@@ -76,25 +76,24 @@ export class HtmlParser {
    * 解码HTML实体
    */
   static decodeHtmlEntities(text: string): string {
-    const entities: Record<string, string> = {
-      '&amp;': '&',
-      '&lt;': '<',
-      '&gt;': '>',
-      '&quot;': '"',
-      '&#39;': "'",
-      '&nbsp;': ' ',
-      '&apos;': "'"
-    };
+    const entities: Map<string, string> = new Map();
+    entities.set('&amp;', '&');
+    entities.set('&lt;', '<');
+    entities.set('&gt;', '>');
+    entities.set('&quot;', '"');
+    entities.set('&#39;', "'");
+    entities.set('&nbsp;', ' ');
+    entities.set('&apos;', "'");
 
-    let result = text.replace(/&[a-zA-Z]+;/g, (match) => {
-      return entities[match] || match;
+    let result = text.replace(/&[a-zA-Z]+;/g, (match: string) => {
+      return entities.has(match) ? entities.get(match)! : match;
     });
 
     // 解码数字实体 &#123; 或 &#x1F;
-    result = result.replace(/&#(\d+);/g, (_, code) => {
+    result = result.replace(/&#(\d+);/g, (_match: string, code: string) => {
       return String.fromCharCode(parseInt(code));
     });
-    result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, code) => {
+    result = result.replace(/&#x([0-9a-fA-F]+);/g, (_match: string, code: string) => {
       return String.fromCharCode(parseInt(code, 16));
     });
 
@@ -120,7 +119,7 @@ export class HtmlParser {
    * 组合选择器匹配：标签+类
    */
   static matchTagWithClass(html: string, tagName: string, className: string): string[] {
-    const regex = new RegExp(`<${tagName}\\b[^>]*\\bclass\\s*=\\s*["'][^"']*\\b${this.escapeRegex(className)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/${tagName}>`, 'gi');
+    const regex = new RegExp(`<${tagName}\\b[^>]*\\bclass\\s*=\\s*["'][^"']*\\b${HtmlParser.escapeRegex(className)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/${tagName}>`, 'gi');
     return html.match(regex) || [];
   }
 
@@ -138,19 +137,19 @@ export class HtmlParser {
     let regex: RegExp;
     switch (operator) {
       case '=':
-        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["']${this.escapeRegex(attrValue)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["']${HtmlParser.escapeRegex(attrValue)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
         break;
       case '~=':
-        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["'][^"']*\\b${this.escapeRegex(attrValue)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["'][^"']*\\b${HtmlParser.escapeRegex(attrValue)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
         break;
       case '^=':
-        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["']${this.escapeRegex(attrValue)}[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["']${HtmlParser.escapeRegex(attrValue)}[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
         break;
       case '$=':
-        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["'][^"']*${this.escapeRegex(attrValue)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["'][^"']*${HtmlParser.escapeRegex(attrValue)}["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
         break;
       case '*=':
-        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["'][^"']*${this.escapeRegex(attrValue)}[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+        regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\b${attrName}\\s*=\\s*["'][^"']*${HtmlParser.escapeRegex(attrValue)}[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
         break;
       default:
         return [];
