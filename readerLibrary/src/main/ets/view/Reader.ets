@@ -200,13 +200,9 @@ export struct ReaderBottom {
 
 export class SimulateDrawManager {
   currentDrawHelper: SimulationDrawHelper | null = null;
-  // 当前画布大小
   canvasSize: Size = Size.zero();
-  // 起始触摸点
   startTouch: TouchEvent = TouchEvent.zero();
-  // 当前触摸点
   touch: TouchEvent = TouchEvent.zero();
-  // 上一次触摸点
   lastTouch: TouchEvent | null = null;
   private context: DrawingRenderingContext;
   private fontSize: number;
@@ -216,13 +212,14 @@ export class SimulateDrawManager {
   private currentPageIndex: number;
   private bgColor: string;
   paragraphSpacing: number;
+  letterSpacing: number;
   batteryPixelMap: image.PixelMap | null = null;
   textDisplaySize: number[] = [0, 0];
   private isTurnNext: boolean | null = null;
   public readerPadding: number = 24;
 
   constructor(context: DrawingRenderingContext, fontSize: number, lineHeight: number,
-    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string, paragraphSpacing: number) {
+    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string, paragraphSpacing: number, letterSpacing: number = 0) {
     this.context = context;
     this.fontSize = fontSize;
     this.lineHeight = lineHeight;
@@ -231,6 +228,7 @@ export class SimulateDrawManager {
     this.currentPageIndex = currentPageIndex;
     this.bgColor = bgColor;
     this.paragraphSpacing = paragraphSpacing;
+    this.letterSpacing = letterSpacing;
   }
 
   updateBgColor(bgColor: string) {
@@ -252,6 +250,13 @@ export class SimulateDrawManager {
     this.paragraphSpacing = spacing;
     if (this.currentDrawHelper !== null) {
       this.currentDrawHelper.updateParagraphSpacing(spacing);
+    }
+  }
+
+  updateLetterSpacing(spacing: number) {
+    this.letterSpacing = spacing;
+    if (this.currentDrawHelper !== null) {
+      this.currentDrawHelper.updateLetterSpacing(spacing);
     }
   }
 
@@ -356,13 +361,13 @@ export class SimulateDrawManager {
           new SimulationCornerTurnDrawHelper(this, this.context, this.fontSize, this.lineHeight, this.chapterList,
             this.isTurnNext ? this.currentChapterIndex : prePageIndex![0],
             this.isTurnNext ? this.currentPageIndex : prePageIndex![1],
-            this.bgColor, this.paragraphSpacing);
+            this.bgColor, this.paragraphSpacing, this.letterSpacing);
       } else {
         this.currentDrawHelper =
           new SimulationPageTurnDrawHelper(this, this.context, this.fontSize, this.lineHeight, this.chapterList,
             this.isTurnNext ? this.currentChapterIndex : prePageIndex![0],
             this.isTurnNext ? this.currentPageIndex : prePageIndex![1],
-            this.bgColor, this.paragraphSpacing);
+            this.bgColor, this.paragraphSpacing, this.letterSpacing);
       }
     }
 
@@ -387,9 +392,7 @@ export class SimulateDrawManager {
 
 // 仿真翻页绘制辅助器
 abstract class SimulationDrawHelper {
-  // 底部页面区域Path
   nextPagePath = new drawing.Path();
-  // 顶部翻起页区域Path
   turningPagePath = new drawing.Path();
   hostManager: SimulateDrawManager;
   protected fontSize: number;
@@ -399,6 +402,7 @@ abstract class SimulationDrawHelper {
   protected currentPageIndex: number;
   protected bgColor: string;
   protected paragraphSpacing: number;
+  protected letterSpacing: number;
   protected context: DrawingRenderingContext;
 
   updateBgColor(bgColor: string) {
@@ -414,8 +418,12 @@ abstract class SimulationDrawHelper {
     this.paragraphSpacing = spacing;
   }
 
+  updateLetterSpacing(spacing: number) {
+    this.letterSpacing = spacing;
+  }
+
   constructor(hostManager: SimulateDrawManager, context: DrawingRenderingContext, fontSize: number, lineHeight: number,
-    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string, paragraphSpacing: number) {
+    chapterList: ReaderChapterItem[], currentChapterIndex: number, currentPageIndex: number, bgColor: string, paragraphSpacing: number, letterSpacing: number = 0) {
     this.hostManager = hostManager;
     this.context = context;
     this.fontSize = fontSize;
@@ -425,6 +433,7 @@ abstract class SimulationDrawHelper {
     this.currentPageIndex = currentPageIndex;
     this.bgColor = bgColor;
     this.paragraphSpacing = paragraphSpacing;
+    this.letterSpacing = letterSpacing;
   }
 
   get canvasSize(): Size {

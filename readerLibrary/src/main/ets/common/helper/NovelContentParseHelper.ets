@@ -18,12 +18,8 @@ export class NovelContentParseHelper {
     measureContentWidth: number, measureContentHeight: number, paragraphSpacing: number = 0,
     letterSpacing: number = 0): Promise<string[][]> {
     let tempParagraphList = paragraphList.slice()
-    let wordSize = measure.measureTextSize({
-      textContent: '测', // 随便找的测试文字，用来测试一个字有多大。
-      fontSize: fontSize,
-      lineHeight: lineHeight,
-      letterSpacing: `${letterSpacing}px`
-    });
+    let fullWidth = vp2px(fontSize);
+    let wordSize: SizeOptions = { width: fullWidth, height: vp2px(lineHeight || (fontSize * 1.5)) };
     let pageIndex = 0;
     let pageContent: string[][] = [];
     let lastLength = tempParagraphList.length;
@@ -89,7 +85,6 @@ export class NovelContentParseHelper {
         constraintHeight = targetHeight;
       }
 
-      // 断句对象
       let breakIterator = I18n.getLineInstance('cn');
 
       let result: string[] = [];
@@ -103,10 +98,8 @@ export class NovelContentParseHelper {
       while (accumulatedHeight + wordHeight <= constraintHeight && paragraphs.length != 0) {
         let currentTarget = paragraphs[0]
         
-        // 检查是否为图片占位符
         let isImage = currentTarget.trim().startsWith('[img:') && currentTarget.trim().endsWith(']');
         if (isImage) {
-          // 图片实际渲染高度: 180vp + 上下各8vp margin = 196vp
           let imgHeightPx = vp2px(180 + 16);
           let imgLinesNeeded = Math.max(1, Math.ceil(imgHeightPx / wordHeight));
           let imgHeightNeeded = wordHeight * imgLinesNeeded;
@@ -119,7 +112,6 @@ export class NovelContentParseHelper {
             accumulatedHeight += imgHeightNeeded;
             paragraphs.splice(0, 1);
           } else {
-            // 空间不够，留到下一页
             break;
           }
           continue;
@@ -141,10 +133,9 @@ export class NovelContentParseHelper {
           continue;
         }
 
-        let heightLimit = wordHeight * 1.15;
-        let currentTargetHeight = NovelContentParseHelper.measureTextHeight(currentTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
+        let fitsOneLine = NovelContentParseHelper.fitsOnOneLine(currentTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
 
-        if (currentTargetHeight <= heightLimit) {
+        if (fitsOneLine) {
           result[currentLineIndex] = currentTarget + (isNeedAddLineFeed ? lineFeed : '');
           currentLineIndex++
           accumulatedHeight += wordHeight;
@@ -162,17 +153,16 @@ export class NovelContentParseHelper {
           }
 
           let tempCurrentTarget = currentTarget.substring(0, currentPos)
-          let testHeight = NovelContentParseHelper.measureTextHeight(tempCurrentTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
+          let fitsTemp = NovelContentParseHelper.fitsOnOneLine(tempCurrentTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
 
-          if (testHeight <= heightLimit) {
+          if (fitsTemp) {
             while (true) {
               let nextPos = breakIterator.next();
               if (nextPos === -1 || nextPos > currentTarget.length) {
                 break;
               }
               let nextTarget = currentTarget.substring(0, nextPos);
-              let nextHeight = NovelContentParseHelper.measureTextHeight(nextTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
-              if (nextHeight > heightLimit) {
+              if (!NovelContentParseHelper.fitsOnOneLine(nextTarget, constraintWidth, fontSize, lineHeight, letterSpacing)) {
                 break;
               }
               currentPos = nextPos;
@@ -185,8 +175,7 @@ export class NovelContentParseHelper {
                 break;
               }
               let prevTarget = currentTarget.substring(0, prevPos);
-              let prevHeight = NovelContentParseHelper.measureTextHeight(prevTarget, constraintWidth, fontSize, lineHeight, letterSpacing);
-              if (prevHeight <= heightLimit) {
+              if (NovelContentParseHelper.fitsOnOneLine(prevTarget, constraintWidth, fontSize, lineHeight, letterSpacing)) {
                 currentPos = prevPos;
                 tempCurrentTarget = prevTarget;
                 break;
@@ -196,7 +185,6 @@ export class NovelContentParseHelper {
             }
           }
 
-          // 确保每次循环至少消耗 1 个字符，保证有进度，绝不死循环
           if (tempCurrentTarget.length === 0 && currentTarget.length > 0) {
             tempCurrentTarget = currentTarget.substring(0, 1);
             currentPos = 1;
@@ -223,6 +211,17 @@ export class NovelContentParseHelper {
     });
   }
 
+  static fitsOnOneLine(content: string, constraintWidth: number, fontSize: number, lineHeight: number,
+    letterSpacing: number = 0): boolean {
+    let width = measure.measureTextSize({
+      textContent: content,
+      fontSize: `${fontSize}fp`,
+      letterSpacing: `${letterSpacing}fp`
+    }).width
+
+    return typeof width === 'number' && width <= constraintWidth;
+  }
+
   /**
    * 测量给定文字的高度
    * measure the height of text
@@ -238,9 +237,9 @@ export class NovelContentParseHelper {
     let height = measure.measureTextSize({
       textContent: content,
       constraintWidth: `${constraintWidth}px`,
-      fontSize: fontSize,
-      lineHeight: lineHeight,
-      letterSpacing: `${letterSpacing}px`
+      fontSize: `${fontSize}fp`,
+      lineHeight: `${lineHeight}fp`,
+      letterSpacing: `${letterSpacing}fp`
     }).height
 
     return typeof height === 'number' ? height : 0;

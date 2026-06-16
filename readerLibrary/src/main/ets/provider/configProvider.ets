@@ -237,7 +237,7 @@ struct ReaderSourceProvider {
             startIndex += contentLength;
             return pageItem
           })
-          
+
           let oldChapter = this.chapterList[chapterIndex];
           let newChapter = new ReaderChapterItem(
             oldChapter.number,
@@ -247,7 +247,6 @@ struct ReaderSourceProvider {
             oldChapter.paragraphList,
             newPages
           );
-          this.chapterList[chapterIndex] = newChapter;
 
           if (chapterIndex === this.currentChapterIndex) {
             let newPageIndex = 0;
@@ -272,9 +271,7 @@ struct ReaderSourceProvider {
                 }
               }
             }
-            this.currentPageIndex = newPageIndex;
-            
-            // Sync render properties with the successfully calculated configuration
+
             this.renderFontSize = this.fontSize;
             this.renderLineHeightRatio = this.lineHeightRatio;
             this.renderParagraphSpacing = this.paragraphSpacing;
@@ -283,7 +280,9 @@ struct ReaderSourceProvider {
             this.renderIsFirstLineIndent = this.isFirstLineIndent;
             this.renderLetterSpacing = this.letterSpacing;
             this.renderReaderPadding = this.readerPadding;
+            this.currentPageIndex = newPageIndex;
           }
+          this.chapterList[chapterIndex] = newChapter;
           this.chapterList = Array.from(this.chapterList)
         }
       }

@@ -29,6 +29,7 @@ export struct SimulateCurlView {
   @Provide('batteryPixelMap') @Watch('setBatteryPixelMap') batteryPixelMap: image.PixelMap | null = null;
   @Consume('displaySize') @Watch('onTextDisplaySizeChanged') displaySize: number[];
   @Consume('renderParagraphSpacing') @Watch('onParagraphSpacingChanged') paragraphSpacing: number;
+  @Consume('renderLetterSpacing') @Watch('onLetterSpacingChanged') letterSpacing: number;
   drawManager: SimulateDrawManager | null = null;
   isTurnNext: boolean | null = null;
   animationEndValue: number | null = null;
@@ -58,7 +59,7 @@ export struct SimulateCurlView {
   aboutToAppear(): void {
     this.drawManager =
       new SimulateDrawManager(this.context, this.fontSize, this.fontSize * this.lineHeightRatio, this.chapterList,
-        this.currentChapterIndex, this.currentPageIndex, this.bgColor, this.paragraphSpacing);
+        this.currentChapterIndex, this.currentPageIndex, this.bgColor, this.paragraphSpacing, this.letterSpacing);
     this.drawManager.setReaderPadding(this.readerPadding)
     this.drawManager.setTextDisplaySize(this.displaySize)
 
@@ -147,6 +148,12 @@ export struct SimulateCurlView {
   onParagraphSpacingChanged() {
     if (this.drawManager !== null) {
       this.drawManager.updateParagraphSpacing(this.paragraphSpacing);
+    }
+  }
+
+  onLetterSpacingChanged() {
+    if (this.drawManager !== null) {
+      this.drawManager.updateLetterSpacing(this.letterSpacing);
     }
   }
 
