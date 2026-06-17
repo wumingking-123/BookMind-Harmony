@@ -125,6 +125,7 @@ export default struct ContentRefresh {
                 bookSourceUrl: this.bookSource.bookSourceUrl,
                 exploreItem: item,
                 exploreRule: this.exploreRule,
+                charset: this.bookSource.charset,
                 counter: this.counter,
                 handleClick: () => {
                   this.showSheet = true

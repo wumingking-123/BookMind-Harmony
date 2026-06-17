@@ -2,6 +2,7 @@ import { BookSource } from '../../database/entities/BookSource';
 import AppPattern from '../constants/AppPattern';
 import { parseSearchString, SearchConfig } from '../model/SearchConfig';
 import networkUtil from './NetworkUtils';
+import { encodeToGbk } from './GbkEncoder';
 
 export interface IParseURL {
   baseUrl: string
@@ -102,15 +103,44 @@ export class ParseURLUtils {
     searchUrl = this.extractAndReplace(searchUrl)
     try {
       let parseSearch = parseSearchString(searchUrl)
-      baseUrl = this.buildBaseUrl(this.url, parseSearch.path,parseSearch.body);
-      baseUrl = this.replacePlaceholders(baseUrl, '{{key}}', decodeURIComponent(this.parseURL.keyword));
+      console.log('[ParseURLUtils] parseSearchString body: ' + parseSearch.body)
+      // 使用书源的charset覆盖默认值
+      if (this.parseURL.bookSource?.charset) {
+        parseSearch.charset = this.parseURL.bookSource.charset
+      }
+      // 使用书源的header配置
+      if (this.parseURL.bookSource?.header) {
+        try {
+          // 解析header配置（可能是JSON字符串或JS表达式）
+          const headerStr = this.parseURL.bookSource.header
+          if (headerStr.startsWith('{') || headerStr.startsWith('@js:')) {
+            // 简单处理：如果是@js:开头，跳过；如果是JSON，直接解析
+            if (headerStr.startsWith('{')) {
+              parseSearch.headers = JSON.parse(headerStr)
+            }
+          }
+        } catch (e) {
+          console.log('[ParseURLUtils] 解析header失败: ' + (e as Error).message)
+        }
+      }
+      baseUrl = this.buildBaseUrl(this.url, parseSearch.path, parseSearch.method === 'POST' ? '' : parseSearch.body);
+      // 根据charset编码keyword（GBK需要特殊编码）
+      const isGbk = parseSearch.charset.toUpperCase() === 'GBK'
+      const encodedKeyword = isGbk ? encodeToGbk(this.parseURL.keyword) : encodeURIComponent(this.parseURL.keyword)
+      baseUrl = this.replacePlaceholders(baseUrl, '{{key}}', encodedKeyword);
       baseUrl = this.replacePlaceholders(baseUrl, '{{page}}', this.parseURL.page.toString());
       baseUrl = networkUtil.getAbsoluteURL(this.url, baseUrl)
       parseSearch.url = baseUrl
+      parseSearch.body = this.replacePlaceholders(parseSearch.body, '{{key}}', encodedKeyword);
+      parseSearch.body = this.replacePlaceholders(parseSearch.body, '{{page}}', this.parseURL.page.toString());
+      console.log('[ParseURLUtils] 最终body: ' + parseSearch.body)
       return parseSearch;
     } catch (e){
+      const charset = this.parseURL.bookSource?.charset?.toUpperCase() || 'UTF-8'
+      const isGbk = charset === 'GBK'
+      const encodedKeyword = isGbk ? encodeToGbk(this.parseURL.keyword) : encodeURIComponent(this.parseURL.keyword)
       baseUrl = this.buildBaseUrl(this.url, searchUrl, '')
-      baseUrl = this.replacePlaceholders(baseUrl, '{{key}}', decodeURIComponent(this.parseURL.keyword));
+      baseUrl = this.replacePlaceholders(baseUrl, '{{key}}', encodedKeyword);
       baseUrl = this.replacePlaceholders(baseUrl, '{{page}}', this.parseURL.page.toString());
       return baseUrl
     }

@@ -58,9 +58,14 @@ export class XmlAnalysis {
 
     // 1. 获取书籍列表元素
     const bookListRule = this.source.bookList
-    if (!bookListRule) return bookList
+    if (!bookListRule) {
+      console.log('书源规则缺少bookList: ' + this.xmlDate.bookSource?.bookSourceName)
+      return bookList
+    }
 
+    console.log('解析规则bookList: ' + bookListRule + ', 书源: ' + this.xmlDate.bookSource?.bookSourceName)
     const bookElements = analyzer.getElements(bookListRule)
+    console.log('匹配到 ' + bookElements.length + ' 个元素, 书源: ' + this.xmlDate.bookSource?.bookSourceName)
     if (bookElements.length === 0) return bookList
 
     // 2. 从每个书籍元素中提取信息

@@ -20,10 +20,16 @@ export struct CoverFlipView {
   @State prePageIndex: number[] | null = null;
 
   aboutToAppear(): void {
+    console.log('[CoverFlipView] aboutToAppear, chapterList.length: ' + this.chapterList.length + ', currentChapterIndex: ' + this.currentChapterIndex)
     this.calPageIndex();
   }
 
   onChapterListChanged() {
+    let hasPages = this.chapterList.length > 0 && !!this.chapterList[this.currentChapterIndex]?.chapterPageList?.length
+    console.log('[CoverFlipView] onChapterListChanged, chapterList.length: ' + this.chapterList.length + ', hasPages: ' + hasPages)
+    if (hasPages) {
+      console.log('[CoverFlipView] chapterPageList.length: ' + this.chapterList[this.currentChapterIndex].chapterPageList.length)
+    }
     this.calPageIndex();
   }
 

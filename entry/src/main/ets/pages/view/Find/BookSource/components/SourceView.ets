@@ -9,7 +9,7 @@ import Tag from '../../../../../componets/common/Tag'
 import { IconTitleVo } from '../../../../../componetsmodel/IconTitleVo'
 import { CustomContentDialog, router } from '@kit.ArkUI'
 import BookSourceDao from '../../../../../database/dao/BookSourceDao'
-import { GroupPartList, SOURCE_GROUP_MAP } from '../../../../../database/entities/BookSource'
+import { BookSource, GroupPartList, SOURCE_GROUP_MAP } from '../../../../../database/entities/BookSource'
 import { BookSourcePart } from '../../../../../database/entities/BookSourcePart'
 import { JSON } from '@kit.ArkTS'
 import SourceGroup from '../../../../../componets/ui/SourceGroup'
@@ -18,6 +18,7 @@ import FiltrateOption from './FiltrateOption'
 import FilterText from './FilterText'
 import { ThemeItem } from '../../../../../common/model/Theme'
 import { ThemeStorageKey } from '../../../../../common/constants/Theme'
+import searchUtil from '../../../../../common/utils/searchUtils'
 
 @Component
 export default struct SourceView {
@@ -48,6 +49,8 @@ export default struct SourceView {
   @StorageLink('refreshCount') refreshCount: number = 0
   @State isShowGroup: boolean = false
   @State currentTitle: number = -1
+  @State showDebugLog: boolean = false
+  @State debugLogText: string = ''
   @State query: BookSourceSearchParams = {
     enabled: undefined,
     bookSourceGrade: undefined,
@@ -662,8 +665,55 @@ export default struct SourceView {
             this.isShowGroup = false
           }
         })
+
+      // 调试日志面板
+      Flex()
+        .bindSheet($$this.showDebugLog, this.debugLogBuilder(), {
+          height: '60%',
+          dragBar: true,
+          showClose: false,
+          onDisappear: () => {
+            this.showDebugLog = false
+          }
+        })
     }
     .alignContent(Alignment.Top)
+  }
+
+  @Builder
+  debugLogBuilder() {
+    Column({ space: 8 }) {
+      Row() {
+        Text('搜索测试结果')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+        Blank()
+        Button('关闭')
+          .fontSize(13)
+          .height(30)
+          .onClick(() => {
+            this.showDebugLog = false
+          })
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 12 })
+
+      Scroll() {
+        Text(this.debugLogText)
+          .fontSize(12)
+          .fontColor('#333333')
+          .fontFamily('monospace')
+          .padding(12)
+      }
+      .layoutWeight(1)
+      .width('100%')
+      .backgroundColor('#f8f8f8')
+      .borderRadius(8)
+      .margin({ left: 12, right: 12 })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(Color.White)
   }
 
   @Builder
@@ -847,6 +897,21 @@ export default struct SourceView {
                     this.dialogController.open()
                     break;
                   case 2:
+                    // 测试搜索
+                    this.debugLogText = '正在测试: ' + item.bookSourceName + '...\n'
+                    this.showDebugLog = true
+                    try {
+                      const fullSource = await BookSourceDao.getBookSource(item.bookSourceUrl)
+                      if (fullSource) {
+                        const logs = await searchUtil.debugSearch(fullSource, '都市')
+                        this.debugLogText = logs.join('\n')
+                      } else {
+                        this.debugLogText = '未找到书源数据'
+                      }
+                    } catch (e) {
+                      this.debugLogText = '测试异常: ' + (e as Error).message
+                    }
+                    break;
                   case 3:
                     showMessage(this.Item_Right_Dialog_Data[index].title)
                     break;
@@ -858,6 +923,25 @@ export default struct SourceView {
                     })
                     break;
                   case 5:
+                    // WebView搜索（用于有anti-scraping的站点如起点）
+                    try {
+                      const webViewSource = await BookSourceDao.getBookSource(item.bookSourceUrl)
+                      if (webViewSource) {
+                        router.pushUrl({
+                          url: 'pages/view/search/WebViewSearch',
+                          params: {
+                            keyword: '都市',
+                            bookSource: webViewSource
+                          }
+                        })
+                      } else {
+                        showMessage('未找到书源数据')
+                      }
+                    } catch (e) {
+                      showMessage('打开失败: ' + (e as Error).message)
+                    }
+                    break;
+                  case 6:
                     await BookSourceDao.delete(item.bookSourceUrl)
                     showMessage('删除成功')
                     this.getList()
@@ -960,6 +1044,7 @@ export default struct SourceView {
     new IconTitleVo($r('app.media.search'), '搜索'),
     new IconTitleVo($r('app.media.ic_logout'), '登录'),
     new IconTitleVo($r('app.media.icon_rule_help'), '调试'),
+    new IconTitleVo($r('app.media.search'), 'WebView搜索'),
     new IconTitleVo($r('app.media.delete'), '删除')
   ]
   More_Right_Dialog_Data: IconTitleVo[] = [

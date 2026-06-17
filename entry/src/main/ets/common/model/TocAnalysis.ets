@@ -62,7 +62,7 @@ export class TocAnalysis {
         const nextUrl = this.getNextPageUrl(currentBody, rule.nextTocUrl);
         if (nextUrl && nextUrl !== '') {
           try {
-            currentBody = await requestUtil.requestUrlHtml(nextUrl);
+            currentBody = await requestUtil.requestUrlHtml(nextUrl, this.tocData.bookSource?.charset);
           } catch (e) {
             console.log('获取下一页目录失败: ' + e);
             break;
@@ -94,8 +94,17 @@ export class TocAnalysis {
 
     // 获取章节列表元素
     if (!tocRule.chapterList) return chapters;
+    console.log('[TocAnalysis] chapterList规则: ' + tocRule.chapterList)
     const chapterElements = analyzer.getElements(tocRule.chapterList);
-    if (chapterElements.length === 0) return chapters;
+    console.log('[TocAnalysis] 匹配到章节数: ' + chapterElements.length)
+    if (chapterElements.length === 0) {
+      // 打印HTML前500字帮助调试
+      console.log('[TocAnalysis] HTML前500字: ' + body.substring(0, 500))
+      return chapters
+    }
+
+    // 打印第一个元素帮助调试
+    console.log('[TocAnalysis] 第一个元素前200字: ' + chapterElements[0].substring(0, 200))
 
     // 提取每个章节信息
     for (let i = 0; i < chapterElements.length; i++) {
@@ -107,6 +116,11 @@ export class TocAnalysis {
 
       // 提取章节URL
       chapter.url = analyzer.extractAttribute(element, tocRule.chapterUrl);
+
+      if (i < 3) {
+        console.log('[TocAnalysis] 章节[' + i + '] title=' + chapter.title + ', url=' + chapter.url)
+        console.log('[TocAnalysis] 章节[' + i + '] element前150字: ' + element.substring(0, 150))
+      }
 
       // 解析相对URL
       if (chapter.url && !isNetworkUrl(chapter.url)) {

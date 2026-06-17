@@ -98,7 +98,7 @@ class DownloadManager {
 
     try {
       // 1. 获取目录
-      const tocBody = await requestUtil.requestUrlHtml(task.tocUrl);
+      const tocBody = await requestUtil.requestUrlHtml(task.tocUrl, task.bookSource?.charset);
       const tocAnalysis = new TocAnalysis();
       tocAnalysis.init(new TocAnalysisData({
         body: tocBody,
@@ -146,7 +146,7 @@ class DownloadManager {
         this.notifyProgress(task);
 
         try {
-          const chapterBody = await requestUtil.requestUrlHtml(chapter.url);
+          const chapterBody = await requestUtil.requestUrlHtml(chapter.url, task.bookSource?.charset);
           const contentAnalysis = new ContentAnalysis();
           contentAnalysis.init(new ContentAnalysisData({
             body: chapterBody,

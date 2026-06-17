@@ -10,14 +10,16 @@ export class SearchConfig {
   charset: string;
   url: string;
   webView:boolean;
+  headers?: Record<string, string>;
 
-  constructor(path: string, method: string, body: string, charset: string, url: string, webView:boolean) {
+  constructor(path: string, method: string, body: string, charset: string, url: string, webView:boolean, headers?: Record<string, string>) {
     this.path = path;
     this.method = method.toUpperCase(); // 确保方法为大写
     this.body = body;
     this.charset = charset??'UTF-8';
     this.url = url;
     this.webView = webView
+    this.headers = headers
   }
 
   // 替换 body 中的关键字
@@ -47,6 +49,7 @@ export function parseSearchString(searchString: string): SearchConfig {
 
   // 解析 JSON 配置
   const config: SearchConfigData = JSON.parse(cleanConfigString);
+  console.log('[parseSearchString] body: ' + config.body)
 
   return new SearchConfig(
     path,

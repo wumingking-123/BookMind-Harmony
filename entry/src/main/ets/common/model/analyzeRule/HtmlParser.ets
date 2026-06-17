@@ -4,11 +4,22 @@
  */
 export class HtmlParser {
   /**
-   * 匹配指定标签的所有元素
+   * 匹配指定标签的所有元素（支持自闭合标签如 img、br、input）
    */
   static matchTags(html: string, tagName: string): string[] {
-    const regex = new RegExp(`<${tagName}\\b[^>]*>[\\s\\S]*?<\\/${tagName}>`, 'gi');
-    return html.match(regex) || [];
+    const results: string[] = [];
+    // 匹配自闭合标签 <tag ... /> 或 <tag ...>
+    const selfClosingRegex = new RegExp(`<${tagName}\\b[^>]*\\/\\s*>`, 'gi');
+    let match: RegExpExecArray | null;
+    while ((match = selfClosingRegex.exec(html)) !== null) {
+      results.push(match[0]);
+    }
+    // 匹配开闭标签 <tag ...>...</tag>
+    const openCloseRegex = new RegExp(`<${tagName}\\b[^>]*>[\\s\\S]*?<\\/${tagName}>`, 'gi');
+    while ((match = openCloseRegex.exec(html)) !== null) {
+      results.push(match[0]);
+    }
+    return results;
   }
 
   /**
