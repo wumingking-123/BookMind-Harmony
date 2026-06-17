@@ -7,9 +7,9 @@
  */
 @Component
 export default struct ReadRecordItem {
-  private count: number = 243;
-  private unit: string = '小时';
-  private placeText: string = '阅读时长';
+  @Prop count: number = 0;
+  @Prop unit: string = '分钟';
+  @Prop placeText: string = '阅读时长';
   build() {
     Column() {
       Text() {

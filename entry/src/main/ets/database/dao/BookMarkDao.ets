@@ -85,6 +85,57 @@ class BookMarkDao {
       return false
     }
   }
+
+  async deleteByPosition(bookName: string, bookAuthor: string, chapterIndex: number, chapterPos: number): Promise<boolean> {
+    try {
+      const predicates = DbUtil.getPredicates(this.TABLE_NAME);
+      predicates.equalTo('bookName', bookName)
+      predicates.equalTo('bookAuthor', bookAuthor)
+      predicates.equalTo('chapterIndex', chapterIndex)
+      predicates.equalTo('chapterPos', chapterPos)
+      await DbUtil.delete(predicates)
+      return true
+    } catch (err) {
+      console.log('TagInfo, Error, ', JSON.stringify(err))
+      return false
+    }
+  }
+
+  async queryAll(): Promise<BookMark[]> {
+    try {
+      const column: ColumnInfo[] = AppDatabaseUtil.getColumn(this.TABLE_NAME);
+      let sql = `SELECT * FROM ${this.TABLE_NAME} ORDER BY time DESC`;
+      const list = await DbUtil.querySqlForList<BookMark>(sql, column)
+      return list || []
+    } catch (err) {
+      console.log('TagInfo, Error, ', JSON.stringify(err))
+      return []
+    }
+  }
+
+  async countAll(): Promise<number> {
+    try {
+      const column: ColumnInfo[] = AppDatabaseUtil.getColumn(this.TABLE_NAME);
+      const predicates = DbUtil.getPredicates(this.TABLE_NAME);
+      return await DbUtil.queryForCount(predicates, column)
+    } catch (err) {
+      console.log('TagInfo, Error, ', JSON.stringify(err))
+      return 0
+    }
+  }
+
+  async countByBook(bookName: string, bookAuthor: string): Promise<number> {
+    try {
+      const column: ColumnInfo[] = AppDatabaseUtil.getColumn(this.TABLE_NAME);
+      const predicates = DbUtil.getPredicates(this.TABLE_NAME);
+      predicates.equalTo('bookName', bookName)
+      predicates.equalTo('bookAuthor', bookAuthor)
+      return await DbUtil.queryForCount(predicates, column)
+    } catch (err) {
+      console.log('TagInfo, Error, ', JSON.stringify(err))
+      return 0
+    }
+  }
 }
 
 const bookMarkDao = new BookMarkDao()

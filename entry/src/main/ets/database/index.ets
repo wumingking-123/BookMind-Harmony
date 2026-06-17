@@ -8,6 +8,7 @@ import rssSourceGroupDao from './dao/rssSourceGroupDao'
 import rssSourcesHistoryDao from './dao/RssSourcesHistoryDao'
 import SubscriptionDao from './dao/SubscriptionDao'
 import worksListsDao from './dao/WorksListsDao'
+import readRecordDao from './dao/ReadRecordDao'
 
 class DataBase {
   async initAllTable() {
@@ -21,6 +22,7 @@ class DataBase {
     await rssSourceGroupDao.initBookSourceGroupTable()
     await BookMarkDao.initBookMarkTable()
     await chaptersDao.initChaptersTable()
+    await readRecordDao.initReadRecordTable()
   }
 }
 

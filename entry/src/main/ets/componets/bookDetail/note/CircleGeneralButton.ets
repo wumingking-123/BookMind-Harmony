@@ -7,8 +7,8 @@
  */
 @Component
 export default struct CircleGeneralButton {
-  private icon: ResourceStr = $r('app.media.ic_public_edit');
-  private text: string = '编辑';
+  icon: ResourceStr = $r('app.media.ic_public_edit');
+  text: string = '编辑';
   build() {
     Column({space: 8}) {
       Column() {

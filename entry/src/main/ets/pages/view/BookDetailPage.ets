@@ -11,6 +11,7 @@ import { Books } from '../../database/entities/Books'
 import { BookHistory } from '../../database/entities/BookHistory'
 import bookHistoryUtils from '../../common/utils/BookHistoryUtils'
 import booksUtil from '../../common/utils/booksUtils'
+import readRecordDao from '../../database/dao/ReadRecordDao'
 import { ThemeStorageKey } from '../../common/constants/Theme'
 import { ThemeItem } from '../../common/model/Theme'
 import {
@@ -85,6 +86,10 @@ struct BookDetailPage {
   })
   @State txtFiles: chaptersItem[] = []
   @State txtFile: ChaptersDataSource = new ChaptersDataSource()
+  @State readTimeMins: number = 0
+  @State readDays: number = 0
+  @State readCount: number = 0
+  @State displayTags: string[] = []
 
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
@@ -97,24 +102,130 @@ struct BookDetailPage {
     console.log('router BookDetailPage:' + JSON.stringify(router.getParams()))
     if (router.getParams() as Books) {
       this.bookData = router.getParams() as Books
+      
+      // 映射 kind 到 customTag
+      let params = router.getParams() as Record<string, Object>
+      if (params && params.kind && !this.bookData.customTag) {
+        this.bookData.customTag = params.kind as string
+      }
+
       // 校验是否加入书架
       if (!this.bookData.isJoin) {
         this.bookData.isJoin = await booksUtil.isExistBooks(this.bookData.bookUrl, this.bookData.bookName)
       }
-      // 从数据库读取最新的阅读进度
+      // 从数据库读取最新的阅读进度与完整信息
       if (this.bookData.id) {
         let savedBooks = await booksUtil.getBookByIds(this.bookData.id)
         if (savedBooks.length > 0) {
-          this.bookData.durChapterIndex = savedBooks[0].durChapterIndex
-          this.bookData.durChapterTitle = savedBooks[0].durChapterTitle
-          this.bookData.durChapterPos = savedBooks[0].durChapterPos
+          this.bookData = savedBooks[0]
         }
       }
+
+      this.updateDisplayTags()
+
       let temp = await FileHandler.readFile(this.bookData?.bookUrl || '') // txt小说
       this.txtFile.pushAllData(temp)
       this.txtFiles = this.txtFile.getListData()
       this.initUrlBook()
+
+      // 如果是本地小说，且数据库中未存储字数，或者字数为空，则计算实际字数并保存
+      if (!this.bookData.wordCount && temp && temp.length > 0) {
+        let totalChars = 0;
+        for (let chapter of temp) {
+          totalChars += chapter.content ? chapter.content.length : 0;
+        }
+        if (totalChars > 0) {
+          if (totalChars >= 10000) {
+            this.bookData.wordCount = (totalChars / 10000).toFixed(1) + '万字';
+          } else {
+            this.bookData.wordCount = totalChars + '字';
+          }
+          // 保存到数据库
+          if (this.bookData.id) {
+            await booksUtil.partialUpdate(this.bookData);
+          }
+          this.updateDisplayTags()
+        }
+      }
+      
+      // 读取实际阅读记录
+      let record = await readRecordDao.getRecordByBookName(this.bookData.bookName);
+      if (record) {
+        this.readTimeMins = Math.floor(record.readTime / 60);
+        this.readDays = record.readDays;
+        this.readCount = record.readCount;
+      } else {
+        this.readTimeMins = 0;
+        this.readDays = 0;
+        this.readCount = 0;
+      }
     }
+  }
+
+  updateDisplayTags() {
+    let tagList: string[] = [];
+    
+    // 1. 本地/线上分类
+    if (this.bookData.isLocalBook) {
+      tagList.push('本地导入');
+      // 提取文件后缀
+      let ext = '';
+      if (this.bookData.bookUrl) {
+        let dotIdx = this.bookData.bookUrl.lastIndexOf('.');
+        if (dotIdx > 0) {
+          ext = this.bookData.bookUrl.substring(dotIdx + 1).toUpperCase();
+        }
+      }
+      if (ext) {
+        tagList.push(ext);
+      }
+    } else {
+      // 线上书源
+      if (this.bookData.originName) {
+        tagList.push(this.bookData.originName);
+      }
+    }
+
+    // 2. 自定义分类标签
+    if (this.bookData.customTag) {
+      let splitTags = this.bookData.customTag.split(/[,，\s]+/);
+      for (let tag of splitTags) {
+        if (tag.trim() && !tagList.includes(tag.trim())) {
+          tagList.push(tag.trim());
+        }
+      }
+    }
+
+    // 3. 字数标签
+    let wc = this.bookData.wordCount;
+    if (wc) {
+      let formattedWc = '';
+      wc = wc.trim();
+      if (wc.endsWith('字') || wc.endsWith('万') || wc.endsWith('k') || wc.endsWith('K')) {
+        formattedWc = wc;
+      } else {
+        let num = parseInt(wc);
+        if (!isNaN(num) && num > 0) {
+          if (num >= 10000) {
+            formattedWc = (num / 10000).toFixed(1) + '万字';
+          } else {
+            formattedWc = num + '字';
+          }
+        } else {
+          formattedWc = wc;
+        }
+      }
+      if (formattedWc && !tagList.includes(formattedWc)) {
+        tagList.push(formattedWc);
+      }
+    }
+
+    // 默认兜底标签
+    if (tagList.length === 0) {
+      tagList.push('未分类');
+    }
+
+    this.displayTags = tagList;
   }
 
   initUrlBook() {
@@ -429,9 +540,9 @@ struct BookDetailPage {
           }
 
           Row({ space: InkSpacing.SM }) {
-            TagIndex({ tag: '幻想修仙' })
-            TagIndex({ tag: '完本' })
-            TagIndex({ tag: '300万字' })
+            ForEach(this.displayTags, (tag: string) => {
+              TagIndex({ tag: tag })
+            }, (tag: string) => tag)
           }
         }
         .height(107)
@@ -444,11 +555,15 @@ struct BookDetailPage {
       // 阅读记录
       Row() {
         Row() {
-          ReadRecordItem()
+          ReadRecordItem({
+            count: this.readTimeMins >= 60 ? Math.floor(this.readTimeMins / 60) : this.readTimeMins,
+            unit: this.readTimeMins >= 60 ? '小时' : '分钟',
+            placeText: '阅读时长'
+          })
           Divider().recordDividerStyle()
-          ReadRecordItem({ count: 16, unit: '天', placeText: '阅读天数' })
+          ReadRecordItem({ count: this.readDays, unit: '天', placeText: '阅读天数' })
           Divider().recordDividerStyle()
-          ReadRecordItem({ count: 3, unit: '次', placeText: 'N刷次数' })
+          ReadRecordItem({ count: this.readCount, unit: '次', placeText: 'N刷次数' })
         }
         .borderRadius(InkRadius.MD)
         .padding({ top: InkSpacing.LG, bottom: InkSpacing.LG })

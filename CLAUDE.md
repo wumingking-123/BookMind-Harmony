@@ -50,6 +50,23 @@ Module dependencies are declared in each module's `oh-package.json5` using `file
 - **Theme system**: "墨韵" (Ink Rhyme) design system with `InkPalette`, `InkTypography`, `InkSpacing`, `InkRadius`, `InkShadow`, `InkMotion`, `InkLayout` token classes in `DesignTokens.ets`. Morandi-inspired color themes in `Theme.ets` managed by `ThemeManager`.
 - **Reader module**: `readerLibrary` exports `MainPage`, `CoverFlipView`, and `ReaderProvider`. Supports cover flip, slide, and up-down page-turn styles. Content pagination runs on `taskPool` for performance.
 
+### Multi-Reader Architecture (重要)
+
+项目中存在**三套并行的阅读器页面实现**，用于兼容不同鸿蒙版本和功能需求。**对阅读界面的任何 UI/功能修改都必须同步应用到以下所有三个文件：**
+
+| 文件 | 说明 |
+|------|------|
+| `entry/src/main/ets/pages/view/Reader/ReaderPage.ets` | 初版阅读器 |
+| `entry/src/main/ets/pages/view/Reader/ReaderPage2.ets` | 自绘渲染引擎版（使用 `readerLibrary` 的 Canvas 翻页） |
+| `entry/src/main/ets/pages/view/Reader/ReaderPageKit.ets` | 原生 ReaderKit 版（使用 `@kit.ReaderKit` 系统能力） |
+
+路由选择逻辑在 `BookDetailPage.ets` 中：优先使用 `ReaderPageKit`（若设备支持 `SystemCapability.Reader.ReaderService.ReaderCore`），否则回退到 `ReaderPage2`。
+
+三个文件共享以下公共模块，修改这些模块时无需重复：
+- `readerLibrary/` 下的排版引擎、翻页视图、配置 Provider
+- `entry/.../componets/Reader/` 下的对话框组件（LayoutMoreDialog、BackgroundColorDialog、FlipModeDialog 等）
+- `entry/.../common/` 下的工具类和常量
+
 ### Database Tables
 
 Books, BookSources, BookGroups, BookHistory, WorksLists, Subscription, RssSources, RssSourcesHistory, RssSourceGroup. All DAOs are in `entry/src/main/ets/database/dao/`.

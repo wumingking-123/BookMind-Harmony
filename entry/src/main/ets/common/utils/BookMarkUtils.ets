@@ -10,9 +10,13 @@ class BookMarkUtils {
     return await bookMarkDao.queryByBook(bookName, bookAuthor)
   }
 
-  async isBookMarked(bookName: string, bookAuthor: string, chapterIndex: number): Promise<boolean> {
+  async isBookMarked(bookName: string, bookAuthor: string, chapterIndex: number, chapterPos: number): Promise<boolean> {
     let list = await bookMarkDao.queryByChapter(bookName, bookAuthor, chapterIndex)
-    return list.length > 0
+    return list.some(item => item.chapterPos === chapterPos)
+  }
+
+  async deleteBookMarkByPosition(bookName: string, bookAuthor: string, chapterIndex: number, chapterPos: number): Promise<boolean> {
+    return await bookMarkDao.deleteByPosition(bookName, bookAuthor, chapterIndex, chapterPos)
   }
 
   async deleteBookMark(time: number): Promise<boolean> {
@@ -21,6 +25,18 @@ class BookMarkUtils {
 
   async deleteAllBookMarks(bookName: string, bookAuthor: string): Promise<boolean> {
     return await bookMarkDao.deleteByBook(bookName, bookAuthor)
+  }
+
+  async getAllBookMarks(): Promise<BookMark[]> {
+    return await bookMarkDao.queryAll()
+  }
+
+  async getTotalBookmarkCount(): Promise<number> {
+    return await bookMarkDao.countAll()
+  }
+
+  async getBookmarkCountByBook(bookName: string, bookAuthor: string): Promise<number> {
+    return await bookMarkDao.countByBook(bookName, bookAuthor)
   }
 }
 

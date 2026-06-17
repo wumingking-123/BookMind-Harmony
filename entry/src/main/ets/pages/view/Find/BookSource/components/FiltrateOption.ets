@@ -12,7 +12,7 @@ export default struct FiltrateOption {
   options: Options[] = []
   columns: number = 3
   isAgain: boolean = false
-  @Prop value?: number | string | boolean
+  @Prop value: number | string | boolean | undefined = undefined
   onChange: (value?: number | string | boolean) => void = () => {}
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem

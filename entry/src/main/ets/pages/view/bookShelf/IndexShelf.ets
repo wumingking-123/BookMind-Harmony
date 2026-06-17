@@ -118,8 +118,8 @@ export default struct IndexShelf {
 
       GridRow({ columns: 3, gutter: 0 }) {
         GridCol() { this.ImportClickBox(0, 'app.media.my_center_file_icon', '本地导入') }
-        GridCol() { this.ImportClickBox(1, 'app.media.my_center_cloud_icon', '网盘导入') }
         GridCol() { this.ImportClickBox(2, 'app.media.official_website', '网址导入') }
+        GridCol() { this.ImportClickBox(3, 'app.media.Paste', '粘贴导入') }
       }
 
       Divider()
@@ -147,80 +147,6 @@ export default struct IndexShelf {
         .borderRadius(InkRadius.MD)
     }
     .margin({ top: InkSpacing.LG, bottom: InkSpacing.LG })
-  }
-
-  @Builder
-  CloudImportDialog() {
-    Column() {
-      // 拖拽指示条
-      Row()
-        .width(32)
-        .height(4)
-        .borderRadius(2)
-        .backgroundColor(InkPalette.INK_MIST)
-        .margin({ top: InkSpacing.MD, bottom: InkSpacing.LG })
-
-      Text('网盘导入')
-        .fontSize(InkTypography.TITLE_SMALL)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(InkPalette.INK)
-        .width('100%')
-        .padding({ bottom: InkSpacing.MD })
-
-      Divider().color(InkPalette.PAPER_DEEP)
-
-      // 暂无可用网盘
-      Text('暂无可用网盘')
-        .fontSize(InkTypography.BODY)
-        .fontColor(InkPalette.INK_MIST)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .height(InkLayout.MIN_TOUCH_TARGET)
-
-      Divider().color(InkPalette.PAPER_DEEP)
-
-      Text('取消')
-        .fontSize(InkTypography.BODY)
-        .fontColor(InkPalette.INK_GHOST)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .height(InkLayout.MIN_TOUCH_TARGET)
-        .onClick(() => { this.closeSheet() })
-    }
-    .padding({ left: InkSpacing.XL, right: InkSpacing.XL })
-    .backgroundColor(InkPalette.PAPER)
-    .borderRadius({ topLeft: InkRadius.SHEET, topRight: InkRadius.SHEET })
-  }
-
-  @Builder
-  ImportBookListDialog() {
-    Column() {
-      Row()
-        .width(32)
-        .height(4)
-        .borderRadius(2)
-        .backgroundColor(InkPalette.INK_MIST)
-        .margin({ top: InkSpacing.MD, bottom: InkSpacing.LG })
-
-      GridRow({ columns: 2, gutter: 0 }) {
-        GridCol() { this.ImportClickBox(3, 'app.media.Paste', '粘贴导入') }
-        GridCol() { this.ImportClickBox(4, 'app.media.my_center_file_icon', '本地导入') }
-      }
-
-      Divider()
-        .color(InkPalette.PAPER_DEEP)
-        .margin({ top: InkSpacing.MD })
-
-      Text('取消')
-        .fontSize(InkTypography.BODY)
-        .fontColor(InkPalette.INK_GHOST)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .padding({ top: InkSpacing.LG, bottom: InkSpacing.LG })
-        .onClick(() => { this.closeSheet() })
-    }
-    .backgroundColor(InkPalette.PAPER)
-    .borderRadius({ topLeft: InkRadius.SHEET, topRight: InkRadius.SHEET })
   }
 
   build() {
@@ -272,7 +198,7 @@ export default struct IndexShelf {
           })
 
           Row() {
-            Image($r('app.media.more'))
+            Image($r('app.media.down_svg'))
               .width(20)
               .height(20)
               .fillColor(InkPalette.INK_FAINT)
@@ -283,33 +209,25 @@ export default struct IndexShelf {
           .backgroundColor(InkPalette.OVERLAY_LIGHT)
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
-          .bindMenu([
-            {
-              icon: $r('app.media.import_svg'),
-              value: '书籍导入',
-              action: () => { this.openSheet('import', SheetSize.MEDIUM) }
-            },
-            {
-              icon: $r('app.media.down_svg'),
-              value: '下载管理',
-              action: () => { router.pushUrl({ url: 'pages/view/bookShelf/DownloadManagementPage' }) }
-            },
-            {
-              icon: $r('app.media.import_book_svg'),
-              value: '导入书单',
-              action: () => { this.openSheet('booklist', 240) }
-            },
-            {
-              icon: $r('app.media.batch_svg'),
-              value: '批量管理',
-              action: () => {
-                router.pushUrl({
-                  url: 'pages/view/bookShelf/Manage/BookManagePage',
-                  params: { currentIndex: this.currentIndex, EXHIBIT: this.EXHIBIT, bookTypeNumber: this.bookTypeNumber }
-                })
-              }
-            }
-          ])
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/view/bookShelf/DownloadManagementPage' })
+          })
+
+          Row() {
+            Image($r('app.media.import_svg'))
+              .width(20)
+              .height(20)
+              .fillColor(InkPalette.INK_FAINT)
+          }
+          .width(36)
+          .height(36)
+          .borderRadius(InkRadius.FULL)
+          .backgroundColor(InkPalette.OVERLAY_LIGHT)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => {
+            this.openSheet('import', SheetSize.MEDIUM)
+          })
         }
       }
       .width('100%')
@@ -376,10 +294,6 @@ export default struct IndexShelf {
   unifiedSheetBuilder() {
     if (this.sheetType === 'import') {
       this.ImportDialog()
-    } else if (this.sheetType === 'cloud') {
-      this.CloudImportDialog()
-    } else if (this.sheetType === 'booklist') {
-      this.ImportBookListDialog()
     }
   }
 

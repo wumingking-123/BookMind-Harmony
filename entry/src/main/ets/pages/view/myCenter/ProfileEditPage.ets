@@ -1,4 +1,4 @@
-import { router } from '@kit.ArkUI'
+import router from '@ohos.router'
 import { ThemeStorageKey } from '../../../common/constants/Theme'
 import { ThemeItem } from '../../../common/model/Theme'
 import {

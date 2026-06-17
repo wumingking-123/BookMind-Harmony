@@ -9,10 +9,15 @@ import { TxtContentHandler } from '../../../componets/Reader/TxtContentHandler';
 import { MusicPlayer } from 'ets/componets/Reader/MusicPlayer';
 import purificationView from './purificationView';
 import { chaptersItem } from 'ets/componets/dataList/ReaderChaptersItem';
-import { BookList } from 'ets/componets/dataList/bookList';
+import { Books } from '../../../database/entities/Books';
+import { BookMark } from '../../../database/entities/BookMark';
+import bookMarkUtils from '../../../common/utils/BookMarkUtils';
+import { ReaderCatalog } from '../../../componets/Reader/ReaderCatalog';
+import { ReaderChapterItem } from '@ohos/readerLibrary/src/main/ets/common/entity/ReaderChaptersItem';
+import { promptAction } from '@kit.ArkUI';
 
 interface ParamsObj {
-  bookData: BookList,
+  bookData: Books,
   clickBookChapter: number,
   txtFile: chaptersItem[]
 }
@@ -22,13 +27,17 @@ interface ParamsObj {
 struct ReaderPage {
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
+  @State bookData: Books | undefined = undefined
   @State ReaderPadding: number = 24 // 边距
   @State isShowSetting: boolean = true
   @State isShowDownload: boolean = false
   @State isShowListen: boolean = false
   @State isShowContentSetting: boolean = false
   @State isShowMoreLayout: boolean = false
-  @State CurrentChapters: number = 0
+  @State isShowCatalog: boolean = false
+  @State catalogTabIndex: number = 0
+  @State isBookmarked: boolean = false
+  @State @Watch('onChapterChanged') CurrentChapters: number = 0
   @State TotalChapters: number = 0
   @State CurrentLuminance: number = 0 // 亮度
   @State CurrentFontSize: number = 20 // 字号
@@ -53,12 +62,71 @@ struct ReaderPage {
   })
 
   async aboutToAppear() {
+    console.log("============== 当前所在界面: ReaderPage (旧版) ==============")
     //详情页加了个目录序号参数，所以修改了一下params的类型，不影响之前的bookData，但需要多‘.’一次。看看大佬们可以怎么优化一下，上个页面BookDetailPage
     let temp = router.getParams() as ParamsObj
-    console.log('router ReaderPage:' + temp.bookData.fileLink)
+    console.log('router ReaderPage:' + temp.bookData.bookUrl)
     this.txtFile = temp.txtFile //txt小说
     this.TotalChapters = this.txtFile.length
     this.CurrentChapters = temp.clickBookChapter
+    this.checkBookmarkState()
+  }
+
+  async checkBookmarkState() {
+    if (!this.bookData) return;
+    try {
+      this.isBookmarked = await bookMarkUtils.isBookMarked(
+        this.bookData.bookName, 
+        this.bookData.author, 
+        this.CurrentChapters, 
+        0
+      );
+    } catch (e) {
+      console.error('Failed to check bookmark state:', e);
+    }
+  }
+
+  onChapterChanged() {
+    this.checkBookmarkState()
+  }
+
+  async toggleBookmark() {
+    if (!this.bookData) return;
+    try {
+      if (this.isBookmarked) {
+        await bookMarkUtils.deleteBookMarkByPosition(
+          this.bookData.bookName,
+          this.bookData.author,
+          this.CurrentChapters,
+          0
+        );
+        this.isBookmarked = false;
+      } else {
+        let bookmark = new BookMark();
+        bookmark.bookName = this.bookData.bookName;
+        bookmark.bookAuthor = this.bookData.author;
+        bookmark.chapterIndex = this.CurrentChapters;
+        bookmark.chapterPos = 0;
+        bookmark.chapterName = this.txtFile[this.CurrentChapters]?.title || '未知章节';
+        bookmark.bookText = this.txtFile[this.CurrentChapters]?.title || '未知章节';
+        
+        let snippet = "【当前页片段】";
+        if (this.txtFile[this.CurrentChapters]?.content) {
+           let txt = String(this.txtFile[this.CurrentChapters].content).replace(/\[img:.*?\]/g, '').replace(/\n/g, '').trim();
+           snippet = txt.substring(0, 40) + '...';
+        }
+        bookmark.content = snippet;
+        
+        await bookMarkUtils.addBookMark(bookmark);
+        this.isBookmarked = true;
+      }
+      promptAction.showToast({
+        message: this.isBookmarked ? '已添加书签' : '已取消书签',
+        duration: 1500
+      });
+    } catch (e) {
+      console.error('Failed to toggle bookmark:', e);
+    }
   }
 
   build() {
@@ -68,11 +136,14 @@ struct ReaderPage {
           // 阅读器-上方弹框
           Column() {
             Row({ space: 8 }) {
-              Image($r("app.media.ic_public_return_left"))
-                .width(24)
-                .onClick(() => {
-                  router.back()
-                })
+              Row() {
+                Image($r("app.media.ic_public_return_left"))
+                  .width(24)
+              }
+              .padding(12)
+              .onClick(() => {
+                router.back()
+              })
               Text(`${this.txtFile[this.CurrentChapters]?.chapterTitleNumber} ${this.txtFile[this.CurrentChapters]?.title}`
                 .replace(new RegExp('\\s{1,}', 'g'), ' ')
                 .replaceAll('=', ''))
@@ -99,11 +170,23 @@ struct ReaderPage {
                       // this.clickBookType = ''
                     }
                   })
-                Image($r("app.media.more"))
-                  .width(24)
-                  .onClick(() => {
-
-                  })
+                Row() {
+                  Image(this.isBookmarked ? $r("app.media.reader_tab_bookmark_fill") : $r("app.media.reader_tab_bookmark_outline"))
+                    .width(24)
+                    .fillColor(this.isBookmarked ? '#E07A5F' : undefined)
+                }
+                .padding(12)
+                .onClick(() => {
+                  this.toggleBookmark()
+                })
+                Row() {
+                  Image($r("app.media.more"))
+                    .width(24)
+                }
+                .padding(12)
+                .onClick(() => {
+                  this.isShowMoreLayout = true
+                })
               }
             }
             .padding({
@@ -342,6 +425,15 @@ struct ReaderPage {
                   Text("目录")
                 }
               }
+              .onClick(() => {
+                this.isShowCatalog = true;
+              })
+              .bindSheet($$this.isShowCatalog, this.CatalogBuilder(), {
+                height: '95%',
+                showClose: false,
+                dragBar: false,
+                maskColor: 'rgba(0,0,0,0.6)'
+              })
 
               GridItem() {
                 Column() {
@@ -531,5 +623,26 @@ struct ReaderPage {
     LayoutMoreDialog()
       .height(500)
       .width("100%")
+  }
+
+  @Builder
+  CatalogBuilder() {
+    ReaderCatalog({
+      bookData: this.bookData,
+      catalogTabIndex: $catalogTabIndex,
+      chapterList: this.txtFile.map((item, index): ReaderChapterItem => {
+        return new ReaderChapterItem(index, item.title, item.chapterTitleNumber, '', [], []);
+      }),
+      currentChapterIndex: this.CurrentChapters,
+      isNightMode: false,
+      isShowCatalog: $isShowCatalog,
+      isShowSetting: $isShowSetting,
+      jumpToChapter: (chapterIndex: number, pageIndex: number) => {
+        this.CurrentChapters = chapterIndex;
+        this.checkBookmarkState();
+        this.isShowCatalog = false;
+        this.isShowSetting = false;
+      }
+    })
   }
 }

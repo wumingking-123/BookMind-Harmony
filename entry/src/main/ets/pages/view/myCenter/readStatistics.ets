@@ -6,6 +6,10 @@ import { readStatisticsDataList } from '../../../componets/myCenter/readStatisti
 import { readBookList } from '../../../componets/dataList/readBookList';
 import { readTabs } from '../../../componets/myCenter/readTabs';
 import { PublicConstants } from '../../../common/constants/PublicConstants';
+import readRecordDao from '../../../database/dao/ReadRecordDao';
+import booksDao from '../../../database/dao/BooksDao';
+import bookMarkUtils from '../../../common/utils/BookMarkUtils';
+import { BookMark } from '../../../database/entities/BookMark';
 
 
 @Entry
@@ -31,17 +35,8 @@ struct readStatistics {
   @Provide delStatus:boolean=false
 
   @State delDialog:boolean=false
-  @State bookList:readBookList[]=[
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[20,23],new Date(),20,0),
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[21,23],new Date(),30,1),
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[22,23],new Date(),40,2),
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[23,23],new Date(),70,3),
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[23,23],new Date(),70,3),
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[23,23],new Date(),70,3),
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[23,23],new Date(),70,3),
-    new readBookList("夜的命名术",$r("app.media.book_cover"),"会说话的肘子",[23,23],new Date(),70,3),
-
-  ]
+  @State bookList: readBookList[] = []
+  @State allBookmarkList: BookMark[] = []
   @Builder head(){
     Row(){
       Row(){
@@ -100,15 +95,99 @@ struct readStatistics {
     Column(){
       Column(){
         this.head()
-        readTabs({
-          read_list:this.read_list
-        })
-        //tab条 小说漫画有声书切换
-        //书籍组件
-        readStatisticsDataList({
-          dateValue:this.dateValue,
-          bookList:this.bookList
-        })
+        if (this.type === 2) {
+          // 书签列表
+          if (this.allBookmarkList.length === 0) {
+            Column() {
+              Image($r('app.media.find_empty'))
+                .width(100)
+                .height(100)
+                .opacity(0.6)
+                .margin({ bottom: 16 })
+              Text('暂无书签')
+                .fontSize(14)
+                .fontColor('#999999')
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .justifyContent(FlexAlign.Center)
+          } else {
+            List() {
+              ForEach(this.allBookmarkList, (item: BookMark, index: number) => {
+                ListItem() {
+                  Row() {
+                    Column({ space: 8 }) {
+                      Row() {
+                        Text(item.chapterName || item.bookText || '未知章节')
+                          .fontSize(14)
+                          .fontWeight(FontWeight.Medium)
+                          .fontColor('#E07A5F')
+                          .layoutWeight(1)
+                          .maxLines(1)
+                          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+                        Text(new Date(item.time).toLocaleDateString())
+                          .fontSize(11)
+                          .fontColor('#999999')
+                      }
+                      .width('100%')
+
+                      Text(item.bookName)
+                        .fontSize(12)
+                        .fontColor('#6B5E52')
+                        .maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+                      if (item.content) {
+                        Text(item.content)
+                          .fontSize(13)
+                          .fontColor('#8A7D71')
+                          .lineHeight(18)
+                          .maxLines(2)
+                          .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      }
+                    }
+                    .layoutWeight(1)
+                    .alignItems(HorizontalAlign.Start)
+                    .padding({ top: 12, bottom: 12, left: 16 })
+
+                    Image($r('app.media.delete'))
+                      .width(20)
+                      .height(20)
+                      .fillColor('#D0D0D0')
+                      .margin({ left: 12, right: 16 })
+                      .onClick(async () => {
+                        let success = await bookMarkUtils.deleteBookMark(item.time);
+                        if (success) {
+                          this.allBookmarkList = this.allBookmarkList.filter(b => b.time !== item.time);
+                          this.title_list = [
+                            new dataItem("读过", this.title_list[0].value),
+                            new dataItem("读完", this.title_list[1].value),
+                            new dataItem("书签", this.allBookmarkList.length),
+                          ];
+                        }
+                      })
+                  }
+                  .width('100%')
+                  .backgroundColor(Color.White)
+                  .borderRadius(12)
+                  .margin({ left: 16, right: 16, bottom: 8 })
+                }
+              })
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .padding({ top: 8 })
+          }
+        } else {
+          readTabs({
+            read_list:this.read_list
+          })
+          readStatisticsDataList({
+            dateValue:this.dateValue,
+            bookList:this.bookList
+          })
+        }
       }.attributeModifier(this.Column)
       .height(CommonConstants.FULL_HEIGHT)
       .width(CommonConstants.FULL_WIDTH)
@@ -160,8 +239,57 @@ struct readStatistics {
     offset:{dx:0,dy:20},
     customStyle: true
   })
-  aboutToAppear(): void {
-      console.log(this.type+"------")
+  async aboutToAppear() {
+    console.log(this.type+"------")
+    let allBooks = await booksDao.search();
+    let records = await readRecordDao.getAllRecords();
+
+    // 加载所有书签
+    let allBookmarks = await bookMarkUtils.getAllBookMarks();
+    this.allBookmarkList = allBookmarks;
+
+    // 按书名分组统计书签数量
+    let bookmarkCountMap: Map<string, number> = new Map();
+    for (let bm of allBookmarks) {
+      let key = bm.bookName + '|' + bm.bookAuthor;
+      bookmarkCountMap.set(key, (bookmarkCountMap.get(key) || 0) + 1);
+    }
+
+    let newList: readBookList[] = [];
+    let totalTime = 0;
+    let totalDays = 0;
+
+    for (let r of records) {
+      let book = allBooks.find(b => b.bookName === r.bookName);
+      if (book) {
+        totalTime += r.readTime;
+        totalDays += r.readDays;
+
+        let hrs = Math.floor(r.readTime / 3600);
+        let mins = Math.floor((r.readTime % 3600) / 60);
+        let cover = book.coverUrl ? book.coverUrl : $r("app.media.book_cover");
+        let bookAuthor = book.author || '未知';
+
+        let schedule = 0;
+        if (book.totalChapterNum > 0 && book.durChapterIndex !== undefined) {
+           schedule = Math.floor((book.durChapterIndex / book.totalChapterNum) * 100);
+        }
+
+        let bmCount = bookmarkCountMap.get(r.bookName + '|' + bookAuthor) || 0;
+        newList.push(new readBookList(r.bookName, cover, bookAuthor, [hrs, mins], new Date(r.lastRead), schedule, bmCount, r.readCount, false));
+      }
+    }
+
+    this.bookList = newList;
+    let totalHrs = Math.floor(totalTime / 3600);
+    this.dateValue = [totalDays, totalHrs];
+
+    // 更新 title_list 中的书签数量
+    this.title_list = [
+      new dataItem("读过", records.length),
+      new dataItem("读完", newList.filter(b => b.schedule >= 100).length),
+      new dataItem("书签", allBookmarks.length),
+    ];
   }
 
 }
