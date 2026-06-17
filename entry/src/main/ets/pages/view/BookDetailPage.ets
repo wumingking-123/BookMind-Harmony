@@ -2,7 +2,6 @@ import CommonConstants from '../../common/constants/CommonConstants'
 import ReadRecordItem from '../../componets/bookDetail/ReadRecordItem'
 import TagIndex from '../../componets/bookDetail/TagIndex'
 import { router, SwipeRefresher } from '@kit.ArkUI'
-import NoteIndex from '../../componets/bookDetail/note/NoteIndex'
 import { chaptersItem } from '../../componets/dataList/ReaderChaptersItem'
 import { FileHandler } from '../../common/utils/FileHandler'
 import { BookContentHolder } from '../../common/utils/BookContentHolder'
@@ -12,6 +11,9 @@ import { BookHistory } from '../../database/entities/BookHistory'
 import bookHistoryUtils from '../../common/utils/BookHistoryUtils'
 import booksUtil from '../../common/utils/booksUtils'
 import readRecordDao from '../../database/dao/ReadRecordDao'
+import bookMarkDao from '../../database/dao/BookMarkDao'
+import { BookMark } from '../../database/entities/BookMark'
+import bookHistoryDao from '../../database/dao/BookHistoryDao'
 import { ThemeStorageKey } from '../../common/constants/Theme'
 import { ThemeItem } from '../../common/model/Theme'
 import {
@@ -90,12 +92,22 @@ struct BookDetailPage {
   @State readDays: number = 0
   @State readCount: number = 0
   @State displayTags: string[] = []
+  @State hasHistory: boolean = false
+  @State bookBookmarks: BookMark[] = []
+  @State tabList: string[] = ['目录', '书源', '书签']
 
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   onPageShow() {
     this.isShow = true
+  }
+
+  checkIsLocalBook(): boolean {
+    if (this.bookData.isLocalBook === true || Number(this.bookData.isLocalBook) === 1 || String(this.bookData.isLocalBook) === 'true' || String(this.bookData.isLocalBook) === '1') {
+      return true;
+    }
+    return false;
   }
 
   async aboutToAppear() {
@@ -159,6 +171,21 @@ struct BookDetailPage {
         this.readDays = 0;
         this.readCount = 0;
       }
+
+      // 检查是否有阅读历史记录
+      let histories = await bookHistoryDao.search();
+      this.hasHistory = histories.some(h => h.id === this.bookData.id || h.bookName === this.bookData.bookName);
+
+      // 加载本书相关的书签
+      let allBookmarks = await bookMarkDao.queryAll();
+      this.bookBookmarks = allBookmarks.filter(bm => bm.bookName && bm.bookName.trim() === this.bookData.bookName.trim());
+
+      // 根据是否是本地书初始化 Tab 标签
+      if (this.checkIsLocalBook()) {
+        this.tabList = ['目录', '书签']
+      } else {
+        this.tabList = ['目录', '书源', '书签']
+      }
     }
   }
 
@@ -166,7 +193,7 @@ struct BookDetailPage {
     let tagList: string[] = [];
     
     // 1. 本地/线上分类
-    if (this.bookData.isLocalBook) {
+    if (this.checkIsLocalBook()) {
       tagList.push('本地导入');
       // 提取文件后缀
       let ext = '';
@@ -278,79 +305,160 @@ struct BookDetailPage {
       .width('100%')
 
       Tabs({ barPosition: BarPosition.Start }) {
-        // 目录 Tab
-        TabContent() {
-          Column() {
-            if (this.txtFiles.length === 0) {
-              SwipeRefresher({ content: '目录加载中...', isLoading: true })
-            } else {
-              List() {
-                LazyForEach(this.txtFile, (item: chaptersItem, index: number) => {
-                  ListItem() {
-                    Row() {
-                      Text(`${item.chapterTitleNumber} ${item.title}`
-                        .replace(new RegExp('\\s{1,}', 'g'), ' ')
-                        .replaceAll('=', ''))
-                        .fontSize(InkTypography.BODY)
-                        .fontColor(InkPalette.INK)
-                        .layoutWeight(1)
-                    }
-                    .width('100%')
-                    .height(48)
-                    .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+        ForEach(this.tabList, (name: string, idx: number) => {
+          TabContent() {
+            if (name === '目录') {
+              Column() {
+                if (this.txtFiles.length === 0) {
+                  SwipeRefresher({ content: '目录加载中...', isLoading: true })
+                } else {
+                  List() {
+                    LazyForEach(this.txtFile, (item: chaptersItem, index: number) => {
+                      ListItem() {
+                        Row() {
+                          Text(`${item.chapterTitleNumber} ${item.title}`
+                            .replace(new RegExp('\\s{1,}', 'g'), ' ')
+                            .replaceAll('=', ''))
+                            .fontSize(InkTypography.BODY)
+                            .fontColor(InkPalette.INK)
+                            .layoutWeight(1)
+                        }
+                        .width('100%')
+                        .height(48)
+                        .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
+                      }
+                      .onClick(() => {
+                        // Cache chapter list to avoid serialization overhead
+                        BookContentHolder.setChapters(this.txtFiles);
+                        // 跳转到阅读器
+                        router.pushUrl({
+                          url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                            ? 'pages/view/Reader/ReaderPageKit'
+                            : 'pages/view/Reader/ReaderPage2',
+                          params: {
+                            bookData: this.bookData,
+                            clickBookChapter: index
+                          }
+                        })
+                        if (this.txtFiles && this.txtFile.getListData()[index]) {
+                          this.jumpReadPage(`${item.chapterTitleNumber} ${item.title}`, index)
+                        }
+                      })
+                    })
                   }
-                  .onClick(() => {
-                    // Cache chapter list to avoid serialization overhead
-                    BookContentHolder.setChapters(this.txtFiles);
-                    // 跳转到阅读器
-                     router.pushUrl({
-                       url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
-                         ? 'pages/view/Reader/ReaderPageKit'
-                         : 'pages/view/Reader/ReaderPage2',
-                       params: {
-                         bookData: this.bookData,
-                         clickBookChapter: index
-                       }
-                     })
-                    if (this.txtFiles && this.txtFile.getListData()[index]) {
-                      this.jumpReadPage(`${item.chapterTitleNumber} ${item.title}`, index)
-                    }
+                  .chainAnimation(true)
+                  .edgeEffect(EdgeEffect.Fade)
+                  .divider({
+                    strokeWidth: 0.5,
+                    color: InkPalette.PAPER_DEEP,
+                    startMargin: InkSpacing.LG,
+                    endMargin: InkSpacing.LG
                   })
-                })
+                }
               }
-              .chainAnimation(true)
-              .edgeEffect(EdgeEffect.Fade)
-              .divider({
-                strokeWidth: 0.5,
-                color: InkPalette.PAPER_DEEP,
-                startMargin: InkSpacing.LG,
-                endMargin: InkSpacing.LG
-              })
+            } else if (name === '书源') {
+              Column() {
+                SwipeRefresher({ content: '书源加载中...', isLoading: true })
+              }
+            } else if (name === '书签') {
+              Column() {
+                if (this.bookBookmarks.length === 0) {
+                  Column({ space: InkSpacing.LG }) {
+                    Stack({ alignContent: Alignment.Center }) {
+                      Row()
+                        .width(100)
+                        .height(100)
+                        .borderRadius(InkRadius.FULL)
+                        .backgroundColor(InkPalette.PAPER_WARM)
+                      Image($r('app.media.find_empty'))
+                        .width(64)
+                        .height(64)
+                        .opacity(0.6)
+                    }
+                    .width(100)
+                    .height(100)
+
+                    Text('暂无书签')
+                      .fontSize(InkTypography.BODY)
+                      .fontWeight(FontWeight.Medium)
+                      .fontColor(InkPalette.INK_LIGHT)
+                  }
+                  .width('100%')
+                  .justifyContent(FlexAlign.Center)
+                  .padding({ top: InkSpacing.HUGE })
+                } else {
+                  List() {
+                    ForEach(this.bookBookmarks, (item: BookMark, index: number) => {
+                      ListItem() {
+                        Column({ space: 6 }) {
+                          Row() {
+                            Text(item.chapterName || item.bookText || '未知章节')
+                              .fontSize(InkTypography.BODY)
+                              .fontColor(InkPalette.INK)
+                              .layoutWeight(1)
+                              .maxLines(1)
+                              .textOverflow({ overflow: TextOverflow.Ellipsis })
+                            Text(new Date(item.time).toLocaleDateString())
+                              .fontSize(InkTypography.CAPTION)
+                              .fontColor(InkPalette.INK_MIST)
+                          }
+                          .width('100%')
+
+                          if (item.content) {
+                            Text(item.content)
+                              .fontSize(InkTypography.BODY_SMALL)
+                              .fontColor(InkPalette.INK_LIGHT)
+                              .lineHeight(InkTypography.BODY_SMALL * InkTypography.LINE_HEIGHT_NORMAL)
+                              .maxLines(2)
+                              .textOverflow({ overflow: TextOverflow.Ellipsis})
+                              .width('100%')
+                          }
+                        }
+                        .padding({ left: InkSpacing.LG, right: InkSpacing.LG, top: 12, bottom: 12 })
+                        .width('100%')
+                        .onClick(async () => {
+                          BookContentHolder.setChapters(this.txtFiles);
+                          router.pushUrl({
+                            url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                              ? 'pages/view/Reader/ReaderPageKit'
+                              : 'pages/view/Reader/ReaderPage2',
+                            params: {
+                              bookData: this.bookData,
+                              clickBookChapter: item.chapterIndex
+                            }
+                          });
+                          this.jumpReadPage(item.chapterName, item.chapterIndex);
+                        })
+                      }
+                    })
+                  }
+                  .chainAnimation(true)
+                  .edgeEffect(EdgeEffect.Fade)
+                  .divider({
+                    strokeWidth: 0.5,
+                    color: InkPalette.PAPER_DEEP,
+                    startMargin: InkSpacing.LG,
+                    endMargin: InkSpacing.LG
+                  })
+                  .scrollBar(BarState.Off)
+                  .width('100%')
+                  .layoutWeight(1)
+                  .padding({ bottom: 20 })
+                }
+              }
+              .width('100%')
+              .height('100%')
             }
           }
-        }
-        .tabBar(this.catalogTab(0, '目录', this.txtFile.totalCount()))
-
-        // 书源 Tab
-        TabContent() {
-          Column() {
-            SwipeRefresher({ content: '书源加载中...', isLoading: true })
-          }
-        }
-        .tabBar(this.catalogTab(1, '书源', 24))
-
-        // 笔记 Tab
-        TabContent() {
-          NoteIndex()
-        }
-        .tabBar(this.catalogTab(2, '笔记', 7))
+          .tabBar(this.catalogTab(idx, name, this.getTabCount(name)))
+        }, (name: string) => name)
       }
       .layoutWeight(1)
       .onChange((index: number) => {
         this.currentIndex = index
       })
 
-      // 底部按钮 — 加入书架 / 立即阅读 (大圆角胶囊)
+      // 底部按钮 — 加入书架 / 继续阅读或立即阅读 (大圆角胶囊)
       Row({ space: InkSpacing.LG }) {
         Button(this.bookData.isJoin ? '已加书架' : '加入书架')
           .fontSize(InkTypography.BODY)
@@ -364,7 +472,7 @@ struct BookDetailPage {
             !this.bookData.isJoin ? this.addBookShelf() : ''
           })
 
-        Button(this.bookData.bookType === 2 ? '开始播放' : '立即阅读')
+        Button(this.bookData.bookType === 2 ? '开始播放' : (this.hasHistory ? '继续阅读' : '立即阅读'))
           .fontSize(InkTypography.BODY)
           .fontWeight(FontWeight.Medium)
           .width(140)
@@ -374,11 +482,15 @@ struct BookDetailPage {
           .fontColor(InkPalette.PAPER)
           .enabled(this.bookData.bookType === 2 || this.txtFile.totalCount() > 0)
           .onClick(() => {
+            let savedIndex = this.bookData.durChapterIndex || 0;
+            if (savedIndex >= this.txtFiles.length) {
+              savedIndex = 0;
+            }
             if (this.bookData.bookType === 2) {
               // 有声书直接跳转播放器
               router.pushUrl({
                 url: 'pages/view/Reader/ReaderPage2',
-                params: { bookData: this.bookData, clickBookChapter: 0 }
+                params: { bookData: this.bookData, clickBookChapter: savedIndex }
               })
             } else {
               // 小说/漫画跳转阅读器
@@ -387,10 +499,11 @@ struct BookDetailPage {
                 url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
                   ? 'pages/view/Reader/ReaderPageKit'
                   : 'pages/view/Reader/ReaderPage2',
-                params: { bookData: this.bookData, clickBookChapter: 0 }
+                params: { bookData: this.bookData, clickBookChapter: savedIndex }
               })
-              if (this.txtFiles && this.txtFile.getListData()[0]) {
-                this.jumpReadPage(`${this.txtFile.getListData()[0].chapterTitleNumber} ${this.txtFile.getListData()[0].title}`, 0)
+              let chapterItem = this.txtFile.getListData()[savedIndex];
+              if (this.txtFiles && chapterItem) {
+                this.jumpReadPage(`${chapterItem.chapterTitleNumber} ${chapterItem.title}`, savedIndex)
               }
             }
           })
@@ -400,6 +513,17 @@ struct BookDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor(InkPalette.PAPER)
+  }
+
+  getTabCount(name: string): number {
+    if (name === '目录') {
+      return this.txtFile.totalCount()
+    } else if (name === '书源') {
+      return 24
+    } else if (name === '书签') {
+      return this.bookBookmarks.length
+    }
+    return 0
   }
 
   /**

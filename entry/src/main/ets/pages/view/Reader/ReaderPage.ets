@@ -113,7 +113,9 @@ struct ReaderPage {
         let snippet = "【当前页片段】";
         if (this.txtFile[this.CurrentChapters]?.content) {
            let txt = String(this.txtFile[this.CurrentChapters].content).replace(/\[img:.*?\]/g, '').replace(/\n/g, '').trim();
-           snippet = txt.substring(0, 40) + '...';
+           if (txt.length > 0) {
+             snippet = txt.substring(0, 40) + '...';
+           }
         }
         bookmark.content = snippet;
         

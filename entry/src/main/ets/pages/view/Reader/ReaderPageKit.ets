@@ -457,6 +457,11 @@ struct ReaderPageContent {
               snippet = txt.substring(0, 40) + '...';
             }
           }
+        } else if (currentChapter && currentChapter.content) {
+          let txt = currentChapter.content.replace(/\[img:.*?\]/g, '').replace(/\n/g, '').trim();
+          if (txt.length > 0) {
+            snippet = txt.substring(0, 40) + '...';
+          }
         }
 
         let bookmark = new BookMark();
@@ -950,6 +955,7 @@ struct ReaderPageContent {
         .height("100%")
         .justifyContent(FlexAlign.Start)
         .zIndex(3)
+        .hitTestBehavior(HitTestMode.Transparent)
 
         Column() {
           Column() {
@@ -1200,8 +1206,6 @@ struct ReaderPageContent {
               .onClick(() => {
                 console.log('[ReaderPageKit] 点击书签按钮, isBookmarked=' + this.isBookmarked)
                 this.toggleBookmark();
-                this.catalogTabIndex = 1;
-                this.isShowCatalog = true;
               })
 
               // 5. 设置
@@ -1239,6 +1243,7 @@ struct ReaderPageContent {
         .height("100%")
         .justifyContent(FlexAlign.End)
         .zIndex(3)
+        .hitTestBehavior(HitTestMode.Transparent)
       }
     }
     .height('100%')

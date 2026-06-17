@@ -49,7 +49,7 @@ interface ParamsObj {
 @Entry
 @Component
 struct ReaderPage2 {
-  @State bookData: Books | undefined = undefined
+  @Provide bookData: Books | undefined = undefined
   currentChapters: number = 0
   chapterList: ReaderChapterItem[] = [];
   private readStartTime: number = 0;
@@ -165,7 +165,7 @@ struct ReaderPage2 {
   @Builder
   contentBuilder() {
     Row() {
-      ContentContainer({ bookData: this.bookData })
+      ContentContainer()
     }
   }
 }
@@ -174,10 +174,9 @@ struct ReaderPage2 {
 // todo：研究确认一下
 @Component
 struct ContentContainer {
-  @Prop bookData: Books | undefined
   build() {
     Row() {
-      ReaderPageContent({ bookData: this.bookData })
+      ReaderPageContent()
     }
   }
 }
@@ -228,7 +227,7 @@ struct NumberAdjuster {
 
 @Component
 struct ReaderPageContent {
-  @Prop bookData: Books | undefined
+  @Consume bookData: Books | undefined
   @State isShowSetting: boolean = false
   @State isShowContentSetting: boolean = false
   @State isShowDownload: boolean = false
@@ -402,6 +401,13 @@ struct ReaderPageContent {
            const lines = currentChapter.chapterPageList[this.currentPageIndex].lineContentList;
            if (lines && lines.length > 0) {
              let txt = lines.join('').replace(/\[img:.*?\]/g, '').replace(/\n/g, '').trim();
+             if (txt.length > 0) {
+               snippet = txt.substring(0, 40) + '...';
+             }
+           }
+        } else if (currentChapter && currentChapter.content) {
+           let txt = currentChapter.content.replace(/\[img:.*?\]/g, '').replace(/\n/g, '').trim();
+           if (txt.length > 0) {
              snippet = txt.substring(0, 40) + '...';
            }
         }
@@ -883,6 +889,7 @@ struct ReaderPageContent {
         .height("100%")
         .justifyContent(FlexAlign.Start)
         .zIndex(3)
+        .hitTestBehavior(HitTestMode.Transparent)
 
         // 底部面板 (Z-Index 3)
         Column() {
@@ -1205,6 +1212,7 @@ struct ReaderPageContent {
         .height("100%")
         .justifyContent(FlexAlign.End)
         .zIndex(3)
+        .hitTestBehavior(HitTestMode.Transparent)
       }
     }
     .height('100%')
