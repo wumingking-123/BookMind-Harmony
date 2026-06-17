@@ -12,6 +12,9 @@ import { BookSource, BOOK_SOURCE_TYPE, GRADE_TYPE, SOURCE_GROUP_MAP,
   SOURCE_SCORE_ARR } from '../../../../database/entities/BookSource';
 import { ThemeItem } from '../../../../common/model/Theme';
 import { ThemeStorageKey } from '../../../../common/constants/Theme';
+import { SearchRule } from '../../../../database/entities/rule/SearchRule';
+import { TocRule } from '../../../../database/entities/rule/TocRule';
+import { ContentRule } from '../../../../database/entities/rule/ContentRule';
 
 interface RouteParams {
   id: string,
@@ -34,6 +37,8 @@ struct AddSourcePage {
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @State currentIndex: number = 0
   @State isDebug: boolean = false
+  @State showAdvanced: boolean = false
+  @State showTemplateDialog: boolean = false
   private scroller: Scroller = new Scroller()
   private controller: TabsController = new TabsController()
   private headController: TabsController = new TabsController()
@@ -75,6 +80,188 @@ struct AddSourcePage {
   onReadChange() {
     console.log(this.readIndex + '')
     this.headController.changeIndex(this.readIndex)
+  }
+
+  /**
+   * 应用笔趣阁系列模板
+   */
+  applyBiQuGeTemplate(url: string, name: string) {
+    this.formModel.bookSourceUrl = url
+    this.formModel.bookSourceName = name
+    this.formModel.bookSourceType = 0
+    this.formModel.bookSourceGroup = '男频'
+
+    this.formModel.searchUrl = url + '/search.php?q={{key}}'
+
+    const searchRule = new SearchRule()
+    searchRule.checkKeyWord = '都市'
+    searchRule.bookList = 'div.search-result-item'
+    searchRule.bookUrl = 'a@href'
+    searchRule.name = 'h3.result-game-item-title a'
+    searchRule.author = 'span.result-game-item-info-detail:contains(作者) a'
+    searchRule.kind = 'span.result-game-item-info-detail:contains(类型) a'
+    searchRule.lastChapter = 'span.result-game-item-info-detail:contains(最新) a'
+    searchRule.coverUrl = 'img.result-game-item-pic img@src'
+    searchRule.intro = 'p.result-game-item-desc'
+    this.formModel.ruleSearch = searchRule
+
+    const tocRule = new TocRule()
+    tocRule.chapterList = 'div#list dl dd'
+    tocRule.chapterUrl = 'a@href'
+    tocRule.chapterName = 'a'
+    this.formModel.ruleToc = tocRule
+
+    const contentRule = new ContentRule()
+    contentRule.content = 'div#content'
+    contentRule.title = 'div.bookname h1'
+    contentRule.replaceRegex = '/笔趣阁.*最新章节！/g'
+    this.formModel.ruleContent = contentRule
+
+    this.showTemplateDialog = false
+    showMessage('模板已应用，请确认信息后保存')
+  }
+
+  /**
+   * 应用通用JSON接口模板
+   */
+  applyJsonApiTemplate() {
+    this.formModel.bookSourceType = 0
+    this.formModel.bookSourceGroup = '网络'
+
+    const searchRule = new SearchRule()
+    searchRule.bookList = '@Json:$.data.list'
+    searchRule.bookUrl = '@Json:$.bookUrl'
+    searchRule.name = '@Json:$.bookName'
+    searchRule.author = '@Json:$.bookAuthor'
+    searchRule.coverUrl = '@Json:$.coverUrl'
+    searchRule.intro = '@Json:$.bookIntro'
+    this.formModel.ruleSearch = searchRule
+
+    const tocRule = new TocRule()
+    tocRule.chapterList = '@Json:$.data.chapters'
+    tocRule.chapterUrl = '@Json:$.chapterUrl'
+    tocRule.chapterName = '@Json:$.chapterName'
+    this.formModel.ruleToc = tocRule
+
+    const contentRule = new ContentRule()
+    contentRule.content = '@Json:$.data.content'
+    contentRule.title = '@Json:$.data.title'
+    this.formModel.ruleContent = contentRule
+
+    this.showTemplateDialog = false
+    showMessage('JSON接口模板已应用，请填写URL并确认')
+  }
+
+  @Builder
+  templateDialogBuilder() {
+    Column({ space: 12 }) {
+      Text('选择站点模板')
+        .fontSize(18)
+        .fontWeight(FontWeight.Medium)
+        .margin({ top: 16 })
+
+      Text('选择模板后自动填充解析规则，您只需填写网站地址即可')
+        .fontSize(14)
+        .fontColor('#99000000')
+        .margin({ bottom: 8 })
+
+      // 笔趣阁模板
+      Row() {
+        Column({ space: 4 }) {
+          Text('笔趣阁系列')
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+          Text('适用于大多数笔趣阁风格站点')
+            .fontSize(13)
+            .fontColor('#66000000')
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Button('使用')
+          .fontSize(14)
+          .height(32)
+          .backgroundColor(this.theme.mainColor)
+          .fontColor(Color.White)
+          .onClick(() => {
+            this.formModel.bookSourceUrl = 'https://www.biquges.com'
+            this.formModel.bookSourceName = '笔趣阁'
+            this.applyBiQuGeTemplate('https://www.biquges.com', '笔趣阁')
+          })
+      }
+      .width('100%')
+      .padding(12)
+      .backgroundColor('#f5f5f5')
+      .borderRadius(8)
+
+      // JSON接口模板
+      Row() {
+        Column({ space: 4 }) {
+          Text('JSON接口')
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+          Text('适用于返回JSON数据的API接口')
+            .fontSize(13)
+            .fontColor('#66000000')
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Button('使用')
+          .fontSize(14)
+          .height(32)
+          .backgroundColor(this.theme.mainColor)
+          .fontColor(Color.White)
+          .onClick(() => {
+            this.applyJsonApiTemplate()
+          })
+      }
+      .width('100%')
+      .padding(12)
+      .backgroundColor('#f5f5f5')
+      .borderRadius(8)
+
+      // 自定义
+      Row() {
+        Column({ space: 4 }) {
+          Text('自定义')
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+          Text('手动配置所有规则')
+            .fontSize(13)
+            .fontColor('#66000000')
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Button('开始')
+          .fontSize(14)
+          .height(32)
+          .backgroundColor('#666666')
+          .fontColor(Color.White)
+          .onClick(() => {
+            this.showTemplateDialog = false
+            this.showAdvanced = true
+          })
+      }
+      .width('100%')
+      .padding(12)
+      .backgroundColor('#f5f5f5')
+      .borderRadius(8)
+
+      Button('取消')
+        .width('100%')
+        .height(40)
+        .fontSize(14)
+        .backgroundColor('#eeeeee')
+        .fontColor('#333333')
+        .margin({ top: 8 })
+        .onClick(() => {
+          this.showTemplateDialog = false
+        })
+    }
+    .padding({ left: 20, right: 20, bottom: 20 })
+    .width('100%')
   }
 
   build() {
@@ -198,6 +385,14 @@ struct AddSourcePage {
             this.isShowHelp = false
           }
         })
+        .bindSheet(this.showTemplateDialog, this.templateDialogBuilder(), {
+          height: '50%',
+          showClose: false,
+          dragBar: true,
+          onDisappear: () => {
+            this.showTemplateDialog = false
+          }
+        })
     }
   }
 
@@ -219,6 +414,21 @@ struct AddSourcePage {
   baseForm() {
     Scroll(this.scroller) {
       Column() {
+        // 使用模板按钮
+        Row() {
+          Button('使用模板快速添加')
+            .fontSize(14)
+            .height(36)
+            .backgroundColor(this.theme.mainColor)
+            .fontColor(Color.White)
+            .layoutWeight(1)
+            .onClick(() => {
+              this.showTemplateDialog = true
+            })
+        }
+        .width('100%')
+        .margin({ bottom: 12 })
+
         FormItem({
           value: this.formModel.bookSourceName,
           label: '名称',
@@ -347,77 +557,92 @@ struct AddSourcePage {
           }
         });
 
-        FormItem({
-          value: this.formModel.loginUrl,
-          label: '登录URL',
-          onChange: (value: string) => {
-            this.formModel.loginUrl = value
-          }
-        });
+        // 展开/折叠高级选项
+        Row() {
+          Text(this.showAdvanced ? '— 收起高级选项' : '+ 展开高级选项')
+            .fontSize(14)
+            .fontColor(this.theme.mainColor)
+        }
+        .width('100%')
+        .height(40)
+        .justifyContent(FlexAlign.Center)
+        .onClick(() => {
+          this.showAdvanced = !this.showAdvanced
+        })
 
-        FormItem({
-          value: this.formModel.loginUi,
-          label: '登录UI',
-          onChange: (value: string) => {
-            this.formModel.loginUi = value
-          }
-        });
+        if (this.showAdvanced) {
+          FormItem({
+            value: this.formModel.loginUrl,
+            label: '登录URL',
+            onChange: (value: string) => {
+              this.formModel.loginUrl = value
+            }
+          });
 
-        FormItem({
-          value: this.formModel.loginCheckJs,
-          label: '登录检测JS',
-          onChange: (value: string) => {
-            this.formModel.loginCheckJs = value
-          }
-        });
+          FormItem({
+            value: this.formModel.loginUi,
+            label: '登录UI',
+            onChange: (value: string) => {
+              this.formModel.loginUi = value
+            }
+          });
 
-        FormItem({
-          value: this.formModel.coverDecodeJs,
-          label: '封面解密',
-          onChange: (value: string) => {
-            this.formModel.coverDecodeJs = value
-          }
-        });
+          FormItem({
+            value: this.formModel.loginCheckJs,
+            label: '登录检测JS',
+            onChange: (value: string) => {
+              this.formModel.loginCheckJs = value
+            }
+          });
 
-        FormItem({
-          value: this.formModel.bookUrlPattern,
-          label: '书籍URL正则',
-          onChange: (value: string) => {
-            this.formModel.bookUrlPattern = value
-          }
-        });
+          FormItem({
+            value: this.formModel.coverDecodeJs,
+            label: '封面解密',
+            onChange: (value: string) => {
+              this.formModel.coverDecodeJs = value
+            }
+          });
 
-        FormItem({
-          value: this.formModel.header,
-          label: '请求头',
-          onChange: (value: string) => {
-            this.formModel.header = value
-          }
-        });
+          FormItem({
+            value: this.formModel.bookUrlPattern,
+            label: '书籍URL正则',
+            onChange: (value: string) => {
+              this.formModel.bookUrlPattern = value
+            }
+          });
 
-        FormItem({
-          value: this.formModel.variableComment,
-          label: '变量说明',
-          onChange: (value: string) => {
-            this.formModel.variableComment = value
-          }
-        });
+          FormItem({
+            value: this.formModel.header,
+            label: '请求头',
+            onChange: (value: string) => {
+              this.formModel.header = value
+            }
+          });
 
-        FormItem({
-          value: this.formModel.concurrentRate,
-          label: '并发率',
-          onChange: (value: string) => {
-            this.formModel.concurrentRate = value
-          }
-        });
+          FormItem({
+            value: this.formModel.variableComment,
+            label: '变量说明',
+            onChange: (value: string) => {
+              this.formModel.variableComment = value
+            }
+          });
 
-        FormItem({
-          value: this.formModel.jsLib,
-          label: 'jsLib',
-          onChange: (value: string) => {
-            this.formModel.jsLib = value
-          }
-        });
+          FormItem({
+            value: this.formModel.concurrentRate,
+            label: '并发率',
+            onChange: (value: string) => {
+              this.formModel.concurrentRate = value
+            }
+          });
+
+          FormItem({
+            value: this.formModel.jsLib,
+            label: 'jsLib',
+            onChange: (value: string) => {
+              this.formModel.jsLib = value
+            }
+          });
+        }
       }.width('100%')
     }.height('100%').scrollBar(BarState.Off)
     .padding({ left: 20, right: 20 })

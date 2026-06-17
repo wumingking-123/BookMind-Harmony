@@ -48,12 +48,16 @@ export class BookSource {
   respondTime: number = 180000
   // 智能排序的权重
   weight: number = 0
+  // 默认编码（不填则自动检测）
+  charset?: string
   // 发现url
   exploreUrl?: string
   // 发现筛选规则
   exploreScreen?: string
   // 搜索url
   searchUrl?: string
+  // 搜索结果页url（用于两步搜索：先POST获取searchid，再GET结果页）
+  searchResultUrl?: string
   // 发现规则
   ruleExplore?: ExploreRule
   // 搜索规则
@@ -148,9 +152,11 @@ export const ToBookSource = (bookSourceDb: BookSourceDb) => {
     lastUpdateTime: bookSourceDb.lastUpdateTime,
     respondTime: bookSourceDb.respondTime,
     weight: bookSourceDb.weight,
+    charset: bookSourceDb.charset,
     exploreUrl: bookSourceDb.exploreUrl,
     exploreScreen: bookSourceDb.exploreScreen,
     searchUrl: bookSourceDb.searchUrl,
+    searchResultUrl: bookSourceDb.searchResultUrl,
     isTop: bookSourceDb.isTop,
     showRecentIcon: bookSourceDb.showRecentIcon,
     showExplore: bookSourceDb.showExplore,
@@ -195,9 +201,11 @@ export const ToBookSourceDb = (bookSource: BookSource) => {
     lastUpdateTime: bookSource.lastUpdateTime,
     respondTime: bookSource.respondTime,
     weight: bookSource.weight,
+    charset: bookSource.charset,
     exploreUrl: bookSource.exploreUrl,
     exploreScreen: bookSource.exploreScreen,
     searchUrl: bookSource.searchUrl,
+    searchResultUrl: bookSource.searchResultUrl,
     isTop: bookSource.isTop,
     showRecentIcon: bookSource.showRecentIcon,
     showExplore: bookSource.showExplore,

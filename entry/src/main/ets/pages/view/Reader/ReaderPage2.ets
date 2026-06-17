@@ -80,11 +80,38 @@ struct ReaderPage2 {
       console.error('BookContentHolder is empty, no chapters to display');
       return;
     }
+
+    // 注册内容解析回调，用于在线书籍的章节URL解析
+    const bookSource = BookContentHolder.getBookSource()
+    console.log('[ReaderPage2] bookSource: ' + (bookSource ? bookSource.bookSourceName : 'null'))
+    if (bookSource) {
+      BookContentHolder.resolveContent = (url: string) => BookContentHolder.resolveChapterContent(url)
+    }
+
+    const clickedIndex = temp.clickBookChapter
+    this.currentChapters = clickedIndex
+
+    // 先设置 chapterList（含URL），让 ReaderProvider 初始化并触发渲染
     this.chapterList = rawFile.map((value) => {
       return new ReaderChapterItem(value.number, value.title, value.chapterTitleNumber, value.content);
     })
+    console.log('[ReaderPage2] chapterList已设置, length: ' + this.chapterList.length)
 
-    this.currentChapters = temp.clickBookChapter
+    // 再预取当前章节内容（异步，不阻塞初始渲染）
+    if (clickedIndex >= 0 && clickedIndex < rawFile.length) {
+      const content = rawFile[clickedIndex].content
+      if (content && content.startsWith('http')) {
+        console.log('[ReaderPage2] 开始预取章节内容: ' + content)
+        const resolved = await BookContentHolder.resolveChapterContent(content)
+        console.log('[ReaderPage2] 预取结果长度: ' + (resolved ? resolved.length : 0))
+        if (resolved && resolved.length > 0) {
+          // 更新当前章节内容为已解析的正文
+          this.chapterList[clickedIndex].content = resolved
+          // 触发数组引用更新，让 @Consume 感知变化
+          this.chapterList = Array.from(this.chapterList)
+        }
+      }
+    }
 
     // 获取并设置初始背景颜色，避免闪烁
     let initialColor = BG_COLOR_ARRAY[BGColorType.WHITE];

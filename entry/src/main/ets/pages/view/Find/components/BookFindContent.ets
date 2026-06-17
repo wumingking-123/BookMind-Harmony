@@ -2,19 +2,20 @@
  * @author 2008
  * @datetime 2024/7/14 21:54
  * @className: BookFind
- * 发现公用书籍展示组件
+ * 发现公用书籍展示组件（本地解析版本，不依赖后端API）
  */
-import axios, { AxiosResponse, AxiosError } from '@ohos/axios'
 import { isNetworkUrl } from '../../../../common/utils/utils'
 import noFind from '../../../../componets/common/noFind'
 import { ExploreRule } from '../../../../database/entities/rule'
-import { ExploreItem, ExploreQuery } from '../../../../database/types/BookSourceType'
+import { ExploreItem } from '../../../../database/types/BookSourceType'
 import mayAlsoLike from '../mayAlsoLike'
 import { CardItem } from './CardItem'
 import { router } from '@kit.ArkUI'
-import CommonConstants from '../../../../common/constants/CommonConstants';
 import { ThemeItem } from '../../../../common/model/Theme'
 import { ThemeStorageKey } from '../../../../common/constants/Theme'
+import requestUtils from '../../../../common/utils/requestUtils'
+import { RuleAnalyzer, RuleAnalyzerData } from '../../../../common/model/analyzeRule/RuleAnalyzer'
+import { BookSource } from '../../../../database/entities/BookSource'
 
 @Component
 export default struct BookFindContent {
@@ -26,6 +27,7 @@ export default struct BookFindContent {
   @State errorExplore: boolean = false
   @State bookList: ExploreRule[] = []
   @Prop exploreRule: ExploreRule = {}
+  @Prop charset?: string
   handleClick: () => void = () => {
   }
   // 主题颜色
@@ -35,40 +37,84 @@ export default struct BookFindContent {
     this.getList()
   }
 
-  getList() {
+  async getList() {
     this.loading = true
-    let url = this.exploreItem.url.replace('{{page}}', "1")
+    this.errorExplore = false
+    this.bookList = []
+
+    let url = this.exploreItem.url.replace('{{page}}', '1')
     if (!isNetworkUrl(url)) {
       url = this.bookSourceUrl + url
     }
-    const exploreQuery: ExploreQuery = {
-      url,
-      bookList: this.exploreRule.bookList,
-      pageSize: 3,
-      name: this.exploreRule.name,
-      author: this.exploreRule.author,
-      intro: this.exploreRule.intro,
-      kind: this.exploreRule.kind,
-      lastChapter: this.exploreRule.lastChapter,
-      bookUrl: this.exploreRule.bookUrl,
-      coverUrl: this.exploreRule.coverUrl,
-      wordCount: this.exploreRule.wordCount
-    }
-    axios.post(CommonConstants.BASE_URL + '/common/analysisRules', exploreQuery).then((res: AxiosResponse) => {
-      console.info('TagInfo, 解析内容：', JSON.stringify(res.data))
-      this.bookList = (res.data as ExploreRule[]).map(item => {
-        if (item.coverUrl && !isNetworkUrl(item.coverUrl)) {
-          item.coverUrl = this.bookSourceUrl + item.coverUrl
-        }
-        return item
-      })
+
+    try {
+      // 1. 直接请求页面HTML（不依赖后端API）
+      const html = await requestUtils.requestUrlHtml(url, this.charset)
+      if (!html || html.length < 100) {
+        this.loading = false
+        return
+      }
+
+      // 2. 本地解析HTML
+      const results = this.parseExploreHtml(html)
+      this.bookList = results
       this.loading = false
       this.errorExplore = false
-    }).catch((err: AxiosError) => {
-      console.log('TagInfo 请求失败：', JSON.stringify(err.message));
+    } catch (e) {
+      console.log('BookFindContent 请求失败: ' + (e as Error).message)
       this.loading = false
       this.errorExplore = true
-    })
+    }
+  }
+
+  /**
+   * 本地解析探索页面HTML
+   */
+  private parseExploreHtml(html: string): ExploreRule[] {
+    const results: ExploreRule[] = []
+    if (!this.exploreRule.bookList) return results
+
+    // 构造一个最小的BookSource用于RuleAnalyzer
+    const dummySource = new BookSource()
+    dummySource.bookSourceUrl = this.bookSourceUrl
+
+    const analyzer = new RuleAnalyzer()
+    analyzer.init(new RuleAnalyzerData({
+      body: html,
+      bookSource: dummySource
+    }))
+
+    // 获取书籍列表元素
+    const bookElements = analyzer.getElements(this.exploreRule.bookList)
+    if (bookElements.length === 0) return results
+
+    for (const element of bookElements) {
+      const item: ExploreRule = {}
+
+      // 提取各字段
+      item.name = analyzer.extractText(element, this.exploreRule.name)
+      item.author = analyzer.extractText(element, this.exploreRule.author)
+      item.intro = analyzer.extractText(element, this.exploreRule.intro)
+      item.kind = analyzer.extractText(element, this.exploreRule.kind)
+      item.lastChapter = analyzer.extractText(element, this.exploreRule.lastChapter)
+      item.wordCount = analyzer.extractText(element, this.exploreRule.wordCount)
+      item.bookUrl = analyzer.extractAttribute(element, this.exploreRule.bookUrl)
+      item.coverUrl = analyzer.extractAttribute(element, this.exploreRule.coverUrl)
+
+      // 解析相对URL
+      if (item.bookUrl && !isNetworkUrl(item.bookUrl)) {
+        item.bookUrl = this.bookSourceUrl + item.bookUrl
+      }
+      if (item.coverUrl && !isNetworkUrl(item.coverUrl)) {
+        item.coverUrl = this.bookSourceUrl + item.coverUrl
+      }
+
+      if (item.name) {
+        results.push(item)
+      }
+    }
+
+    return results
   }
 
   build() {
@@ -102,7 +148,7 @@ export default struct BookFindContent {
         } else {
           Column() {
             ForEach(this.bookList, (item: ExploreRule, index) => {
-              CardItem({ item: item ,currentIndex:this.currentIndex})
+              CardItem({ item: item, currentIndex: this.currentIndex })
             })
             if (this.bookList.length === 3) {
               Column() {
@@ -122,7 +168,8 @@ export default struct BookFindContent {
                     bookSourceUrl: this.bookSourceUrl,
                     exploreItem: this.exploreItem,
                     exploreRule: this.exploreRule,
-                    currentIndex: this.currentIndex
+                    currentIndex: this.currentIndex,
+                    charset: this.charset
                   }
                 })
               })

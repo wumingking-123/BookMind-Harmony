@@ -1,5 +1,7 @@
 import { BGColorType, BG_COLOR_ARRAY, Constants, FlipPageType } from '../common/constants/Constants';
 import { ReaderChapterItem, ReaderChapterPageItem } from '../common/entity/ReaderChaptersItem';
+import { BookContentHolder } from 'ets/common/utils/BookContentHolder';
+import { isNetworkUrl } from 'ets/common/utils/utils';
 import { NovelContentParseHelper } from '../common/helper/NovelContentParseHelper';
 import { display } from '@kit.ArkUI';
 import taskPool from '@ohos.taskpool';
@@ -51,7 +53,7 @@ async function calChapterContent(width: number, height: number, targetParagraphL
 @Component
 struct ReaderSourceProvider {
   @BuilderParam child: () => void // 通用组件
-  @Provide('chapterList') chapterList: ReaderChapterItem[] = [];
+  @Provide('chapterList') @Watch('calChapterContent') chapterList: ReaderChapterItem[] = [];
   @Consume('lineHeightRatio') @Watch('onConfigSizeChange') lineHeightRatio: number
   @Consume('fontSize') @Watch('onConfigSizeChange') fontSize: number
   @Consume('displaySize') @Watch('onDisplaySizeChange') displaySize: number[]
@@ -77,6 +79,7 @@ struct ReaderSourceProvider {
   @State private configVersion: number = 0
   private lastChapterIndex: number = 0
   private configChangeTimeout: number = -1
+  private fetchingChapters: Set<number> = new Set()
 
   private getTargetPosInUnformatted(): number {
     let currentChapter = this.chapterList?.[this.currentChapterIndex];
@@ -85,7 +88,7 @@ struct ReaderSourceProvider {
     }
     let formattedPos = currentChapter.chapterPageList[this.currentPageIndex].startIndex;
     let formattedParagraphs = this.getFormattedParagraphs(currentChapter.paragraphList);
-    
+
     let pStart = 0;
     for (let i = 0; i < formattedParagraphs.length; i++) {
       let pLen = formattedParagraphs[i].length;
@@ -179,26 +182,48 @@ struct ReaderSourceProvider {
   private calContentOfTargetChapter(width: number, height: number, chapterIndex: number, fontSize: number,
     lineHeightRatio: number, forceUpdate: boolean, restorePosition: boolean, isBackwards: boolean) {
     if (!this.chapterList || !this.chapterList[chapterIndex]) {
+      console.log('[calContentOfTargetChapter] chapterIndex ' + chapterIndex + ' not found')
       return
     }
     if (!forceUpdate) {
       if (this.chapterList[chapterIndex].chapterPageList.length !== 0) {
+        console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' already has pages, skip')
         return
       }
     }
     if (!this.chapterList[chapterIndex].paragraphList || this.chapterList[chapterIndex].paragraphList.length === 0) {
       if (this.chapterList[chapterIndex].content) {
-        this.chapterList[chapterIndex].paragraphList = this.chapterList[chapterIndex].content
+        let content = this.chapterList[chapterIndex].content
+        if (isNetworkUrl(content) && BookContentHolder.resolveContent) {
+          console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' is URL, fetching: ' + content.substring(0, 80))
+          if (!this.fetchingChapters.has(chapterIndex)) {
+            this.fetchingChapters.add(chapterIndex)
+            BookContentHolder.resolveContent(content).then((resolved: string) => {
+              this.fetchingChapters.delete(chapterIndex)
+              if (resolved && resolved.length > 0) {
+                this.chapterList[chapterIndex].content = resolved
+                this.chapterList[chapterIndex].paragraphList = []
+                this.chapterList[chapterIndex].chapterPageList = []
+                this.forceCalChapterContent()
+              }
+            })
+          }
+          return
+        }
+        console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' splitting text, content length: ' + content.length)
+        this.chapterList[chapterIndex].paragraphList = content
           .split('\n')
           .map((value: string) => value.trim())
           .filter((value: string) => value.length > 0)
           .map((value: string) => value + '\n');
+        console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' paragraphList length: ' + this.chapterList[chapterIndex].paragraphList.length)
       } else {
+        console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' has no content')
         this.chapterList[chapterIndex].paragraphList = []
       }
     }
     let paragraphsToCal = this.getFormattedParagraphs(this.chapterList[chapterIndex].paragraphList);
-    
+
     let targetStartPos = 0;
     if (restorePosition && chapterIndex === this.currentChapterIndex) {
       let currentChapter = this.chapterList[chapterIndex];
@@ -221,12 +246,14 @@ struct ReaderSourceProvider {
     }
 
     let taskVersion = this.configVersion;
+    console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' starting taskPool, paragraphs: ' + paragraphsToCal.length + ', w:' + width + ' h:' + height + ' fs:' + fontSize)
     taskPool.execute(calChapterContent, width, height, paragraphsToCal, fontSize,
       lineHeightRatio, this.paragraphSpacing, this.letterSpacing).then((chapterList) => {
       if (taskVersion !== this.configVersion) {
         console.info(`Discarding outdated calculation for chapter ${chapterIndex}`);
         return;
       }
+      console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' taskPool result, isArray: ' + Array.isArray(chapterList) + ', length: ' + (Array.isArray(chapterList) ? chapterList.length : 0))
       if (Array.isArray(chapterList)) {
         let startIndex = 0
         let result: string[][] = chapterList as string[][]
@@ -249,6 +276,7 @@ struct ReaderSourceProvider {
             oldChapter.paragraphList,
             newPages
           );
+          console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' pages created: ' + newPages.length)
 
           if (chapterIndex === this.currentChapterIndex) {
             let newPageIndex = 0;
@@ -283,11 +311,14 @@ struct ReaderSourceProvider {
             this.renderLetterSpacing = this.letterSpacing;
             this.renderReaderPadding = this.readerPadding;
             this.currentPageIndex = newPageIndex;
+            console.log('[calContentOfTargetChapter] currentPageIndex set to: ' + newPageIndex)
           }
           this.chapterList[chapterIndex] = newChapter;
           this.chapterList = Array.from(this.chapterList)
         }
       }
+    }).catch((e: Error) => {
+      console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' taskPool error: ' + e.message)
     })
   }
 
@@ -297,8 +328,11 @@ struct ReaderSourceProvider {
     this.configVersion++;
     let width = this.displaySize[0];
     let height = this.displaySize[1];
+    console.log('[ReaderSourceProvider] calChapterContent called, displaySize: [' + width + ', ' + height + '], chapterList.length: ' + this.chapterList.length + ', currentChapterIndex: ' + this.currentChapterIndex)
 
     if (width !== 0 && height !== 0 && this.chapterList.length !== 0) {
+      let ch = this.chapterList[this.currentChapterIndex]
+      console.log('[ReaderSourceProvider] current chapter content length: ' + (ch?.content?.length ?? 0) + ', paragraphList.length: ' + (ch?.paragraphList?.length ?? 0) + ', chapterPageList.length: ' + (ch?.chapterPageList?.length ?? 0))
       this.calContentOfTargetChapter(width, height, this.currentChapterIndex,
         this.fontSize, this.lineHeightRatio, false, false, isBackwards);
       if (this.currentChapterIndex > 0) {
@@ -309,6 +343,8 @@ struct ReaderSourceProvider {
         this.calContentOfTargetChapter(width, height, this.currentChapterIndex + 1,
           this.fontSize, this.lineHeightRatio, false, false, false);
       }
+    } else {
+      console.log('[ReaderSourceProvider] calChapterContent skipped - displaySize or chapterList empty')
     }
   }
 

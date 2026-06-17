@@ -19,6 +19,12 @@ import { ThemeItem } from '../../common/model/Theme'
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
 } from '../../common/constants/DesignTokens'
+import { isNetworkUrl } from '../../common/utils/utils'
+import requestUtils from '../../common/utils/requestUtils'
+import { TocAnalysis, TocAnalysisData } from '../../common/model/TocAnalysis'
+import { BookSource } from '../../database/entities/BookSource'
+import bookSourceDao from '../../database/dao/BookSourceDao'
+import { RuleAnalyzer, RuleAnalyzerData } from '../../common/model/analyzeRule/RuleAnalyzer'
 
 /**
  * 标题图片样式
@@ -95,6 +101,7 @@ struct BookDetailPage {
   @State hasHistory: boolean = false
   @State bookBookmarks: BookMark[] = []
   @State tabList: string[] = ['目录', '书源', '书签']
+  private _bookSource: BookSource | undefined = undefined
 
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
@@ -135,9 +142,19 @@ struct BookDetailPage {
 
       this.updateDisplayTags()
 
-      let temp = await FileHandler.readFile(this.bookData?.bookUrl || '') // txt小说
-      this.txtFile.pushAllData(temp)
-      this.txtFiles = this.txtFile.getListData()
+      const bookUrl = this.bookData?.bookUrl || ''
+      let temp: chaptersItem[] = []
+      console.log('[BookDetailPage] bookUrl: ' + bookUrl)
+      console.log('[BookDetailPage] bookName: ' + this.bookData?.bookName)
+      if (isNetworkUrl(bookUrl)) {
+        // 在线书籍：通过网络获取目录
+        await this.loadOnlineToc(bookUrl)
+      } else {
+        // 本地文件：读取本地目录
+        temp = await FileHandler.readFile(bookUrl)
+        this.txtFile.pushAllData(temp)
+        this.txtFiles = this.txtFile.getListData()
+      }
       this.initUrlBook()
 
       // 如果是本地小说，且数据库中未存储字数，或者字数为空，则计算实际字数并保存
@@ -191,7 +208,7 @@ struct BookDetailPage {
 
   updateDisplayTags() {
     let tagList: string[] = [];
-    
+
     // 1. 本地/线上分类
     if (this.checkIsLocalBook()) {
       tagList.push('本地导入');
@@ -253,6 +270,113 @@ struct BookDetailPage {
     }
 
     this.displayTags = tagList;
+  }
+
+  /**
+   * 在线书籍：获取目录
+   */
+  async loadOnlineToc(bookUrl: string) {
+    try {
+      // 查找匹配的书源
+      const source = await this.findBookSource(bookUrl)
+      console.log('[BookDetailPage] findBookSource result: ' + (source ? source.bookSourceName + ' (' + source.bookSourceUrl + ')' : 'null'))
+      if (!source || !source.ruleToc) {
+        console.log('[BookDetailPage] 未找到匹配书源或目录规则, bookUrl=' + bookUrl)
+        return
+      }
+
+      // 获取目录页HTML（优先用tocUrl，否则用bookUrl）
+      let tocUrl = bookUrl
+      if (source.ruleBookInfo?.tocUrl) {
+        // 先获取书籍详情页，提取tocUrl
+        try {
+          const detailHtml = await requestUtils.requestUrlHtml(bookUrl, source.charset)
+          const analyzer = new RuleAnalyzer()
+          analyzer.init(new RuleAnalyzerData({ body: detailHtml, bookSource: source }))
+          const extractedTocUrl = analyzer.extractText(detailHtml, source.ruleBookInfo.tocUrl)
+          if (extractedTocUrl && isNetworkUrl(extractedTocUrl)) {
+            tocUrl = extractedTocUrl
+          } else if (extractedTocUrl) {
+            tocUrl = source.bookSourceUrl + extractedTocUrl
+          }
+        } catch (e) {
+          console.log('BookDetailPage: 获取详情页失败，使用bookUrl作为目录页: ' + (e as Error).message)
+        }
+      }
+
+      // 请求目录页HTML
+      const tocHtml = await requestUtils.requestUrlHtml(tocUrl, source.charset)
+      if (!tocHtml || tocHtml.length < 100) {
+        console.log('BookDetailPage: 目录页内容为空或过短')
+        return
+      }
+      // 调试：打印HTML中包含catalogue或list的关键片段
+      const debugMatch = tocHtml.match(/catalogue[^"]{0,50}/gi)
+      console.log('[BookDetailPage] HTML中catalogue匹配: ' + JSON.stringify(debugMatch))
+      // 打印前2000字的HTML结构
+      console.log('[BookDetailPage] 目录HTML前2000字: ' + tocHtml.substring(0, 2000))
+
+      // 使用TocAnalysis解析目录
+      const tocAnalysis = new TocAnalysis()
+      tocAnalysis.init(new TocAnalysisData({
+        body: tocHtml,
+        bookSource: source,
+        bookUrl: bookUrl
+      }))
+      const chapters = await tocAnalysis.getChapterList()
+
+      // 转换为UI需要的chaptersItem格式
+      const items: chaptersItem[] = []
+      for (const ch of chapters) {
+        items.push(new chaptersItem(
+          ch.index,
+          ch.title,
+          `第${ch.index + 1}章`,
+          ch.url // 将章节URL存入content字段，阅读时使用
+        ))
+      }
+
+      this.txtFile.pushAllData(items)
+      this.txtFiles = this.txtFile.getListData()
+      this._bookSource = source
+      console.log('BookDetailPage: 在线目录加载成功, ' + items.length + ' 章')
+    } catch (e) {
+      console.log('BookDetailPage: 在线目录加载失败: ' + (e as Error).message)
+    }
+  }
+
+  /**
+   * 根据bookUrl查找匹配的书源
+   */
+  async findBookSource(bookUrl: string): Promise<BookSource | null> {
+    try {
+      // 从bookUrl中提取域名，匹配书源
+      const match = bookUrl.match(/^(https?:\/\/[^\/]+)/)
+      if (!match) {
+        console.log('[findBookSource] 无法提取域名: ' + bookUrl)
+        return null
+      }
+      const domain = match[1]
+      console.log('[findBookSource] 提取域名: ' + domain)
+
+      const sources = await bookSourceDao.getEnabledPartByGroup()
+      console.log('[findBookSource] 启用书源数量: ' + sources.length)
+      for (const s of sources) {
+        const srcDomain = s.bookSourceUrl ? s.bookSourceUrl.replace(/^https?:\/\//, '') : ''
+        console.log('[findBookSource] 检查书源: ' + s.bookSourceName + ' (' + srcDomain + ')')
+        if (s.bookSourceUrl && domain.includes(srcDomain)) {
+          // 获取完整书源（包含规则）
+          const fullSource = await bookSourceDao.getBookSource(s.bookSourceUrl)
+          console.log('[findBookSource] 匹配成功: ' + s.bookSourceName + ', hasRuleToc=' + !!fullSource?.ruleToc + ', hasRuleContent=' + !!fullSource?.ruleContent)
+          if (fullSource) return fullSource
+        }
+      }
+      console.log('[findBookSource] 无匹配书源')
+      return null
+    } catch (e) {
+      console.log('[findBookSource] 查找书源失败: ' + (e as Error).message)
+      return null
+    }
   }
 
   initUrlBook() {
@@ -751,6 +875,7 @@ struct BookDetailPage {
     }
     let chapterItem = this.txtFile.getListData()[savedIndex]
     if (this.bookData.bookType !== 2) {
+      BookContentHolder.setBookSource(this._bookSource)
       BookContentHolder.setChapters(this.txtFiles)
     }
     router.pushUrl({

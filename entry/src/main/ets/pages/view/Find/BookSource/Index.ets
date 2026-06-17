@@ -11,6 +11,8 @@ import BookMark from '../../../../componets/head/BookMark'
 import { getPasteDataSync, isNetworkUrl, sleep } from '../../../../common/utils/utils'
 import { router } from '@kit.ArkUI'
 import { BookSource } from '../../../../database/entities/BookSource'
+import { ThemeItem } from '../../../../common/model/Theme'
+import { ThemeStorageKey } from '../../../../common/constants/Theme'
 
 @Entry
 @Component
@@ -27,6 +29,8 @@ struct BookSourcePage {
   @State currentIndex: number = 0
   tabsController: TabsController = new TabsController();
   @State isShowHelp: boolean = false
+  // 主题颜色
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
   @State @Watch('onChange')isShowImport: boolean = false
   @State sourceList: BookSource[] = []
   @State isBatch: boolean = false
@@ -104,6 +108,54 @@ struct BookSourcePage {
           })
         }
       }
+
+      // 快速操作按钮
+      Row({ space: 12 }) {
+        Button('一键导入')
+          .fontSize(13)
+          .height(36)
+          .backgroundColor(this.theme.mainColor)
+          .fontColor(Color.White)
+          .layoutWeight(1)
+          .borderRadius(18)
+          .onClick(() => {
+            this.pasteAnalyze()
+          })
+
+        Button('快速添加')
+          .fontSize(13)
+          .height(36)
+          .backgroundColor('#ffffff')
+          .fontColor(this.theme.mainColor)
+          .layoutWeight(1)
+          .borderRadius(18)
+          .borderWidth(1)
+          .borderColor(this.theme.mainColor)
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/view/Find/BookSource/AddSourcePage' })
+          })
+
+        Button('本地导入')
+          .fontSize(13)
+          .height(36)
+          .backgroundColor('#ffffff')
+          .fontColor('#666666')
+          .layoutWeight(1)
+          .borderRadius(18)
+          .borderWidth(1)
+          .borderColor('#dddddd')
+          .onClick(() => {
+            let context = getContext(this) as common.Context;
+            FileHandler.pickerFile(context)
+              .then((res: BookSource[]) => {
+                this.sourceList = res;
+                this.isShowImport = true
+              })
+          })
+      }
+      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      .width('100%')
+      .backgroundColor('#ffffff')
 
       // 头部卡片下方视图
       Tabs({

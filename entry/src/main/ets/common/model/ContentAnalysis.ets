@@ -73,7 +73,7 @@ export class ContentAnalysis {
         const nextUrl = this.getNextPageUrl(currentBody, rule.nextContentUrl);
         if (nextUrl && nextUrl !== '') {
           try {
-            currentBody = await requestUtil.requestUrlHtml(nextUrl);
+            currentBody = await requestUtil.requestUrlHtml(nextUrl, this.contentData.bookSource?.charset);
           } catch (e) {
             console.log('获取下一页内容失败: ' + e);
             break;
@@ -119,7 +119,12 @@ export class ContentAnalysis {
     // 提取正文
     let content = '';
     if (contentRule.content) {
+      console.log('[parseContent] 开始解析, body长度: ' + body.length + ', rule: ' + contentRule.content)
       content = analyzer.extractText(body, contentRule.content);
+      console.log('[parseContent] 解析结果长度: ' + content.length)
+      if (content.length > 0) {
+        console.log('[parseContent] 前200字符: ' + content.substring(0, 200))
+      }
     }
 
     return { title, content };

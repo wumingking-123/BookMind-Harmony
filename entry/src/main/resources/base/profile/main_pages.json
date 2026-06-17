@@ -27,6 +27,7 @@
     "pages/view/Find/CategoryList/Index",
     "pages/view/myCenter/MyThemeConfig",
     "pages/view/myCenter/CreateCustomTheme",
-    "pages/view/myCenter/ProfileEditPage"
+    "pages/view/myCenter/ProfileEditPage",
+    "pages/view/search/WebViewSearch"
   ]
 }

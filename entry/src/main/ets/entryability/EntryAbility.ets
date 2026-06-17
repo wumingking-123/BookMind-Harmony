@@ -8,6 +8,9 @@ import DbUtil from '../common/utils/DbUtil';
 import DataBase from '../database'
 import { webview } from '@kit.ArkWeb';
 import { themeManager, ThemeManager } from '../common/utils/ThemeManager';
+import bookSourceDao from '../database/dao/BookSourceDao';
+import { BookSource } from '../database/entities/BookSource';
+import { getDefaultBookSources } from '../common/constants/DefaultBookSources';
 
 export default class EntryAbility extends UIAbility {
 
@@ -45,8 +48,45 @@ export default class EntryAbility extends UIAbility {
 
   onWindowStageCreate(windowStage: window.WindowStage) {
     // 初始化db数据库/创建相关数据表
-    DbUtil.initDB(this.context).then(() => {
+    DbUtil.initDB(this.context).then(async () => {
       DataBase.initAllTable()
+      // 自动加载默认书源（补充缺失的默认书源）
+      try {
+        const defaultSources = getDefaultBookSources()
+        const toInsert: BookSource[] = []
+        for (const ds of defaultSources) {
+          const exist = await bookSourceDao.getBookSource(ds.bookSourceUrl)
+          if (!exist) {
+            toInsert.push(ds)
+            hilog.info(0x0000, 'testTag', '待添加默认书源: %{public}s', ds.bookSourceName)
+          } else {
+            // 检查是否需要更新（exploreUrl格式不对、内容不同、或缺少规则）
+            const needUpdateRule = ds.ruleToc || ds.ruleExplore || ds.ruleContent
+            const needUpdateUrl = ds.exploreUrl && (!exist.exploreUrl || !exist.exploreUrl.startsWith('[') || exist.exploreUrl !== ds.exploreUrl)
+            const needUpdateSearch = ds.searchUrl && exist.searchUrl !== ds.searchUrl
+            if (needUpdateRule || needUpdateUrl || needUpdateSearch) {
+              exist.ruleExplore = ds.ruleExplore || exist.ruleExplore
+              exist.ruleToc = ds.ruleToc || exist.ruleToc
+              exist.ruleContent = ds.ruleContent || exist.ruleContent
+              exist.ruleSearch = ds.ruleSearch || exist.ruleSearch
+              exist.ruleBookInfo = ds.ruleBookInfo || exist.ruleBookInfo
+              exist.charset = ds.charset || exist.charset
+              exist.exploreUrl = ds.exploreUrl || exist.exploreUrl
+              exist.searchUrl = ds.searchUrl || exist.searchUrl
+              exist.searchResultUrl = ds.searchResultUrl || exist.searchResultUrl
+              exist.enabledExplore = ds.enabledExplore
+              await bookSourceDao.update(exist)
+              hilog.info(0x0000, 'testTag', '已更新书源: %{public}s', ds.bookSourceName)
+            }
+          }
+        }
+        if (toInsert.length > 0) {
+          await bookSourceDao.batchInsert(toInsert)
+          hilog.info(0x0000, 'testTag', '已补充 %{public}d 个默认书源', toInsert.length)
+        }
+      } catch (e) {
+        hilog.error(0x0000, 'testTag', '加载默认书源失败: %{public}s', JSON.stringify(e) ?? '')
+      }
     })
     // 获取本地文件存储路径
     const pathDir = this.context.filesDir;
