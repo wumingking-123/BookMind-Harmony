@@ -31,7 +31,8 @@ export struct ReaderProvider {
         child: this.child,
         chapterList: this.chapterList,
         currentChapterIndex: this.currentChapterIndex,
-        fontWeight: this.fontWeight
+        fontWeight: this.fontWeight,
+        currentPageIndex: this.currentPageIndex
       })
     }
   }
@@ -80,6 +81,7 @@ struct ReaderSourceProvider {
   private lastChapterIndex: number = 0
   private configChangeTimeout: number = -1
   private fetchingChapters: Set<number> = new Set()
+  private isFirstInit: boolean = true
 
   private getTargetPosInUnformatted(): number {
     let currentChapter = this.chapterList?.[this.currentChapterIndex];
@@ -294,7 +296,12 @@ struct ReaderSourceProvider {
                   newPageIndex = pageList.length - 1;
                 }
               } else {
-                if (isBackwards) {
+                if (this.isFirstInit) {
+                  newPageIndex = this.currentPageIndex;
+                  if (newPageIndex >= pageList.length) newPageIndex = pageList.length - 1;
+                  if (newPageIndex < 0) newPageIndex = 0;
+                  this.isFirstInit = false;
+                } else if (isBackwards) {
                   newPageIndex = pageList.length - 1;
                 } else {
                   newPageIndex = 0;
@@ -389,6 +396,7 @@ struct ReaderConfigProvider {
   @Provide('letterSpacing') @Watch('onSettingsChanged') letterSpacing: number = 0;
   chapterList: ReaderChapterItem[] = [];
   currentChapterIndex: number = 0;
+  currentPageIndex: number = 0;
 
   async aboutToAppear() {
     try {
@@ -432,7 +440,8 @@ struct ReaderConfigProvider {
       ReaderStatusProvider({
         child: this.child,
         chapterList: this.chapterList,
-        currentChapterIndex: this.currentChapterIndex
+        currentChapterIndex: this.currentChapterIndex,
+        currentPageIndex: this.currentPageIndex
       })
     }
   }

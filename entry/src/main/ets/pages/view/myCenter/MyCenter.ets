@@ -9,7 +9,6 @@ import bookMarkUtils from '../../../common/utils/BookMarkUtils'
 import readRecordDao from '../../../database/dao/ReadRecordDao'
 import booksDao from '../../../database/dao/BooksDao'
 
-@Entry
 @Component
 export default struct MyCenter {
   @State reading_time: number = 0
@@ -18,7 +17,6 @@ export default struct MyCenter {
     new dataItem('读过', 128),
     new dataItem('读完', 42),
     new dataItem('书签', 16),
-    new dataItem('勋章', 5),
   ]
   // 中部功能快捷入口
   @State center_list: dataItem[] = [
@@ -70,7 +68,6 @@ export default struct MyCenter {
         new dataItem('读过', readCount),
         new dataItem('读完', finishedCount),
         new dataItem('书签', bookmarkCount),
-        new dataItem('勋章', 5),
       ];
     } catch (e) {
       console.error('Failed to load MyCenter stats:', e);
@@ -299,15 +296,10 @@ export default struct MyCenter {
 
   // 读过点击事件
   head_onclick(value: number) {
-    console.log('点击了' + value)
-    if (value == 3) {
-      // 勋章
-    } else {
-      router.pushUrl({
-        url: 'pages/view/myCenter/readStatistics',
-        params: { value: value }
-      })
-    }
+    router.pushUrl({
+      url: 'pages/view/myCenter/readStatistics',
+      params: { value: value }
+    })
   }
 
   // 书源,主题,净化点击事件
@@ -347,7 +339,7 @@ export default struct MyCenter {
         break
       case 5:
         // 阅读统计
-        router.pushUrl({ url: 'pages/view/myCenter/readStatistics' })
+        router.pushUrl({ url: 'pages/view/myCenter/ReadingStatsOverview' })
         break
     }
   }

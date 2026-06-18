@@ -1,8 +1,6 @@
 import CommonConstants from '../constants/CommonConstants';
 import dataPreferences from '@ohos.data.preferences';
 
-// 获取context
-let context = getContext(this);
 export default class bookDataPreferences {
 
   static shared = new bookDataPreferences();
@@ -11,7 +9,7 @@ export default class bookDataPreferences {
 
   // 初始化preferences实例
   initPreferences() {
-    this.preferences = dataPreferences.getPreferencesSync(context, { name: this.preferencesName });
+    this.preferences = dataPreferences.getPreferencesSync(getContext(), { name: this.preferencesName });
   }
 
   // 设置数据

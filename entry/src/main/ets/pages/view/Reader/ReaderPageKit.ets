@@ -3,6 +3,8 @@ import router from '@ohos.router';
 import { BookMark } from '../../../database/entities/BookMark';
 import bookMarkUtils from '../../../common/utils/BookMarkUtils';
 import { ReaderCatalog } from '../../../componets/Reader/ReaderCatalog';
+import { AiReadingDialog } from '../../../componets/Reader/AiReadingDialog';
+import { ChapterInfo } from '../../../common/utils/AiReadingService';
 import { preferences } from '@kit.ArkData';
 import sourceView from './sourceView';
 import { NetworkInput } from 'ets/componets/Reader/NetworkInput';
@@ -213,6 +215,7 @@ struct ReaderPageContent {
   @State isShowCatalog: boolean = false;
   @State catalogTabIndex: number = 0;
   @State isBookmarked: boolean = false;
+  @State isShowAiDialog: boolean = false;
   @State catalogSearchKey: string = ""
   @State sessionMinutes: number = 1
   private sessionStartTime: number = Date.now()
@@ -1164,7 +1167,24 @@ struct ReaderPageContent {
                 this.isShowCatalog = true
               })
 
-              // 2. 已读百分比
+              // 2. AI 助手
+              Column({ space: 4 }) {
+                Text('AI')
+                  .fontSize(13)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(this.isShowAiDialog ? '#E07A5F' : (this.isNightMode ? '#8A7D71' : '#6B5E52'))
+                  .opacity(this.isShowAiDialog ? 1.0 : 0.7)
+                Text('助手')
+                  .fontSize(11)
+                  .fontColor(this.isShowAiDialog ? '#E07A5F' : (this.isNightMode ? '#A89B8C' : '#6B5E52'))
+              }
+              .layoutWeight(1)
+              .onClick(() => {
+                this.isShowAiDialog = true
+                this.isShowSetting = false
+              })
+
+              // 3. 已读百分比
               Column() {
                 Text(`已读 ${this.calculateReadPercentage()}%`)
                   .fontSize(12)
@@ -1245,6 +1265,15 @@ struct ReaderPageContent {
         .zIndex(3)
         .hitTestBehavior(HitTestMode.Transparent)
       }
+
+      Text()
+        .width(0).height(0)
+        .bindSheet($$this.isShowAiDialog, this.AiDialogBuilder(), {
+          height: '90%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.isNightMode ? '#1E1E20' : '#FAF7F0'
+        })
     }
     .height('100%')
     .width('100%')
@@ -1257,6 +1286,40 @@ struct ReaderPageContent {
         this.sheetType = '';
         this.isShowPurification = false;
       }
+    })
+  }
+
+  @Builder
+  AiDialogBuilder() {
+    AiReadingDialog({
+      isShow: this.isShowAiDialog,
+      isNightMode: this.isNightMode,
+      currentChapterIndex: this.currentChapterIndex,
+      currentPageIndex: this.currentPageIndex,
+      bookUrl: this.bookData?.bookUrl || '',
+      chapterListProvider: (): ChapterInfo[] => {
+        const list: ChapterInfo[] = new Array()
+        for (let i = 0; i < this.chapterList.length; i++) {
+          const ch = this.chapterList[i]
+          const pages: string[][] = new Array()
+          if (ch.chapterPageList) {
+            for (let j = 0; j < ch.chapterPageList.length; j++) {
+              if (ch.chapterPageList[j] && ch.chapterPageList[j].lineContentList) {
+                pages.push(ch.chapterPageList[j].lineContentList)
+              }
+            }
+          }
+          const info: ChapterInfo = {
+            index: i,
+            title: ch.title || '',
+            content: ch.content || '',
+            pageList: pages
+          }
+          list.push(info)
+        }
+        return list
+      },
+      onClose: () => { this.isShowAiDialog = false }
     })
   }
 

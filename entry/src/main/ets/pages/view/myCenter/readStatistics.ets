@@ -183,7 +183,7 @@ struct readStatistics {
                   Row() {
                     Image(this.getBookCover(item))
                       .size({ width: 60, height: 80 })
-                      .alt($r('app.media.book_cover'))
+                      .alt($r('app.media.icon_book_default_cover_one'))
                       .objectFit(ImageFit.Cover)
 
                     Column({ space: 12 }) {
@@ -296,7 +296,8 @@ struct readStatistics {
                         : 'pages/view/Reader/ReaderPage2',
                       params: {
                         bookData: book,
-                        clickBookChapter: item.chapterIndex
+                        clickBookChapter: item.chapterIndex,
+                        clickBookPage: item.chapterPos
                       }
                     });
                   } else {
@@ -362,22 +363,19 @@ struct readStatistics {
     return content.replace(/\[img:.*?\]/g, '').replace(/\n/g, ' ').trim();
   }
 
-  // 查找书籍封面辅助方法
+  // 查找书籍封面辅助方法 — 与书架 BookInfos 逻辑一致，直接用 coverUrl
   getBookCover(item: BookMark): ResourceStr {
     if (!item || !item.bookName) {
-      return $r("app.media.book_cover");
+      return $r("app.media.icon_book_default_cover_one");
     }
     let book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim() && b.author === item.bookAuthor);
     if (!book) {
       book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim());
     }
-    if (book) {
-      let cover = book.coverUrl || book.cover;
-      if (cover && cover !== 'null' && cover !== 'undefined' && cover.trim() !== '') {
-        return cover;
-      }
+    if (book && book.coverUrl && book.coverUrl !== 'null' && book.coverUrl !== 'undefined' && book.coverUrl.trim() !== '') {
+      return book.coverUrl;
     }
-    return $r("app.media.book_cover");
+    return $r("app.media.icon_book_default_cover_one");
   }
 
   formatDate(time: number): string {
@@ -453,7 +451,7 @@ struct readStatistics {
     offset:{dx:0,dy:20},
     customStyle: true
   })
-  async aboutToAppear() {
+  async loadData() {
     console.log(this.type+"------")
     let allBooks = await booksDao.search();
     let records = await readRecordDao.getAllRecords();
@@ -482,7 +480,8 @@ struct readStatistics {
 
         let hrs = Math.floor(r.readTime / 3600);
         let mins = Math.floor((r.readTime % 3600) / 60);
-        let cover = book.coverUrl ? book.coverUrl : $r("app.media.book_cover");
+        let coverStr = book.customCoverUrl || book.coverUrl;
+        let cover = (coverStr && coverStr !== 'null' && coverStr !== 'undefined' && coverStr.trim() !== '') ? coverStr : $r("app.media.icon_book_default_cover_one");
         let bookAuthor = book.author || '未知';
 
         let schedule = 0;
@@ -505,6 +504,14 @@ struct readStatistics {
       new dataItem("读完", newList.filter(b => b.schedule >= 100).length),
       new dataItem("书签", allBookmarks.length),
     ];
+  }
+
+  onPageShow() {
+    this.loadData();
+  }
+
+  aboutToAppear() {
+    this.loadData();
   }
 
 }

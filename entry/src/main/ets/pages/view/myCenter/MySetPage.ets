@@ -58,10 +58,16 @@ struct MySetPage {
     new SetList(true, '语言', true, '跟随系统', '', MySetConstants.SET_LANGUAGE),
   ]
 
+  // AI 阅读设置列表
+  @State aiSetList: SetList[] = [
+    new SetList(true, 'AI 阅读助手', true, '', '配置大模型 API，在阅读时使用 AI 辅助', ''),
+  ]
+
   // 设置分组
   @State setGroupList: SetGroupList[] = [
     new SetGroupList('书架', this.bookSetList),
     new SetGroupList('缓存下载', this.cacheSetList),
+    new SetGroupList('AI 阅读', this.aiSetList),
     new SetGroupList('其他', this.otherSetList)
   ]
 
@@ -199,12 +205,16 @@ struct MySetPage {
   @Builder
   preDowSheet() {
     PreDownloadSheet({
-      select: $$this.select,
-      isShowPreDon: $$this.isShowPreDon,
+      select: this.select,
       onConfirm: (val: number) => {
+        this.select = val
         this.preDow = '预先下载' + val + '章正文'
         this.cacheSetList[1].rightText = this.preDow
         this.cacheSetList = [...this.cacheSetList] // 强制触发渲染
+        this.isShowPreDon = false
+      },
+      onCancel: () => {
+        this.isShowPreDon = false
       }
     })
   }
@@ -213,11 +223,12 @@ struct MySetPage {
   @Builder
   languageSheet() {
     LanguageSelectSheet({
-      selectLanguage: $$this.selectLanguage,
-      isShowLanguage: $$this.isShowLanguage,
+      selectLanguage: this.selectLanguage,
       onSelect: (val: string) => {
+        this.selectLanguage = val
         this.otherSetList[2].rightText = val
         this.otherSetList = [...this.otherSetList] // 强制触发渲染
+        this.isShowLanguage = false
       }
     })
   }
@@ -272,6 +283,9 @@ struct MySetPage {
       case MySetConstants.SET_LANGUAGE:
         this.isShowLanguage = !this.isShowLanguage
         break
+      case '':
+        router.pushUrl({ url: 'pages/view/myCenter/AiSettingsPage' })
+        break
     }
   }
 }
@@ -279,13 +293,13 @@ struct MySetPage {
 // 预下载选择子组件
 @Component
 struct PreDownloadSheet {
-  @Link select: number
-  @Link isShowPreDon: boolean
+  @Prop select: number
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   private fruits: string[] = getRandomStringArray()
   @State private tempNum: number = 10
   onConfirm?: (value: number) => void
+  onCancel?: () => void
 
   aboutToAppear() {
     this.tempNum = this.select
@@ -305,7 +319,11 @@ struct PreDownloadSheet {
         Text('取消')
           .fontSize(InkTypography.BODY)
           .fontColor(InkPalette.INK_GHOST)
-          .onClick(() => { this.isShowPreDon = false })
+          .onClick(() => {
+            if (this.onCancel) {
+              this.onCancel()
+            }
+          })
 
         Text('预下载')
           .fontSize(InkTypography.TITLE_SMALL)
@@ -316,11 +334,9 @@ struct PreDownloadSheet {
           .fontSize(InkTypography.BODY)
           .fontColor(this.theme.mainColor)
           .onClick(() => {
-            this.select = this.tempNum
             if (this.onConfirm) {
               this.onConfirm(this.tempNum)
             }
-            this.isShowPreDon = false
           })
       }
       .width('100%')
@@ -351,8 +367,7 @@ struct PreDownloadSheet {
 // 语言选择子组件
 @Component
 struct LanguageSelectSheet {
-  @Link selectLanguage: string
-  @Link isShowLanguage: boolean
+  @Prop selectLanguage: string
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   private languageList: string[] = ['跟随系统', '简体中文', '繁体中文', '英文']
@@ -394,11 +409,9 @@ struct LanguageSelectSheet {
         .height(52)
         .padding({ left: InkSpacing.XL, right: InkSpacing.XL })
         .onClick(() => {
-          this.selectLanguage = value
           if (this.onSelect) {
             this.onSelect(value)
           }
-          this.isShowLanguage = false
         })
       })
     }
