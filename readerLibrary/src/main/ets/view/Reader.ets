@@ -38,6 +38,7 @@ export struct Reader {
           if (line && line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
             Image(line.trim().substring(5, line.trim().length - 1))
               .objectFit(ImageFit.Contain)
+              .alt($r('app.media.book_cover'))
               .width('100%')
               .height(180)
               .margin({ top: 8, bottom: 8 })
@@ -116,6 +117,7 @@ export struct ReaderForCurlView {
           if (line && line.trim().startsWith('[img:') && line.trim().endsWith(']')) {
             Image(line.trim().substring(5, line.trim().length - 1))
               .objectFit(ImageFit.Contain)
+              .alt($r('app.media.book_cover'))
               .width('100%')
               .height(180)
               .margin({ top: 8, bottom: 8 })

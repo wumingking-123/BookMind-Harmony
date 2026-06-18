@@ -56,17 +56,16 @@ Module dependencies are declared in each module's `oh-package.json5` using `file
 
 ### Multi-Reader Architecture (重要)
 
-项目中存在**三套并行的阅读器页面实现**，用于兼容不同鸿蒙版本和功能需求。**对阅读界面的任何 UI/功能修改都必须同步应用到以下所有三个文件：**
+项目中存在**两套并行的阅读器页面实现**，用于兼容不同鸿蒙版本和功能需求。**对阅读界面的任何 UI/功能修改都必须同步应用到以下两个文件：**
 
 | 文件 | 说明 |
 |------|------|
-| `entry/src/main/ets/pages/view/Reader/ReaderPage.ets` | 初版阅读器 |
 | `entry/src/main/ets/pages/view/Reader/ReaderPage2.ets` | 自绘渲染引擎版（使用 `readerLibrary` 的 Canvas 翻页） |
 | `entry/src/main/ets/pages/view/Reader/ReaderPageKit.ets` | 原生 ReaderKit 版（使用 `@kit.ReaderKit` 系统能力） |
 
 路由选择逻辑在 `BookDetailPage.ets` 中：优先使用 `ReaderPageKit`（若设备支持 `SystemCapability.Reader.ReaderService.ReaderCore`），否则回退到 `ReaderPage2`。
 
-三个文件共享以下公共模块，修改这些模块时无需重复：
+两个文件共享以下公共模块，修改这些模块时无需重复：
 - `readerLibrary/` 下的排版引擎、翻页视图、配置 Provider
 - `entry/.../componets/Reader/` 下的对话框组件（LayoutMoreDialog、BackgroundColorDialog、FlipModeDialog 等）
 - `entry/.../common/` 下的工具类和常量
@@ -132,6 +131,6 @@ Breakpoints: xs (<320vp), sm (<600vp), md (<840vp), lg (>=840vp).
 - **Dual HTTP stack**: `requestUtils` uses axios for GET but native `http.createHttp()` for POST — a workaround because axios decodes URL-encoded POST bodies.
 - **No tests**: All test files are auto-generated scaffolding with trivial assertions. There is no meaningful test coverage.
 - **SQL injection risk**: Some DAO methods (`BooksDao.search()`, `BookSourceDao.flowSearch()`) use string interpolation for LIKE queries — vulnerable if search keys contain quotes.
-- **Two reader pages**: Both `ReaderPage` and `ReaderPage2` are registered routes, suggesting an in-progress migration.
+- **Two reader pages**: `ReaderPageKit` (preferred, native ReaderKit) and `ReaderPage2` (fallback, self-drawn engine) are the two active reader routes; selection happens in `BookDetailPage.ets` based on device capability.
 - **Color library is a stub**: `commons/colorLibrary/` exports only a test function. It is not yet implemented.
 - **`componets/` typo**: The directory name is intentional — do not rename it.

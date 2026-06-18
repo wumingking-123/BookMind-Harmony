@@ -17,7 +17,6 @@
     "pages/view/myCenter/FileManagement",
     "pages/view/bookShelf/LocalImportPage",
     "pages/view/bookShelf/DownloadManagementPage",
-    "pages/view/Reader/ReaderPage",
     "pages/view/Reader/ReaderPage2",
     "pages/view/Reader/ReaderPageKit",
     "pages/view/Find/BookSource/Index",

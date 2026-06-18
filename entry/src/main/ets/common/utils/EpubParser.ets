@@ -20,12 +20,19 @@ interface ParseResult {
   title: string
 }
 
+interface ZipExtractResult {
+  files: Map<string, Uint8Array>
+  deflateKeys: Set<string>
+}
+
 export class EpubParser {
 
   /**
    * 解析 EPUB 文件，返回章节数组
+   * @param epubPath EPUB 文件在沙箱中的绝对路径
+   * @param filesDir 应用沙箱 filesDir（由调用方传入，避免静态方法中 getContext() 失效）
    */
-  static async parse(epubPath: string): Promise<chaptersItem[]> {
+  static async parse(epubPath: string, filesDir?: string): Promise<chaptersItem[]> {
     const chapters: chaptersItem[] = [];
 
     try {
@@ -64,7 +71,7 @@ export class EpubParser {
 
       if (extractedOk) {
         // zlib 解压成功，从目录读取文件
-        const result: chaptersItem[] = EpubParser.parseFromDirectory(extractDir, chapters, epubPath);
+        const result: chaptersItem[] = EpubParser.parseFromDirectory(extractDir, chapters, epubPath, filesDir);
         // 清理临时目录
         try { fs.rmdirSync(extractDir); } catch (e) {}
         return result.length > 0 ? result : chapters;
@@ -77,38 +84,41 @@ export class EpubParser {
       fs.closeSync(file);
 
       const bytes: Uint8Array = new Uint8Array(fileData);
-      const files: Map<string, Uint8Array> = EpubParser.extractZipEntries(bytes);
+      const extractResult: ZipExtractResult = EpubParser.extractZipEntriesWithMeta(bytes);
+      const files: Map<string, Uint8Array> = extractResult.files;
+      const deflateKeys: Set<string> = extractResult.deflateKeys;
 
       if (files.size === 0) {
         chapters.push(new chaptersItem(1, 'EPUB 解析失败', '1', '无法从 EPUB 文件中提取任何内容。文件可能使用了不支持的压缩格式。'));
         return chapters;
       }
 
-      // 解析 container.xml
-      const containerData: Uint8Array | undefined = files.get('META-INF/container.xml');
+      // 解析 container.xml（先解压如果需要）
+      let containerKey = 'META-INF/container.xml';
+      let containerData: Uint8Array | undefined = files.get(containerKey);
       if (!containerData) {
         // 尝试不区分大小写查找
         let found: boolean = false;
         const keys: string[] = Array.from(files.keys());
         for (let i = 0; i < keys.length; i++) {
           if (keys[i].toLowerCase() === 'meta-inf/container.xml') {
-            const data: Uint8Array | undefined = files.get(keys[i]);
-            if (data) {
-              const xml: string = EpubParser.bytesToString(data);
-              const rootfilePath: string = EpubParser.parseContainer(xml);
-              if (rootfilePath.length > 0) {
-                const result: chaptersItem[] = EpubParser.parseFromOpf(files, rootfilePath, epubPath);
-                return result.length > 0 ? result : chapters;
-              }
-            }
+            containerKey = keys[i];
+            containerData = files.get(keys[i]);
             found = true;
             break;
           }
         }
-        if (!found) {
+        if (!found || !containerData) {
           chapters.push(new chaptersItem(1, 'EPUB 解析失败', '1', '缺少 container.xml 文件。'));
+          return chapters;
         }
-        return chapters;
+      }
+
+      // container.xml 可能是 deflate 压缩的，先解压
+      if (deflateKeys.has(containerKey)) {
+        containerData = await EpubParser.inflateDeflateEntry(containerData, containerKey);
+        files.set(containerKey, containerData);
+        deflateKeys.delete(containerKey);
       }
 
       const containerXml: string = EpubParser.bytesToString(containerData);
@@ -118,7 +128,7 @@ export class EpubParser {
         return chapters;
       }
 
-      const result: chaptersItem[] = EpubParser.parseFromOpf(files, rootfilePath, epubPath);
+      const result: chaptersItem[] = await EpubParser.parseFromOpf(files, rootfilePath, epubPath, filesDir, deflateKeys);
       return result.length > 0 ? result : chapters;
 
     } catch (err) {
@@ -134,7 +144,7 @@ export class EpubParser {
   /**
    * 从解压后的目录解析 EPUB
    */
-  static parseFromDirectory(extractDir: string, chapters: chaptersItem[], epubPath: string): chaptersItem[] {
+  static parseFromDirectory(extractDir: string, chapters: chaptersItem[], epubPath: string, filesDir?: string): chaptersItem[] {
     try {
       // 查找 container.xml
       const containerPath: string = extractDir + '/META-INF/container.xml';
@@ -165,7 +175,7 @@ export class EpubParser {
 
       // 确定 bookKey 并创建持久性资源目录
       const bookKey = epubPath.substring(epubPath.lastIndexOf('/') + 1).replace(/\.[^.]+$/, '');
-      const appDir = getAppFilesDir();
+      const appDir = filesDir && filesDir.length > 0 ? filesDir : getAppFilesDir();
       const resourcesDir = appDir + '/epub_resources/' + bookKey;
 
       // 提取/复制所有图片到 epub_resources
@@ -238,13 +248,19 @@ export class EpubParser {
   /**
    * 从 ZIP 字节流解析 EPUB
    */
-  static parseFromOpf(files: Map<string, Uint8Array>, rootfilePath: string, epubPath: string): chaptersItem[] {
+  static async parseFromOpf(files: Map<string, Uint8Array>, rootfilePath: string, epubPath: string, filesDir?: string, deflateKeys?: Set<string>): Promise<chaptersItem[]> {
     const chapters: chaptersItem[] = [];
 
-    const opfData: Uint8Array | undefined = files.get(rootfilePath);
+    // 解压 OPF 文件（如果需要）
+    let opfData: Uint8Array | undefined = files.get(rootfilePath);
     if (!opfData) {
       chapters.push(new chaptersItem(1, 'EPUB 解析失败', '1', '无法找到 content.opf'));
       return chapters;
+    }
+    if (deflateKeys && deflateKeys.has(rootfilePath)) {
+      opfData = await EpubParser.inflateDeflateEntry(opfData, rootfilePath);
+      files.set(rootfilePath, opfData);
+      deflateKeys.delete(rootfilePath);
     }
 
     const opfXml: string = EpubParser.bytesToString(opfData);
@@ -257,7 +273,7 @@ export class EpubParser {
 
     // 确定 bookKey 并创建持久性资源目录
     const bookKey = epubPath.substring(epubPath.lastIndexOf('/') + 1).replace(/\.[^.]+$/, '');
-    const appDir = getAppFilesDir();
+    const appDir = filesDir && filesDir.length > 0 ? filesDir : getAppFilesDir();
     const resourcesDir = appDir + '/epub_resources/' + bookKey;
 
     // 提取所有图片文件并写入沙箱
@@ -268,8 +284,14 @@ export class EpubParser {
         if (rootfileDir.length > 0) {
           imageKey = rootfileDir + '/' + item.href;
         }
-        const imgData = files.get(imageKey);
+        let imgData = files.get(imageKey);
         if (imgData && imgData.length > 0) {
+          // 如果是 deflate 压缩的，先解压
+          if (deflateKeys && deflateKeys.has(imageKey)) {
+            imgData = await EpubParser.inflateDeflateEntry(imgData, imageKey);
+            files.set(imageKey, imgData);
+            deflateKeys.delete(imageKey);
+          }
           let destPath = resourcesDir + '/' + imageKey;
           const parentDir = destPath.substring(0, destPath.lastIndexOf('/'));
           EpubParser.ensureDirExists(parentDir);
@@ -300,8 +322,15 @@ export class EpubParser {
         xhtmlKey = rootfileDir + '/' + item.href;
       }
 
-      const xhtmlData: Uint8Array | undefined = files.get(xhtmlKey);
+      let xhtmlData: Uint8Array | undefined = files.get(xhtmlKey);
       if (!xhtmlData || xhtmlData.length === 0) continue;
+
+      // 如果是 deflate 压缩的，先解压
+      if (deflateKeys && deflateKeys.has(xhtmlKey)) {
+        xhtmlData = await EpubParser.inflateDeflateEntry(xhtmlData, xhtmlKey);
+        files.set(xhtmlKey, xhtmlData);
+        deflateKeys.delete(xhtmlKey);
+      }
 
       const xhtmlContent: string = EpubParser.bytesToString(xhtmlData);
       const processedXhtml = EpubParser.processImagesInXhtml(xhtmlContent, xhtmlKey, resourcesDir);
@@ -324,8 +353,137 @@ export class EpubParser {
 
   // ==================== ZIP 解析 ====================
 
-  static extractZipEntries(bytes: Uint8Array): Map<string, Uint8Array> {
+  /**
+   * 解压单条 deflate 压缩数据
+   * 通过构造最小合法 ZIP 文件，用 zlib.decompressFile 解压
+   */
+  static async inflateDeflateEntry(compressedData: Uint8Array, fileName: string): Promise<Uint8Array> {
+    try {
+      const appDir = getAppFilesDir();
+      if (appDir.length === 0) return compressedData;
+
+      const tmpDir = appDir + '/_epub_tmp_' + Date.now();
+      EpubParser.ensureDirExists(tmpDir);
+      const tmpZipPath = tmpDir + '/tmp.zip';
+      const extractTmpDir = tmpDir + '/out';
+      EpubParser.ensureDirExists(extractTmpDir);
+
+      // 构造最小合法 ZIP 文件 (Local File Header + Data + Central Directory + EOCD)
+      const nameBytes = EpubParser.stringToBytes(fileName);
+      const localHeaderSize = 30 + nameBytes.length;
+      const centralDirSize = 46 + nameBytes.length;
+      const eocdSize = 22;
+      const totalSize = localHeaderSize + compressedData.length + centralDirSize + eocdSize;
+
+      const zipBytes = new Uint8Array(totalSize);
+      let pos = 0;
+
+      // Local File Header
+      zipBytes[pos] = 0x50; zipBytes[pos+1] = 0x4B; zipBytes[pos+2] = 0x03; zipBytes[pos+3] = 0x04; // signature
+      zipBytes[pos+4] = 20; zipBytes[pos+5] = 0; // version needed
+      zipBytes[pos+6] = 0; zipBytes[pos+7] = 0; // flags
+      zipBytes[pos+8] = 8; zipBytes[pos+9] = 0; // compression: deflate
+      zipBytes[pos+10] = 0; zipBytes[pos+11] = 0; zipBytes[pos+12] = 0; zipBytes[pos+13] = 0; // mod time/date
+      EpubParser.writeUint32(zipBytes, pos+14, compressedData.length); // compressed size
+      EpubParser.writeUint32(zipBytes, pos+18, 0); // uncompressed size (unknown, let decompressor handle)
+      zipBytes[pos+26] = nameBytes.length & 0xFF; zipBytes[pos+27] = (nameBytes.length >> 8) & 0xFF; // filename length
+      zipBytes[pos+28] = 0; zipBytes[pos+29] = 0; // extra field length
+      pos += 30;
+      for (let i = 0; i < nameBytes.length; i++) { zipBytes[pos++] = nameBytes[i]; }
+
+      // Compressed data
+      for (let i = 0; i < compressedData.length; i++) { zipBytes[pos++] = compressedData[i]; }
+
+      // Central Directory Header
+      const cdOffset = localHeaderSize + compressedData.length;
+      zipBytes[pos] = 0x50; zipBytes[pos+1] = 0x4B; zipBytes[pos+2] = 0x01; zipBytes[pos+3] = 0x02; // signature
+      zipBytes[pos+4] = 20; zipBytes[pos+5] = 0; // version made by
+      zipBytes[pos+6] = 20; zipBytes[pos+7] = 0; // version needed
+      zipBytes[pos+8] = 0; zipBytes[pos+9] = 0; // flags
+      zipBytes[pos+10] = 8; zipBytes[pos+11] = 0; // compression: deflate
+      zipBytes[pos+12] = 0; zipBytes[pos+13] = 0; zipBytes[pos+14] = 0; zipBytes[pos+15] = 0; // mod time/date
+      EpubParser.writeUint32(zipBytes, pos+16, compressedData.length); // compressed size
+      EpubParser.writeUint32(zipBytes, pos+20, 0); // uncompressed size
+      zipBytes[pos+28] = nameBytes.length & 0xFF; zipBytes[pos+29] = (nameBytes.length >> 8) & 0xFF; // filename length
+      zipBytes[pos+30] = 0; zipBytes[pos+31] = 0; // extra
+      zipBytes[pos+32] = 0; zipBytes[pos+33] = 0; // comment
+      zipBytes[pos+34] = 0; zipBytes[pos+35] = 0; // disk number
+      zipBytes[pos+36] = 0; zipBytes[pos+37] = 0; // internal attrs
+      EpubParser.writeUint32(zipBytes, pos+38, 0); // external attrs
+      EpubParser.writeUint32(zipBytes, pos+42, 0); // local header offset
+      pos += 46;
+      for (let i = 0; i < nameBytes.length; i++) { zipBytes[pos++] = nameBytes[i]; }
+
+      // End of Central Directory
+      zipBytes[pos] = 0x50; zipBytes[pos+1] = 0x4B; zipBytes[pos+2] = 0x05; zipBytes[pos+3] = 0x06; // signature
+      zipBytes[pos+4] = 0; zipBytes[pos+5] = 0; // disk number
+      zipBytes[pos+6] = 0; zipBytes[pos+7] = 0; // disk with central dir
+      zipBytes[pos+8] = 1; zipBytes[pos+9] = 0; // entries on this disk
+      zipBytes[pos+10] = 1; zipBytes[pos+11] = 0; // total entries
+      EpubParser.writeUint32(zipBytes, pos+12, centralDirSize); // central dir size
+      EpubParser.writeUint32(zipBytes, pos+16, cdOffset); // central dir offset
+      zipBytes[pos+20] = 0; zipBytes[pos+21] = 0; // comment length
+
+      // 写入临时 ZIP 文件
+      const tmpFile = fs.openSync(tmpZipPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
+      fs.writeSync(tmpFile.fd, zipBytes.buffer);
+      fs.closeSync(tmpFile);
+
+      // 用 zlib 解压
+      await zlib.decompressFile(tmpZipPath, extractTmpDir);
+
+      // 读取解压后的文件
+      const resultPath = extractTmpDir + '/' + fileName;
+      if (fs.accessSync(resultPath)) {
+        const stat = fs.statSync(resultPath);
+        const resultFile = fs.openSync(resultPath, fs.OpenMode.READ_ONLY);
+        const buf = new ArrayBuffer(stat.size);
+        fs.readSync(resultFile.fd, buf);
+        fs.closeSync(resultFile);
+        const result = new Uint8Array(buf);
+
+        // 清理临时目录
+        try { fs.unlinkSync(tmpZipPath); } catch (e) {}
+        try { fs.rmdirSync(extractTmpDir); } catch (e) {}
+        try { fs.rmdirSync(tmpDir); } catch (e) {}
+
+        return result;
+      }
+    } catch (err) {
+      console.warn('inflateDeflateEntry failed for ' + fileName + ': ' + JSON.stringify(err));
+    }
+    return compressedData;
+  }
+
+  static stringToBytes(str: string): Uint8Array {
+    const result: number[] = new Array();
+    for (let i = 0; i < str.length; i++) {
+      let code = str.charCodeAt(i);
+      if (code < 0x80) {
+        result.push(code);
+      } else if (code < 0x800) {
+        result.push(0xC0 | (code >> 6));
+        result.push(0x80 | (code & 0x3F));
+      } else {
+        result.push(0xE0 | (code >> 12));
+        result.push(0x80 | ((code >> 6) & 0x3F));
+        result.push(0x80 | (code & 0x3F));
+      }
+    }
+    return new Uint8Array(result);
+  }
+
+  static writeUint32(bytes: Uint8Array, offset: number, value: number): void {
+    bytes[offset] = value & 0xFF;
+    bytes[offset + 1] = (value >> 8) & 0xFF;
+    bytes[offset + 2] = (value >> 16) & 0xFF;
+    bytes[offset + 3] = (value >> 24) & 0xFF;
+  }
+
+  // 记录哪些条目是 deflate 压缩的（解压前需要 inflateDeflateEntry 处理）
+  static extractZipEntriesWithMeta(bytes: Uint8Array): ZipExtractResult {
     const files: Map<string, Uint8Array> = new Map();
+    const deflateKeys: Set<string> = new Set();
 
     try {
       // 先查找中央目录结束记录 (EOCD) 签名 0x06054b50
@@ -340,7 +498,7 @@ export class EpubParser {
 
       if (eocdOffset < 0) {
         // 没找到 EOCD，回退到顺序扫描
-        return EpubParser.extractZipEntriesSequential(bytes);
+        return EpubParser.extractZipEntriesSequentialWithMeta(bytes);
       }
 
       // 从 EOCD 读取中央目录信息
@@ -380,9 +538,10 @@ export class EpubParser {
             const fileData: Uint8Array = bytes.slice(dataStart, dataStart + uncompressedSize);
             files.set(fileName, fileData);
           } else if (compressionMethod === 8 && dataStart + compressedSize <= bytes.length) {
-            // Deflate 压缩 — 保存压缩数据，标记为需要解压
+            // Deflate 压缩 — 保存压缩数据，稍后解压
             const compressedData: Uint8Array = bytes.slice(dataStart, dataStart + compressedSize);
             files.set(fileName, compressedData);
+            deflateKeys.add(fileName);
           }
         }
 
@@ -392,17 +551,18 @@ export class EpubParser {
     } catch (err) {
       console.error('ZIP 中央目录解析错误: ' + JSON.stringify(err));
       // 回退到顺序扫描
-      return EpubParser.extractZipEntriesSequential(bytes);
+      return EpubParser.extractZipEntriesSequentialWithMeta(bytes);
     }
 
-    return files;
+    return EpubParser.createZipExtractResult(files, deflateKeys);
   }
 
   /**
    * 顺序扫描 ZIP 文件头 (回退方案)
    */
-  static extractZipEntriesSequential(bytes: Uint8Array): Map<string, Uint8Array> {
+  static extractZipEntriesSequentialWithMeta(bytes: Uint8Array): ZipExtractResult {
     const files: Map<string, Uint8Array> = new Map();
+    const deflateKeys: Set<string> = new Set();
 
     try {
       let offset: number = 0;
@@ -427,6 +587,7 @@ export class EpubParser {
             files.set(fileName, bytes.slice(dataStart, dataStart + uncompressedSize));
           } else if (compressionMethod === 8 && dataStart + compressedSize <= bytes.length) {
             files.set(fileName, bytes.slice(dataStart, dataStart + compressedSize));
+            deflateKeys.add(fileName);
           }
 
           offset = dataStart + Math.max(compressedSize, uncompressedSize);
@@ -438,7 +599,12 @@ export class EpubParser {
       console.error('ZIP 顺序扫描错误: ' + JSON.stringify(err));
     }
 
-    return files;
+    return EpubParser.createZipExtractResult(files, deflateKeys);
+  }
+
+  static createZipExtractResult(files: Map<string, Uint8Array>, deflateKeys: Set<string>): ZipExtractResult {
+    let result: ZipExtractResult = { files: files, deflateKeys: deflateKeys };
+    return result;
   }
 
   // ==================== XML 解析 ====================
@@ -594,9 +760,12 @@ export class EpubParser {
 
   /**
    * 从 EPUB 提取封面图片
+   * @param epubPath EPUB 文件在沙箱中的绝对路径
+   * @param filesDir 应用沙箱 filesDir（由调用方传入，避免静态方法中 getContext() 失效）
    */
-  static async extractCover(epubPath: string): Promise<string> {
+  static async extractCover(epubPath: string, filesDir?: string): Promise<string> {
     try {
+      const appDir: string = filesDir && filesDir.length > 0 ? filesDir : getAppFilesDir();
       // 1. 尝试用 zlib 解压整个 EPUB 到临时目录
       const extractDir: string = epubPath + '_cover_tmp';
       let extractedOk: boolean = false;
@@ -629,12 +798,11 @@ export class EpubParser {
                 coverPath += '/' + coverHref;
                 
                 if (fs.accessSync(coverPath)) {
-                  const appDir: string = getAppFilesDir();
                   const ext: string = coverHref.substring(coverHref.lastIndexOf('.'));
                   const destPath: string = appDir + '/epub_cover_' + Date.now() + ext;
                   fs.copyFileSync(coverPath, destPath);
                   try { fs.rmdirSync(extractDir); } catch (e) {}
-                  return destPath;
+                  return 'file://' + destPath;
                 }
               }
             }
@@ -651,16 +819,35 @@ export class EpubParser {
       fs.closeSync(file);
 
       const bytes: Uint8Array = new Uint8Array(fileData);
-      const files: Map<string, Uint8Array> = EpubParser.extractZipEntries(bytes);
+      const coverExtractResult: ZipExtractResult = EpubParser.extractZipEntriesWithMeta(bytes);
+      const files: Map<string, Uint8Array> = coverExtractResult.files;
+      const deflateKeys: Set<string> = coverExtractResult.deflateKeys;
       
-      const containerData: Uint8Array | undefined = files.get('META-INF/container.xml') || 
-                                                    files.get('meta-inf/container.xml');
+      // 查找 container.xml（不区分大小写）
+      let containerKey = 'META-INF/container.xml';
+      let containerData: Uint8Array | undefined = files.get(containerKey);
+      if (!containerData) {
+        containerKey = 'meta-inf/container.xml';
+        containerData = files.get(containerKey);
+      }
       if (containerData) {
+        // container.xml 可能是 deflate 压缩的
+        if (deflateKeys.has(containerKey)) {
+          containerData = await EpubParser.inflateDeflateEntry(containerData, containerKey);
+          files.set(containerKey, containerData);
+          deflateKeys.delete(containerKey);
+        }
         const containerXml: string = EpubParser.bytesToString(containerData);
         const rootfilePath: string = EpubParser.parseContainer(containerXml);
         if (rootfilePath.length > 0) {
-          const opfData: Uint8Array | undefined = files.get(rootfilePath);
+          let opfData: Uint8Array | undefined = files.get(rootfilePath);
           if (opfData) {
+            // OPF 可能是 deflate 压缩的
+            if (deflateKeys.has(rootfilePath)) {
+              opfData = await EpubParser.inflateDeflateEntry(opfData, rootfilePath);
+              files.set(rootfilePath, opfData);
+              deflateKeys.delete(rootfilePath);
+            }
             const opfXml: string = EpubParser.bytesToString(opfData);
             const result: ParseResult = EpubParser.parseContentOpf(opfXml);
             const rootfileDir: string = rootfilePath.substring(0, rootfilePath.lastIndexOf('/'));
@@ -673,14 +860,18 @@ export class EpubParser {
               }
               const coverData: Uint8Array | undefined = files.get(coverKey);
               if (coverData && coverData.length > 0) {
-                const appDir: string = getAppFilesDir();
+                // 封面图片可能是 deflate 压缩的，先解压
+                let actualCoverData = coverData;
+                if (deflateKeys.has(coverKey)) {
+                  actualCoverData = await EpubParser.inflateDeflateEntry(coverData, coverKey);
+                }
                 const ext: string = coverHref.substring(coverHref.lastIndexOf('.'));
                 const destPath: string = appDir + '/epub_cover_' + Date.now() + ext;
                 
                 const destFile = fs.openSync(destPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
-                fs.writeSync(destFile.fd, coverData.buffer);
+                fs.writeSync(destFile.fd, actualCoverData.buffer);
                 fs.closeSync(destFile);
-                return destPath;
+                return 'file://' + destPath;
               }
             }
           }
@@ -755,7 +946,7 @@ export class EpubParser {
         return `\n[img:${src}]\n`;
       }
       const resolvedKey = EpubParser.resolveRelativePath(xhtmlKey, src);
-      const localPath = resourcesDir + '/' + resolvedKey;
+      const localPath = 'file://' + resourcesDir + '/' + resolvedKey;
       return `\n[img:${localPath}]\n`;
     });
     
@@ -766,7 +957,7 @@ export class EpubParser {
         return `\n[img:${href}]\n`;
       }
       const resolvedKey = EpubParser.resolveRelativePath(xhtmlKey, href);
-      const localPath = resourcesDir + '/' + resolvedKey;
+      const localPath = 'file://' + resourcesDir + '/' + resolvedKey;
       return `\n[img:${localPath}]\n`;
     });
     
