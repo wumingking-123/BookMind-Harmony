@@ -11,6 +11,7 @@ import { themeManager, ThemeManager } from '../common/utils/ThemeManager';
 import bookSourceDao from '../database/dao/BookSourceDao';
 import { BookSource } from '../database/entities/BookSource';
 import { getDefaultBookSources } from '../common/constants/DefaultBookSources';
+import downloadManager from '../common/utils/DownloadManager';
 
 export default class EntryAbility extends UIAbility {
 
@@ -91,6 +92,7 @@ export default class EntryAbility extends UIAbility {
     // 获取本地文件存储路径
     const pathDir = this.context.filesDir;
     AppStorage.setOrCreate('pathDir', pathDir);
+    downloadManager.setPathDir(pathDir);
     // 书源存入的地址
     AppStorage.setOrCreate('pathBookSource', pathDir + '/bookSource.json');
     // Main window is created, set main page for this ability

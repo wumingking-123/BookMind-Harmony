@@ -2,7 +2,7 @@ import { display, promptAction, router, window } from '@kit.ArkUI';
 import { preferences } from '@kit.ArkData';
 import sourceView from './sourceView';
 import { NetworkInput } from 'ets/componets/Reader/NetworkInput';
-import DownloadSettingDialog from '../../../componets/Reader/DownloadSettingDialog';
+import { DownloadSettingDialog } from '../../../componets/Reader/DownloadSettingDialog';
 import LayoutMoreDialog from '../../../componets/Reader/LayoutMoreDialog';
 import BackgroundColorDialog from '../../../componets/Reader/BackgroundColorDialog';
 import FlipModeDialog from '../../../componets/Reader/FlipModeDialog';
@@ -807,7 +807,7 @@ struct ReaderPageContent {
   async checkCurrentBookMark() {
     let bookData = AppStorage.get<Books>('readerBookData')
     if (bookData) {
-      this.isCurrentBookMarked = await bookMarkUtils.isBookMarked(
+      this.isBookmarked = await bookMarkUtils.isBookMarked(
         bookData.bookName, bookData.author, this.currentChapterIndex)
     }
   }
@@ -815,7 +815,19 @@ struct ReaderPageContent {
   async loadBookMarkList() {
     let bookData = AppStorage.get<Books>('readerBookData')
     if (bookData) {
-      this.bookMarkList = await bookMarkUtils.getBookMarks(bookData.bookName, bookData.author)
+      let marks = await bookMarkUtils.getBookMarks(bookData.bookName, bookData.author)
+      let list: ReaderBookmark[] = []
+      for (let m of marks) {
+        let item: ReaderBookmark = {
+          chapterIndex: m.chapterIndex,
+          chapterTitle: m.chapterName,
+          pageIndex: m.chapterPos,
+          snippet: m.bookText,
+          time: m.time
+        }
+        list.push(item)
+      }
+      this.bookmarkList = list
     }
   }
 
@@ -823,13 +835,13 @@ struct ReaderPageContent {
     let bookData = AppStorage.get<Books>('readerBookData')
     if (!bookData) return
 
-    if (this.isCurrentBookMarked) {
+    if (this.isBookmarked) {
       let marks = await bookMarkUtils.getBookMarks(bookData.bookName, bookData.author)
       let currentMark = marks.find(m => m.chapterIndex === this.currentChapterIndex)
       if (currentMark) {
         await bookMarkUtils.deleteBookMark(currentMark.time)
       }
-      this.isCurrentBookMarked = false
+      this.isBookmarked = false
       promptAction.showToast({ message: '已取消书签', duration: 1500 })
     } else {
       let ch = this.chapterList[this.currentChapterIndex]
@@ -842,7 +854,7 @@ struct ReaderPageContent {
       mark.bookText = ch?.paragraphList?.[0]?.substring(0, 50) ?? ''
       mark.content = ''
       await bookMarkUtils.addBookMark(mark)
-      this.isCurrentBookMarked = true
+      this.isBookmarked = true
       promptAction.showToast({ message: '已添加书签', duration: 1500 })
     }
     this.loadBookMarkList()
@@ -851,7 +863,6 @@ struct ReaderPageContent {
   jumpToBookMark(mark: BookMark) {
     this.currentChapterIndex = mark.chapterIndex
     this.currentPageIndex = mark.chapterPos
-    this.isShowBookMarkList = false
     this.isShowSetting = false
   }
 
@@ -1204,13 +1215,14 @@ struct ReaderPageContent {
                         message: this.followSystemBrightness ? '已跟随系统亮度' : '已切换手动调节',
                         duration: 1500
                       })
-                    Text('系统亮度')
-                      .fontSize(12)
-                      .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
-                  }
-                  .onClick(() => {
-                    this.followSystemBrightness = !this.followSystemBrightness
-                  })
+                    })
+
+                  Text('系统亮度')
+                    .fontSize(12)
+                    .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
+                    .onClick(() => {
+                      this.followSystemBrightness = !this.followSystemBrightness
+                    })
                 }
                 .width('100%')
 

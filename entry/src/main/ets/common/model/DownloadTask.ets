@@ -25,6 +25,7 @@ export class DownloadTask {
   status: DownloadStatus = DownloadStatus.PENDING;
   startTime: number = 0;
   error?: string;
+  savedFilePath: string = '';
   chapters: DownloadChapter[] = [];
 
   constructor() {

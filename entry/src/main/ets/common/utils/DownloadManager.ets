@@ -9,7 +9,7 @@ import { ContentAnalysis, ContentAnalysisData } from '../model/ContentAnalysis';
 import { BookChapter } from '../model/BookChapter';
 import chaptersDao from '../../database/dao/ChaptersDao';
 import requestUtil from './requestUtils';
-import taskPool from '@ohos.taskpool';
+import fs from '@ohos.file.fs';
 
 export type DownloadProgressCallback = (task: DownloadTask) => void;
 
@@ -18,6 +18,7 @@ class DownloadManager {
   private activeTasks: Set<string> = new Set();
   private maxConcurrent: number = 3;
   private progressCallbacks: DownloadProgressCallback[] = [];
+  private pathDir: string = '';
 
   /**
    * 添加下载任务
@@ -45,6 +46,13 @@ class DownloadManager {
     this.startNextTask();
 
     return task;
+  }
+
+  /**
+   * 设置存储路径
+   */
+  setPathDir(path: string): void {
+    this.pathDir = path;
   }
 
   /**
@@ -170,6 +178,8 @@ class DownloadManager {
       // 6. 完成
       if ((task.status as DownloadStatus) !== DownloadStatus.PAUSED) {
         task.status = DownloadStatus.COMPLETED;
+        // 保存为TXT文件
+        this.saveAsTxtFile(task);
       }
     } catch (e) {
       task.status = DownloadStatus.ERROR;
@@ -272,6 +282,99 @@ class DownloadManager {
    */
   removeTask(taskId: string): void {
     this.cancelTask(taskId);
+  }
+
+  /**
+   * 导出任务为TXT文件（复制到公共下载目录）
+   */
+  async exportTask(taskId: string): Promise<boolean> {
+    const task = this.tasks.get(taskId);
+    if (!task || !task.savedFilePath) {
+      console.error('[DownloadManager] 导出失败: 任务不存在或文件未保存');
+      return false;
+    }
+
+    try {
+      // 尝试多个可能的公共下载目录
+      const safeName = task.bookName.replace(/[\\/:*?"<>|]/g, '_') + '.txt';
+      const candidates: string[] = [
+        '/storage/Users/currentUser/Download',
+        '/storage/emulated/0/Download',
+        this.pathDir + '/Download'
+      ];
+
+      let destPath = '';
+      for (const dir of candidates) {
+        try {
+          if (!fs.accessSync(dir)) {
+            fs.mkdirSync(dir);
+          }
+          destPath = dir + '/' + safeName;
+          break;
+        } catch (_) {
+          continue;
+        }
+      }
+
+      if (!destPath) {
+        // 回退：导出到应用 Download 目录
+        const fallbackDir = this.pathDir + '/downloads/export';
+        if (!fs.accessSync(fallbackDir)) {
+          fs.mkdirSync(fallbackDir);
+        }
+        destPath = fallbackDir + '/' + safeName;
+      }
+
+      fs.copyFileSync(task.savedFilePath, destPath);
+
+      console.log('[DownloadManager] 导出成功: ' + destPath);
+      return true;
+    } catch (e) {
+      console.error('[DownloadManager] 导出失败: ' + (e as Error).message);
+      return false;
+    }
+  }
+
+  /**
+   * 将下载完成的章节保存为TXT文件
+   */
+  private saveAsTxtFile(task: DownloadTask): void {
+    try {
+      if (!this.pathDir) {
+        console.error('[DownloadManager] pathDir not available');
+        return;
+      }
+      const pathDir = this.pathDir;
+
+      const downloadDir = pathDir + '/downloads';
+      // 确保目录存在
+      if (!fs.accessSync(downloadDir)) {
+        fs.mkdirSync(downloadDir);
+      }
+
+      // 文件名: 书名.txt
+      const safeName = task.bookName.replace(/[\\/:*?"<>|]/g, '_');
+      const filePath = downloadDir + '/' + safeName + '.txt';
+
+      // 拼接所有章节内容
+      let content = task.bookName + '\n作者：' + task.bookAuthor + '\n\n';
+      for (const chapter of task.chapters) {
+        if (chapter.status === DownloadStatus.COMPLETED && chapter.content) {
+          content += '\n\n' + chapter.title + '\n\n' + chapter.content;
+        }
+      }
+
+      // 写入文件
+      const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY);
+      fs.writeSync(file.fd, content);
+      fs.close(file);
+
+      task.savedFilePath = filePath;
+      console.log('[DownloadManager] TXT文件已保存: ' + filePath);
+      this.notifyProgress(task);
+    } catch (e) {
+      console.error('[DownloadManager] 保存TXT文件失败: ' + (e as Error).message);
+    }
   }
 }
 

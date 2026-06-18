@@ -3,7 +3,7 @@ import Dialog from 'ets/componets/common/Dialog';
 import { router } from '@kit.ArkUI';
 import sourceView from './sourceView';
 import { NetworkInput } from 'ets/componets/Reader/NetworkInput';
-import DownloadSettingDialog from '../../../componets/Reader/DownloadSettingDialog';
+import { DownloadSettingDialog } from '../../../componets/Reader/DownloadSettingDialog';
 import LayoutMoreDialog from '../../../componets/Reader/LayoutMoreDialog';
 import { TxtContentHandler } from '../../../componets/Reader/TxtContentHandler';
 import { MusicPlayer } from 'ets/componets/Reader/MusicPlayer';

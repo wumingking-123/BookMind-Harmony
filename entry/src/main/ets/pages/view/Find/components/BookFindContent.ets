@@ -8,7 +8,6 @@ import { isNetworkUrl } from '../../../../common/utils/utils'
 import noFind from '../../../../componets/common/noFind'
 import { ExploreRule } from '../../../../database/entities/rule'
 import { ExploreItem } from '../../../../database/types/BookSourceType'
-import mayAlsoLike from '../mayAlsoLike'
 import { CardItem } from './CardItem'
 import { router } from '@kit.ArkUI'
 import { ThemeItem } from '../../../../common/model/Theme'
@@ -21,7 +20,7 @@ import { BookSource } from '../../../../database/entities/BookSource'
 export default struct BookFindContent {
   @Prop currentIndex: number
   @Prop bookSourceUrl: string
-  @Prop exploreItem: ExploreItem
+  @Prop @Watch('onExploreItemChange') exploreItem: ExploreItem
   @Prop @Watch('getList') counter: number = 0
   @State loading: boolean = true
   @State errorExplore: boolean = false
@@ -34,6 +33,10 @@ export default struct BookFindContent {
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   aboutToAppear() {
+    this.getList()
+  }
+
+  onExploreItemChange() {
     this.getList()
   }
 
@@ -122,10 +125,6 @@ export default struct BookFindContent {
       space: 16
     }) {
       Column() {
-        mayAlsoLike({
-          mayAlsoLike: this.exploreItem.title,
-          handleClick: this.handleClick
-        })
         if (this.loading) {
           Column() {
             LoadingProgress()
@@ -146,50 +145,55 @@ export default struct BookFindContent {
             hintIndex: 0
           })
         } else {
-          Column() {
+          List() {
             ForEach(this.bookList, (item: ExploreRule, index) => {
-              CardItem({ item: item, currentIndex: this.currentIndex })
+              ListItem() {
+                CardItem({ item: item, currentIndex: this.currentIndex })
+              }
             })
             if (this.bookList.length === 3) {
-              Column() {
-                Text('查看更多')
-                  .lineHeight(20)
-                  .fontColor('#73000000')
-              }
-              .width('100%')
-              .padding({ top: 8, bottom: 8 })
-              .margin({ top: 20 })
-              .backgroundColor('#0F000000')
-              .borderRadius(4)
-              .onClick(() => {
-                router.pushUrl({
-                  url: 'pages/view/Find/CategoryList/Index',
-                  params: {
-                    bookSourceUrl: this.bookSourceUrl,
-                    exploreItem: this.exploreItem,
-                    exploreRule: this.exploreRule,
-                    currentIndex: this.currentIndex,
-                    charset: this.charset
-                  }
+              ListItem() {
+                Column() {
+                  Text('查看更多')
+                    .lineHeight(20)
+                    .fontColor('#73000000')
+                }
+                .width('100%')
+                .padding({ top: 8, bottom: 8 })
+                .margin({ top: 20 })
+                .backgroundColor('#0F000000')
+                .borderRadius(4)
+                .onClick(() => {
+                  router.pushUrl({
+                    url: 'pages/view/Find/CategoryList/Index',
+                    params: {
+                      bookSourceUrl: this.bookSourceUrl,
+                      exploreItem: this.exploreItem,
+                      exploreRule: this.exploreRule,
+                      currentIndex: this.currentIndex,
+                      charset: this.charset
+                    }
+                  })
                 })
-              })
+              }
             }
           }
-          .height('100%')
-          .alignItems(HorizontalAlign.Start)
-          .justifyContent(FlexAlign.Start)
+          .layoutWeight(1)
+          .scrollBar(BarState.Off)
+          .divider({ strokeWidth: 0.5, color: '#0F000000' })
         }
       }
       .padding({
         left: 16,
         right: 16,
-        top: 20,
-        bottom: 20
+        top: 16,
+        bottom: 16
       })
       .borderRadius(12)
       .backgroundColor(Color.White)
-      .height(436)
+      .layoutWeight(1)
     }
-    .margin({ top: 12 })
+    .width('100%')
+    .height('100%')
   }
 }

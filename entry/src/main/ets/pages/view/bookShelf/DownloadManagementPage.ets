@@ -1,6 +1,4 @@
-import { router } from '@kit.ArkUI';
-import picker from '@ohos.file.picker';
-import fs from '@ohos.file.fs';
+import { router, promptAction } from '@kit.ArkUI';
 import { ThemeItem } from '../../../common/model/Theme';
 import { ThemeStorageKey } from '../../../common/constants/Theme';
 import downloadManager from '../../../common/utils/DownloadManager';
@@ -22,6 +20,7 @@ struct DownloadManagementPage {
   @State questionsList: Array<string> = ["全部", "小说", "漫画", "有声书", "有声书", "有声书"]
   @State downloadingTasks: DownloadTask[] = []
   @State completedTasks: DownloadTask[] = []
+  @State exportingTaskId: string = ''
 
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
@@ -42,6 +41,53 @@ struct DownloadManagementPage {
   private refreshTasks(): void {
     this.downloadingTasks = downloadManager.getDownloadingTasks();
     this.completedTasks = downloadManager.getCompletedTasks();
+  }
+
+  private async exportSingleTask(task: DownloadTask): Promise<void> {
+    if (this.exportingTaskId) {
+      promptAction.showToast({ message: '请等待当前导出完成', duration: 1500 })
+      return
+    }
+    if (!task.savedFilePath) {
+      promptAction.showToast({ message: '文件未保存，无法导出', duration: 1500 })
+      return
+    }
+
+    this.exportingTaskId = task.id
+    const success = await downloadManager.exportTask(task.id)
+    this.exportingTaskId = ''
+
+    if (success) {
+      promptAction.showToast({ message: '导出成功，请在 Download 目录查看', duration: 2000 })
+    } else {
+      promptAction.showToast({ message: '导出失败', duration: 1500 })
+    }
+  }
+
+  private async exportAllTasks(): Promise<void> {
+    if (this.exportingTaskId) {
+      promptAction.showToast({ message: '请等待当前导出完成', duration: 1500 })
+      return
+    }
+
+    const exportable = this.completedTasks.filter(t => t.savedFilePath)
+    if (exportable.length === 0) {
+      promptAction.showToast({ message: '暂无可导出的任务', duration: 1500 })
+      return
+    }
+
+    let successCount = 0
+    for (const task of exportable) {
+      this.exportingTaskId = task.id
+      const ok = await downloadManager.exportTask(task.id)
+      if (ok) successCount++
+    }
+    this.exportingTaskId = ''
+
+    promptAction.showToast({
+      message: successCount > 0 ? `成功导出 ${successCount} 个文件到 Download 目录` : '导出已取消',
+      duration: 2000
+    })
   }
 
   build() {
@@ -206,6 +252,9 @@ struct DownloadManagementPage {
                     size: 12,
                     weight: 500
                   })
+                  .onClick(() => {
+                    this.exportAllTasks()
+                  })
               }
               .width("100%")
               .padding({
@@ -342,7 +391,7 @@ struct DownloadManagementPage {
           .value(0)
           .width(68)
           .height(28)
-          .style({ content: '导出', font: { size: 12, weight: 500 }, fontColor: "#FFFFFF" })
+          .style({ content: this.exportingTaskId === task.id ? '导出中...' : '导出', font: { size: 12, weight: 500 }, fontColor: "#FFFFFF" })
       }
     }
     .padding({
@@ -359,6 +408,8 @@ struct DownloadManagementPage {
           downloadManager.resumeTask(task.id);
         }
         this.refreshTasks();
+      } else if (itemType === "ExportReady") {
+        this.exportSingleTask(task)
       }
     })
   }

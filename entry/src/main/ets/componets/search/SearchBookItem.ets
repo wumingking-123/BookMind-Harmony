@@ -10,14 +10,6 @@ export struct SearchBookItem {
   @Prop book:SearchBook
   @State fontColor:string="rgba(0, 0, 0, 0.45)"
   @Prop index:number
-  @Builder label(item:string){
-    Text(item)
-      .fontSize(10)
-      .fontColor(this.fontColor)
-      .padding({left:7,right:7,top:3,bottom:3})
-      .backgroundColor("rgba(0, 0, 0, 0.06)")
-      .borderRadius(5)
-  }
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
   build() {
@@ -53,13 +45,6 @@ export struct SearchBookItem {
           .maxLines(2)
           .fontColor(this.fontColor)
           .textOverflow({overflow:TextOverflow.Ellipsis})
-        Row({space:5}){
-          // ForEach(this.book.label,(item:string)=>{
-          //   this.label(item)
-          // })
-          this.label(this.book.kind??'')
-          this.label(this.book.wordCount??'')
-        }.width("100%").height(20)
       }.alignItems(HorizontalAlign.Start)
     }
     .onClick(()=>{
