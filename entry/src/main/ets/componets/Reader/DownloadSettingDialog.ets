@@ -1,19 +1,29 @@
-import { AddDownloadDialog } from 'ets/componets/Reader/AddDownloadDialog';
 import { ThemeStorageKey } from '../../common/constants/Theme';
 import { ThemeItem } from '../../common/model/Theme';
 import { promptAction } from '@kit.ArkUI';
+import downloadManager from '../../common/utils/DownloadManager';
+import { DownloadTask } from '../../common/model/DownloadTask';
+import { BookSource } from '../../database/entities/BookSource';
+import { Books } from '../../database/entities/Books';
 
-@Component
-export default struct DownloadSettingDialog {
-  @Link isShowDownload: boolean
-  @Link isShowSetting: boolean
-  @State selectedOption: number = -1 // 选中的选项 0-3
-  @State StartText: string = "1" // 缓存开始章节
-  @State EndText: string = "50" // 缓存结束章节
-  controller: TextInputController = new TextInputController()
+@CustomDialog
+export struct DownloadSettingDialog {
+  controller?: CustomDialogController
+  @State selectedOption: number = -1
+  @State StartText: string = "1"
+  @State EndText: string = "50"
+  inputController: TextInputController = new TextInputController()
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
-  // 下载选项配置
+  // 外部传入参数
+  bookData?: Books
+  bookSource?: BookSource
+  chapterCount: number = 0
+  onDownloadStart?: (task: DownloadTask) => void
+  // Reader页面兼容参数
+  isShowDownload: boolean = false
+  isShowSetting: boolean = true
+
   private downloadOptions: string[] = [
     '缓存后50章',
     '缓存后面全部章节',
@@ -32,6 +42,12 @@ export default struct DownloadSettingDialog {
       }
       .width('100%')
       .padding({ top: 20 })
+
+      // 章节数提示
+      Text('共 ' + this.chapterCount + ' 章')
+        .fontSize(13)
+        .fontColor('#8F959E')
+        .width('100%')
 
       // 选项列表
       Column({ space: 12 }) {
@@ -54,7 +70,7 @@ export default struct DownloadSettingDialog {
               Text('起始章节')
                 .fontSize(12)
                 .fontColor('#8F959E')
-              TextInput({ text: this.StartText, controller: this.controller })
+              TextInput({ text: this.StartText, controller: this.inputController })
                 .type(InputType.Number)
                 .height(44)
                 .borderRadius(8)
@@ -77,7 +93,7 @@ export default struct DownloadSettingDialog {
               Text('结束章节')
                 .fontSize(12)
                 .fontColor('#8F959E')
-              TextInput({ text: this.EndText, controller: this.controller })
+              TextInput({ text: this.EndText, controller: this.inputController })
                 .type(InputType.Number)
                 .height(44)
                 .borderRadius(8)
@@ -108,7 +124,7 @@ export default struct DownloadSettingDialog {
           .height(44)
           .layoutWeight(1)
           .onClick(() => {
-            this.isShowDownload = false
+            this.controller?.close()
           })
 
         Button('开始缓存')
@@ -131,11 +147,9 @@ export default struct DownloadSettingDialog {
     .borderRadius({ topLeft: 16, topRight: 16 })
   }
 
-  // 选项条目
   @Builder
   OptionItem(text: string, index: number) {
     Row({ space: 12 }) {
-      // 单选框
       Column() {
         if (this.selectedOption === index) {
           Column()
@@ -154,7 +168,6 @@ export default struct DownloadSettingDialog {
       })
       .justifyContent(FlexAlign.Center)
 
-      // 选项文字
       Text(text)
         .fontSize(15)
         .fontColor(this.selectedOption === index ? '#1F2329' : '#646A73')
@@ -174,45 +187,74 @@ export default struct DownloadSettingDialog {
     })
   }
 
-  // 开始下载
   startDownload() {
     if (this.selectedOption === -1) {
-      promptAction.showToast({
-        message: '请选择缓存选项',
-        duration: 1500
-      })
+      promptAction.showToast({ message: '请选择缓存选项', duration: 1500 })
       return
     }
 
-    let message = ''
+    if (!this.bookData || !this.bookSource) {
+      promptAction.showToast({ message: '书源信息不完整', duration: 1500 })
+      return
+    }
+
+    const count = this.chapterCount
+    if (count <= 0) {
+      promptAction.showToast({ message: '暂无章节可下载', duration: 1500 })
+      return
+    }
+
+    let startChapter = 0
+    let endChapter = count - 1
+
     switch (this.selectedOption) {
-      case 0:
-        message = '开始缓存后50章'
+      case 0: // 后50章
+        startChapter = Math.max(0, count - 50)
         break
-      case 1:
-        message = '开始缓存后面全部章节'
+      case 1: // 后面全部
+        startChapter = 0
         break
-      case 2:
-        message = '开始缓存全部章节'
+      case 2: // 全部
+        startChapter = 0
         break
-      case 3:
-        if (!this.StartText || !this.EndText) {
-          promptAction.showToast({
-            message: '请输入有效的章节范围',
-            duration: 1500
-          })
+      case 3: // 自定义
+        const s = parseInt(this.StartText)
+        const e = parseInt(this.EndText)
+        if (isNaN(s) || isNaN(e) || s < 1 || e < s) {
+          promptAction.showToast({ message: '请输入有效的章节范围', duration: 1500 })
           return
         }
-        message = `开始缓存第${this.StartText}-${this.EndText}章`
+        startChapter = s - 1
+        endChapter = Math.min(e - 1, count - 1)
         break
     }
 
-    promptAction.showToast({
-      message: message,
-      duration: 2000
-    })
+    const bookUrl = this.bookData.bookUrl || ''
+    const tocUrl = bookUrl
 
-    // TODO: 实现实际的下载逻辑
-    this.isShowDownload = false
+    const task = downloadManager.addTask(
+      bookUrl,
+      this.bookData.bookName,
+      this.bookData.author || '',
+      this.bookSource,
+      tocUrl,
+      startChapter,
+      endChapter
+    )
+
+    let msg = ''
+    switch (this.selectedOption) {
+      case 0: msg = '开始缓存后50章'; break
+      case 1: msg = '开始缓存后面全部章节'; break
+      case 2: msg = '开始缓存全部章节'; break
+      case 3: msg = `开始缓存第${this.StartText}-${this.EndText}章`; break
+    }
+    promptAction.showToast({ message: msg, duration: 2000 })
+
+    if (this.onDownloadStart) {
+      this.onDownloadStart(task)
+    }
+
+    this.controller?.close()
   }
 }

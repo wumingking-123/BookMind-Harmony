@@ -8,6 +8,7 @@ import rssSourceGroupDao from './dao/rssSourceGroupDao'
 import rssSourcesHistoryDao from './dao/RssSourcesHistoryDao'
 import SubscriptionDao from './dao/SubscriptionDao'
 import worksListsDao from './dao/WorksListsDao'
+import searchKeywordDao from './dao/SearchKeywordDao'
 import readRecordDao from './dao/ReadRecordDao'
 
 class DataBase {
@@ -22,6 +23,7 @@ class DataBase {
     await rssSourceGroupDao.initBookSourceGroupTable()
     await BookMarkDao.initBookMarkTable()
     await chaptersDao.initChaptersTable()
+    await searchKeywordDao.initSearchKeywordTable()
     await readRecordDao.initReadRecordTable()
   }
 }

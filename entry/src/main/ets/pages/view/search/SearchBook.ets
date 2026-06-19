@@ -18,6 +18,7 @@ struct SearchBook {
   @Provide('searchBookList') books:SearchBook[] = []
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @Provide('isSearch') isSearch:boolean = false
+  @Provide('searchTrigger') searchTrigger: string = ''
   aboutToAppear(): void {
     let search = router.getParams() as routeParams
     if (search) {
@@ -35,7 +36,12 @@ struct SearchBook {
       //顶部搜索框
       SearchHead();
       if(!this.isSearch && this.books.length <= 0){
-        SearchHistory();
+        SearchHistory({
+          onSearch: (keyword: string) => {
+            this.SearchValue = keyword
+            this.searchTrigger = keyword + '_' + Date.now()
+          }
+        });
       }else if(this.isSearch && this.books.length <= 0){
         SearchRefresh()
       }else {

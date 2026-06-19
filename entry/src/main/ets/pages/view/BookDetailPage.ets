@@ -25,6 +25,9 @@ import { TocAnalysis, TocAnalysisData } from '../../common/model/TocAnalysis'
 import { BookSource } from '../../database/entities/BookSource'
 import bookSourceDao from '../../database/dao/BookSourceDao'
 import { RuleAnalyzer, RuleAnalyzerData } from '../../common/model/analyzeRule/RuleAnalyzer'
+import downloadManager from '../../common/utils/DownloadManager'
+import { DownloadTask, DownloadStatus } from '../../common/model/DownloadTask'
+import { DownloadSettingDialog } from '../../componets/Reader/DownloadSettingDialog'
 
 /**
  * 标题图片样式
@@ -103,6 +106,11 @@ struct BookDetailPage {
   @State tabList: string[] = ['目录', '书源', '书签']
   private _bookSource: BookSource | undefined = undefined
 
+  // 下载相关状态
+  @State downloadProgress: number = -1 // -1=未下载, 0-100=下载中, 100=完成
+  @State downloadTaskId: string = ''
+  downloadSettingController: CustomDialogController | undefined = undefined
+
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
@@ -157,6 +165,32 @@ struct BookDetailPage {
       }
       this.initUrlBook()
 
+      // 创建下载设置弹窗（数据加载完成后）
+      this.downloadSettingController = new CustomDialogController({
+        builder: DownloadSettingDialog({
+          bookData: this.bookData,
+          bookSource: this._bookSource,
+          chapterCount: this.txtFile.totalCount(),
+          onDownloadStart: (task: DownloadTask) => {
+            this.downloadTaskId = task.id
+            this.downloadProgress = 0
+          }
+        }),
+        customStyle: true,
+        alignment: DialogAlignment.Bottom,
+      })
+
+      // 注册下载进度回调
+      downloadManager.onProgress((task: DownloadTask) => {
+        if (task.id === this.downloadTaskId) {
+          if (task.status === DownloadStatus.COMPLETED) {
+            this.downloadProgress = 100
+          } else if (task.totalChapters > 0) {
+            this.downloadProgress = Math.floor(task.downloadedChapters / task.totalChapters * 100)
+          }
+        }
+      })
+
       // 如果是本地小说，且数据库中未存储字数，或者字数为空，则计算实际字数并保存
       if (!this.bookData.wordCount && temp && temp.length > 0) {
         let totalChars = 0;
@@ -176,7 +210,7 @@ struct BookDetailPage {
           this.updateDisplayTags()
         }
       }
-      
+
       // 读取实际阅读记录
       let record = await readRecordDao.getRecordByBookName(this.bookData.bookName);
       if (record) {
@@ -583,12 +617,12 @@ struct BookDetailPage {
         this.currentIndex = index
       })
 
-      // 底部按钮 — 加入书架 / 继续阅读或立即阅读 (大圆角胶囊)
-      Row({ space: InkSpacing.LG }) {
+      // 底部按钮 — 加入书架 / 下载 / 立即阅读 (大圆角胶囊)
+      Row({ space: InkSpacing.SM }) {
         Button(this.bookData.isJoin ? '已加书架' : '加入书架')
           .fontSize(InkTypography.BODY)
           .fontWeight(FontWeight.Medium)
-          .width(140)
+          .layoutWeight(1)
           .height(48)
           .borderRadius(InkRadius.BUTTON_LARGE)
           .backgroundColor(InkPalette.PAPER_WARM)
@@ -597,10 +631,28 @@ struct BookDetailPage {
             !this.bookData.isJoin ? this.addBookShelf() : ''
           })
 
+        Button(this.getDownloadBtnText())
+          .fontSize(InkTypography.BODY)
+          .fontWeight(FontWeight.Medium)
+          .layoutWeight(1)
+          .height(48)
+          .borderRadius(InkRadius.BUTTON_LARGE)
+          .backgroundColor(InkPalette.PAPER_WARM)
+          .fontColor(InkPalette.INK)
+          .enabled(this.downloadProgress < 0 || this.downloadProgress >= 100)
+          .onClick(() => {
+            if (this.downloadProgress >= 0 && this.downloadProgress < 100) {
+              return // 下载中，不响应
+            }
+            if (this.downloadSettingController) {
+              this.downloadSettingController.open()
+            }
+          })
+
         Button(this.bookData.bookType === 2 ? '开始播放' : (this.hasHistory ? '继续阅读' : '立即阅读'))
           .fontSize(InkTypography.BODY)
           .fontWeight(FontWeight.Medium)
-          .width(140)
+          .layoutWeight(1)
           .height(48)
           .borderRadius(InkRadius.BUTTON_LARGE)
           .backgroundColor(this.bookData.bookType === 2 || this.txtFile.totalCount() > 0 ? this.theme.mainColor : InkPalette.INK_MIST)
@@ -867,6 +919,12 @@ struct BookDetailPage {
     bookHistory.durChapterTitle = durChapterTitle
     bookHistory.durChapterIndex = durChapterIndex
     bookHistoryUtils.addBooks(bookHistory)
+  }
+
+  getDownloadBtnText(): string {
+    if (this.downloadProgress >= 100) return '已下载'
+    if (this.downloadProgress >= 0) return `下载中 ${this.downloadProgress}%`
+    return '下载'
   }
 
   startReadOrPlay() {

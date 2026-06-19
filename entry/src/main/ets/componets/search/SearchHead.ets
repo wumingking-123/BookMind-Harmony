@@ -2,6 +2,7 @@ import { router } from '@kit.ArkUI';
 import taskSearchBooks from '../../common/model/taskSearchBook';
 import { SearchBook } from '../../database/entities/SearchBook';
 import { showMessage } from '../common/promptShow';
+import searchKeywordDao from '../../database/dao/SearchKeywordDao';
 import { ThemeStorageKey } from '../../common/constants/Theme';
 import { ThemeItem } from '../../common/model/Theme';
 import {
@@ -15,6 +16,7 @@ export struct SearchHead {
   @Consume('searchBookList') books: SearchBook[]
   @State lastSearch: string = ''
   @Consume('isSearch') isSearch: boolean
+  @Consume('searchTrigger') @Watch('onTriggerChange') searchTrigger: string
   
   @StorageProp('topRectHeight') topRectHeight: number = 0
   // 主题颜色
@@ -88,6 +90,12 @@ export struct SearchHead {
     this.lastSearch = this.SearchValue
     this.SearchValue = value;
   }
+
+  onTriggerChange() {
+    if (this.searchTrigger) {
+      this.onSubmit(this.SearchValue)
+    }
+  }
   
   onSubmit = async (value: string) => {
     this.SearchValue = value;
@@ -100,6 +108,8 @@ export struct SearchHead {
     }
     this.isSearch = true
     this.books = []
+    // 保存搜索历史
+    searchKeywordDao.insertOrUpdate(this.SearchValue)
     taskSearchBooks.search(this.SearchValue, (newUrls: SearchBook[]) => {
       this.setBookList(newUrls)
     }, () => {

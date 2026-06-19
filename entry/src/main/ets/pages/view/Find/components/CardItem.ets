@@ -27,64 +27,23 @@ export  struct CardItem {
           .fontSize(16)
           .height(24)
           .lineHeight(24)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text(this.item.intro)
-          .fontSize(12)
-          .lineHeight(20)
-          .height(40)
-          .textOverflow({
-            overflow: TextOverflow.Ellipsis
-          })
-          .maxLines(2)
-
-        Row() {
-          Column() {
-            Text(this.item.author)
-              .fontSize(10)
-              .fontColor(this.theme.mainColor)
-          }
-          .padding({ left: 6, right: 6 })
-          .height(16)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(this.theme.secondColor)
-
-          if (this.item.kind) {
-            Column() {
-              Text(this.item.kind)
-                .fontSize(10)
-                .fontColor('#73000000')
-            }
-            .margin({ left: 8 })
-            .padding({ left: 6, right: 6 })
-            .height(16)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor('#0F000000')
-          }
-
-          if (this.item.wordCount) {
-            Column() {
-              Text(this.item.wordCount)
-                .fontSize(10)
-                .fontColor('#73000000')
-            }
-            .margin({ left: 8 })
-            .padding({ left: 6, right: 6 })
-            .height(16)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor('#0F000000')
-          }
+        if (this.item.kind) {
+          Text(this.item.kind)
+            .fontSize(12)
+            .fontColor('#73000000')
+            .height(20)
+            .lineHeight(20)
         }
-        .padding({top: 4})
-        .width('100%')
-        .height(16)
-        .justifyContent(FlexAlign.Start)
       }
       .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.SpaceBetween)
+      .justifyContent(FlexAlign.Center)
       .layoutWeight(1)
     }
     .width('100%')
-    .padding({ top: 20 })
+    .padding({ top: 40 })
     .onClick(() => {
       clickUtil.preventClick(()=>{
         router.pushUrl({

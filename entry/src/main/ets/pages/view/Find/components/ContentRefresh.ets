@@ -7,6 +7,8 @@ import { JSON } from '@kit.ArkTS'
 import { ExploreRule } from '../../../../database/entities/rule'
 import { ExploreItem } from '../../../../database/types/BookSourceType'
 import AllCategory, { GroupExploreList } from './AllCategory'
+import { ThemeItem } from '../../../../common/model/Theme'
+import { ThemeStorageKey } from '../../../../common/constants/Theme'
 
 @Component
 export default struct ContentRefresh {
@@ -31,13 +33,13 @@ export default struct ContentRefresh {
   @State RefreshingTitle: string = '松开刷新'
   @State counter: number = 0
   @Link hasExploreUrl: boolean
-  @State pageSize: number = 4
-  @State pageNum: number = 1
   @State groupExploreList: GroupExploreList[] = []
   @State exploreList: ExploreItem[] = []
   @State showExploreList: ExploreItem[] = []
   @State exploreRule?: ExploreRule = {}
   @State showSheet: boolean = false
+  @State selectedTabIndex: number = 0
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   aboutToAppear() {
     this.getList()
@@ -54,8 +56,8 @@ export default struct ContentRefresh {
       console.info('TagInfo: 发现地址：', JSON.stringify(JSON.parse(this.bookSource.exploreUrl ?? '[]')))
       const exploreList = JSON.parse(this.bookSource.exploreUrl ?? '[]') as ExploreItem[]
       this.exploreList = exploreList
-      this.pageNum = 1
-      this.getShowExploreList()
+      this.showExploreList = exploreList.filter(item => !!item.url)
+      this.selectedTabIndex = 0
       this.getGroupExploreList()
     } catch (err) {
       console.info('TagInfo', JSON.stringify(err))
@@ -101,10 +103,6 @@ export default struct ContentRefresh {
     console.info('TagInfo:', JSON.stringify(this.groupExploreList))
   }
 
-  getShowExploreList() {
-    this.showExploreList = this.exploreList.filter(item =>!!item.url).slice(0, this.pageNum * this.pageSize)
-  }
-
   build() {
     if (!this.bookSource.exploreUrl) {
       noSourceFind({
@@ -116,48 +114,65 @@ export default struct ContentRefresh {
           top: PaddingConstants.PADDING_20
         })
     } else {
-      Refresh({ refreshing: $$this.isRefreshing, builder: this.refreshComponent }) {
-        Scroll() {
-          Column() {
-            ForEach(this.showExploreList, (item: ExploreItem) => {
-              BookFindContent({
-                currentIndex: this.currentIndex,
-                bookSourceUrl: this.bookSource.bookSourceUrl,
-                exploreItem: item,
-                exploreRule: this.exploreRule,
-                charset: this.bookSource.charset,
-                counter: this.counter,
-                handleClick: () => {
-                  this.showSheet = true
-                }
+      Column() {
+        // 横向分类标签栏
+        if (this.showExploreList.length > 1) {
+          Scroll() {
+            Row({ space: 16 }) {
+              ForEach(this.showExploreList, (item: ExploreItem, index: number) => {
+                Text(item.title)
+                  .fontSize(14)
+                  .fontColor(this.selectedTabIndex === index ? this.theme.mainColor : '#999999')
+                  .fontWeight(this.selectedTabIndex === index ? FontWeight.Medium : FontWeight.Normal)
+                  .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                  .borderRadius(16)
+                  .backgroundColor(this.selectedTabIndex === index ? this.theme.secondColor : 'transparent')
+                  .onClick(() => {
+                    this.selectedTabIndex = index
+                  })
               })
-            })
+            }
+            .padding({ left: 16, right: 16 })
           }
-          .padding({ left: 16, right: 16 })
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+          .width('100%')
+          .padding({ top: 12, bottom: 4 })
         }
-        .padding({ bottom: 16 })
-        .scrollBar(BarState.Off)
-        .onReachEnd(() => {
-          this.pageNum += 1
-          this.getShowExploreList()
-        })
+
+        // 当前选中分类的内容
+        if (this.showExploreList.length > 0) {
+          Refresh({ refreshing: $$this.isRefreshing, builder: this.refreshComponent }) {
+            BookFindContent({
+              currentIndex: this.currentIndex,
+              bookSourceUrl: this.bookSource.bookSourceUrl,
+              exploreItem: this.showExploreList[this.selectedTabIndex],
+              exploreRule: this.exploreRule,
+              charset: this.bookSource.charset,
+              counter: this.counter,
+              handleClick: () => {
+                this.showSheet = true
+              }
+            })
+            .height('100%')
+          }
+          .onStateChange((refreshStatus: RefreshStatus) => {
+            if (refreshStatus === 1 || refreshStatus === 2) {
+              this.RefreshingTitle = '松开刷新'
+            } else {
+              this.RefreshingTitle = '刷新中...'
+            }
+          })
+          .layoutWeight(1)
+          .onRefreshing(() => {
+            setTimeout(() => {
+              this.counter++
+              this.isRefreshing = false
+            }, 1000)
+          })
+        }
       }
-      .onStateChange((refreshStatus: RefreshStatus) => {
-        if (refreshStatus === 1 || refreshStatus === 2) {
-          this.RefreshingTitle = '松开刷新'
-        } else {
-          this.RefreshingTitle = '刷新中...'
-        }
-      })
       .height('100%')
-      .onRefreshing(() => {
-        setTimeout(() => {
-          this.pageNum = 1
-          this.getShowExploreList()
-          this.counter++
-          this.isRefreshing = false
-        }, 1000)
-      })
       .bindSheet(this.showSheet, this.bottomSheet(), {
         detents: [SheetSize.FIT_CONTENT, SheetSize.LARGE, 200],
         dragBar: true,
