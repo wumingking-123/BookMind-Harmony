@@ -8,5 +8,6 @@ export default interface FolderAndFileItem {
     icon: PixelMap | ResourceStr | DrawableDescriptor, // 文件夹文件图标
     size: string, // 文件夹里文件数量，或者文件的大小
     date: string, // 最后修改日期
-    isFolder: boolean // 是否为文件夹，用于排序，文件夹在最上面
+    isFolder: boolean, // 是否为文件夹，用于排序，文件夹在最上面
+    path?: string // 真实物理路径
 }

@@ -584,7 +584,8 @@ struct BookDetailPage {
                               : 'pages/view/Reader/ReaderPage2',
                             params: {
                               bookData: this.bookData,
-                              clickBookChapter: item.chapterIndex
+                              clickBookChapter: item.chapterIndex,
+                              clickBookPage: item.chapterPos
                             }
                           });
                           this.jumpReadPage(item.chapterName, item.chapterIndex);
@@ -668,7 +669,7 @@ struct BookDetailPage {
               // 有声书直接跳转播放器
               router.pushUrl({
                 url: 'pages/view/Reader/ReaderPage2',
-                params: { bookData: this.bookData, clickBookChapter: savedIndex }
+                params: { bookData: this.bookData, clickBookChapter: savedIndex, clickBookPage: this.bookData.durChapterPos || 0 }
               })
             } else {
               // 小说/漫画跳转阅读器
@@ -678,7 +679,7 @@ struct BookDetailPage {
                 url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
                   ? 'pages/view/Reader/ReaderPageKit'
                   : 'pages/view/Reader/ReaderPage2',
-                params: { bookData: this.bookData, clickBookChapter: savedIndex }
+                params: { bookData: this.bookData, clickBookChapter: savedIndex, clickBookPage: this.bookData.durChapterPos || 0 }
               })
               let chapterItem = this.txtFile.getListData()[savedIndex];
               if (this.txtFiles && chapterItem) {

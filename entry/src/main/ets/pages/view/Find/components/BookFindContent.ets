@@ -26,7 +26,7 @@ export default struct BookFindContent {
   @State errorExplore: boolean = false
   @State bookList: ExploreRule[] = []
   @Prop exploreRule: ExploreRule = {}
-  @Prop charset?: string
+  @Prop charset: string = ''
   handleClick: () => void = () => {
   }
   // 主题颜色

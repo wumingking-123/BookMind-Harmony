@@ -4,7 +4,7 @@
  * @className: requestUtils
  */
 import axios, { AxiosRequestConfig, AxiosResponse } from '@ohos/axios';
-import { http } from '@kit.NetworkKit';
+import http from '@ohos.net.http';
 import { SearchConfig } from '../model/SearchConfig';
 import { util } from '@kit.ArkTS';
 

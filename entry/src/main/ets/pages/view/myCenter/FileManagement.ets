@@ -5,6 +5,9 @@ import FolderFileListItem from '../../../componets/myCenter/FolderFileListItem';
 import FolderAndFileItem from '../../../componets/dataList/FolderAndFileItem';
 import RenameDialog from '../dialog/RenameDialog';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import fs from '@ohos.file.fs';
+import { common } from '@kit.AbilityKit';
+import { showMessage } from '../../../componets/common/promptShow';
 
 /**
  * @author 惟草木之零落兮
@@ -40,14 +43,71 @@ struct FileManagement {
     }
 
     aboutToAppear(): void {
-        for (let i=0; i < 20; i++){
-            this.fileList.pushData({
-                title: i < 3 ? `文件夹 ${i}` : `文件 ${i}`,
-                icon: i < 3 ? $r("app.media.ic_folder") : $r("app.media.ic_zip") ,
-                size: i < 3 ? "12项" : "30M",
-                date: "2021/8/13",
-                isFolder: i < 3 ? true: false
-            })
+        this.loadFiles();
+    }
+
+    loadFiles() {
+        let context = getContext(this) as common.UIAbilityContext;
+        let filesDir = context.filesDir;
+        this.fileList.clear();
+
+        try {
+            let files = fs.listFileSync(filesDir);
+            for (let i = 0; i < files.length; i++) {
+                let fileName = files[i];
+                let filePath = filesDir + '/' + fileName;
+                let stat = fs.statSync(filePath);
+                
+                // 仅显示文件，不显示目录（或者可以根据需要过滤后缀）
+                if (!stat.isDirectory()) {
+                    let sizeStr = (stat.size / 1024 / 1024).toFixed(2) + " MB";
+                    let d = new Date(stat.mtime * 1000);
+                    let dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+                    
+                    let ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+                    let icon = $r("app.media.ic_zip");
+                    if (ext === '.txt' || ext === '.epub') icon = $r("app.media.my_center_book_icon");
+                    if (ext === '.pdf' || ext === '.cbz') icon = $r("app.media.my_center_purify_icon");
+
+                    let newItem: FolderAndFileItem = {
+                        title: fileName,
+                        icon: icon,
+                        size: sizeStr,
+                        date: dateStr,
+                        isFolder: false,
+                        path: filePath
+                    };
+                    this.fileList.pushData(newItem);
+                }
+            }
+        } catch(e) {
+            console.error("Failed to load files: " + e);
+        }
+    }
+
+    deleteFile(item: FolderAndFileItem, index: number) {
+        try {
+            if (item.path && fs.accessSync(item.path)) {
+                fs.unlinkSync(item.path);
+                this.fileList.deleteData(index);
+                showMessage("删除成功");
+            }
+        } catch (e) {
+            showMessage("删除失败");
+        }
+    }
+
+    @Builder
+    deleteBuilder(item: FolderAndFileItem, index: number) {
+        Row() {
+            Button("删除")
+                .backgroundColor(Color.Red)
+                .fontColor(Color.White)
+                .width(80)
+                .height("100%")
+                .onClick(() => {
+                    this.deleteFile(item, index);
+                })
         }
     }
 
@@ -87,6 +147,7 @@ struct FileManagement {
                                 data: item
                             })
                         }
+                        .swipeAction({ end: this.deleteBuilder(item, index) })
                     })
                 }
                 .width("100%")

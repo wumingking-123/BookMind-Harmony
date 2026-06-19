@@ -17,7 +17,7 @@ struct AboutUsPage {
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @State isShowQQ: boolean = false
-  @State version: string = "V1.0.0.1"
+  @State version: string = "1.0.0"
   @State first_list: dataItem[] = [
     new dataItem("检查更新", 1),
     new dataItem("更新日志", 2),
@@ -52,56 +52,8 @@ struct AboutUsPage {
     return this.theme?.secondColor || InkPalette.PAPER_WARM;
   }
 
-  firstUrl_list(value: number | string) {
-    switch (value) {
-      case 0:
-        try {
-          const request: Want = {
-            parameters: {
-              bundleName: 'com.legado.app'
-            }
-          };
-          productViewManager.loadProduct(getContext(this) as common.UIAbilityContext, request, {
-            onError: (error: BusinessError) => {
-              hilog.info(0, 'TAG', `loadProduct onError. code is ${error.code}, message is ${error.message}`);
-            }
-          });
-        } catch (err) {
-          const error = err as BusinessError;
-          hilog.error(0, 'TAG', `loadProduct failed. code is ${error.code}, message is ${error.message}`);
-        }
-        break
-      case 1:
-        router.pushUrl({
-          url: "pages/view/myCenter/aboutUs/versionLogPage"
-        })
-        break
-      case 2:
-        break
-    }
-  }
+  // 空的实现
 
-  endUrl_list(value: number | string) {
-    switch (value) {
-      case 0:
-        router.pushUrl({
-          url: "pages/view/myCenter/aboutUs/PrivacyAgreementPage"
-        })
-        break
-      case 1:
-        router.pushUrl({
-          url: "pages/view/myCenter/aboutUs/OpenSourceLicensePage"
-        })
-        break
-      case 2:
-        router.pushUrl({
-          url: "pages/view/myCenter/aboutUs/DisclaimerPage"
-        })
-        break
-      case 3:
-        break
-    }
-  }
 
   build() {
     Column() {
@@ -137,56 +89,70 @@ struct AboutUsPage {
           // Logo/应用图标及版本信息
           Column({ space: InkSpacing.SM }) {
             Image($r('app.media.app_icon'))
-              .width(72)
-              .height(72)
+              .width(84)
+              .height(84)
               .borderRadius(InkRadius.LG)
               .shadow(InkShadow.SOFT)
+              .margin({ bottom: InkSpacing.SM })
+              
             Text('鸿蒙阅读')
-              .fontSize(InkTypography.TITLE)
-              .fontWeight(FontWeight.Medium)
+              .fontSize(InkTypography.TITLE_LARGE)
+              .fontWeight(FontWeight.Bold)
               .fontColor(InkPalette.INK)
+              
             Text(`版本号: ${this.version}`)
-              .fontSize(InkTypography.CAPTION)
+              .fontSize(InkTypography.BODY_SMALL)
               .fontColor(InkPalette.INK_MIST)
           }
           .width('100%')
-          .padding({ top: InkSpacing.XL, bottom: InkSpacing.LG })
+          .padding({ top: InkSpacing.XXL, bottom: InkSpacing.LG })
           .alignItems(HorizontalAlign.Center)
 
-          // 第一组设置
-          this.middleClick(this.first_list, "app.media.ic_public_right", this.version, "first")
+          // 开发人员信息
+          Column({ space: InkSpacing.MD }) {
+            Text('开发人员')
+              .fontSize(InkTypography.TITLE_SMALL)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(InkPalette.INK)
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .margin({ bottom: InkSpacing.XS })
 
-          // 社交媒体等卡片网格
-          Grid() {
-            GridItem() {
-              this.middleBox(0, "app.media.official_website", "官网")
-            }
+            Row({ space: InkSpacing.XL }) {
+              Column({ space: InkSpacing.XS }) {
+                Image($r('app.media.avatar_wang'))
+                  .width(64)
+                  .height(64)
+                  .borderRadius(InkRadius.FULL)
+                  .backgroundColor(this.theme?.secondColor || InkPalette.PAPER_WARM)
+                Text('王振祎')
+                  .fontSize(InkTypography.BODY)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(InkPalette.INK)
+              }
+              .alignItems(HorizontalAlign.Center)
 
-            GridItem() {
-              this.middleBox(1, "app.media.wechat_public_account", "公众号")
+              Column({ space: InkSpacing.XS }) {
+                Image($r('app.media.avatar_huang'))
+                  .width(64)
+                  .height(64)
+                  .borderRadius(InkRadius.FULL)
+                  .backgroundColor(this.theme?.secondColor || InkPalette.PAPER_WARM)
+                Text('黄俊杰')
+                  .fontSize(InkTypography.BODY)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(InkPalette.INK)
+              }
+              .alignItems(HorizontalAlign.Center)
             }
-
-            GridItem() {
-              this.middleBox(2, "app.media.channel", "QQ频道")
-            }
-
-            GridItem() {
-              this.middleBox(3, "app.media.QQ", "QQ群")
-            }
+            .justifyContent(FlexAlign.Center)
+            .width('100%')
           }
-          .columnsTemplate('1fr 1fr 1fr 1fr')
-          .columnsGap(InkSpacing.MD)
-          .height(84)
           .width('100%')
-          .bindSheet($$this.isShowQQ, this.QQDialog(), {
-            height: 280,
-            showClose: false,
-            dragBar: false,
-            backgroundColor: InkPalette.PAPER
-          })
-
-          // 第二组设置
-          this.middleClick(this.end_list, "app.media.ic_public_right", null, "end")
+          .padding(InkSpacing.XL)
+          .backgroundColor(Color.White)
+          .borderRadius(InkRadius.CARD)
+          .shadow(InkShadow.SUBTLE)
 
           Blank(InkSpacing.MASSIVE)
         }
@@ -205,143 +171,6 @@ struct AboutUsPage {
     .backgroundColor(InkPalette.PAPER_EMBEDDED)
   }
 
-  @Builder
-  middleBox(index: number, image: string, text: string) {
-    Column({ space: InkSpacing.XS }) {
-      Image($r(`${image}`))
-        .size({ width: 24, height: 24 })
-        .fillColor(this.getMainColor())
-      Text(text)
-        .maxLines(1)
-        .fontSize(InkTypography.CAPTION)
-        .fontColor(InkPalette.INK_LIGHT)
-    }
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .width("100%")
-    .height(72)
-    .borderRadius(InkRadius.CARD)
-    .backgroundColor(Color.White)
-    .shadow(InkShadow.SUBTLE)
-    .onClick(() => {
-      switch (index) {
-        case 0:
-          break
-        case 1:
-          break
-        case 2:
-          break
-        case 3:
-          this.isShowQQ = true
-          break
-      }
-    })
-  }
+  // 移除旧的 builder
 
-  @Builder
-  middleClick(list: Array<dataItem>, image: string, version: string | null, urlList: string) {
-    Column() {
-      ForEach(list, (item: dataItem, index) => {
-        Column() {
-          Row() {
-            Text(item.title)
-              .fontSize(InkTypography.BODY)
-              .fontColor(InkPalette.INK)
-            Blank()
-            if (version && index === 0) {
-              Text(version)
-                .fontSize(InkTypography.BODY_SMALL)
-                .fontColor(InkPalette.INK_MIST)
-                .margin({ right: InkSpacing.XS })
-            }
-            Image($r(`${image}`))
-              .size({ width: 18, height: 18 })
-              .fillColor(InkPalette.INK_WHISPER)
-          }
-          .width("100%")
-          .height(InkLayout.MIN_TOUCH_TARGET)
-          .onClick(() => {
-            switch (urlList) {
-              case 'first':
-                this.firstUrl_list(index)
-                break
-              case 'end':
-                this.endUrl_list(index)
-                break
-            }
-          })
-
-          if (index < list.length - 1) {
-            Divider()
-              .color(InkPalette.PAPER_WARM)
-              .strokeWidth(0.5)
-          }
-        }
-      })
-    }
-    .padding({ left: InkSpacing.LG, right: InkSpacing.LG })
-    .backgroundColor(Color.White)
-    .borderRadius(InkRadius.CARD)
-    .shadow(InkShadow.SUBTLE)
-  }
-
-  @Builder
-  QQDialog() {
-    Column() {
-      Row()
-        .width(32)
-        .height(4)
-        .borderRadius(2)
-        .backgroundColor(InkPalette.INK_MIST)
-        .margin({ top: InkSpacing.MD })
-
-      Text("QQ群")
-        .fontSize(InkTypography.TITLE_SMALL)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(InkPalette.INK)
-        .width("100%")
-        .textAlign(TextAlign.Center)
-        .padding({ top: InkSpacing.LG, bottom: InkSpacing.MD })
-
-      List() {
-        ForEach(this.qqList, (item: string) => {
-          ListItem() {
-            Row() {
-              Text(item)
-                .fontSize(InkTypography.BODY)
-                .fontColor(InkPalette.INK)
-              Blank()
-              Image($r('app.media.ic_public_right'))
-                .width(18)
-                .height(18)
-                .fillColor(InkPalette.INK_WHISPER)
-            }
-            .width('100%')
-            .height(InkLayout.MIN_TOUCH_TARGET)
-            .padding({ left: InkSpacing.XL, right: InkSpacing.XL })
-          }
-        })
-      }
-      .width('100%')
-      .layoutWeight(1)
-
-      Divider()
-        .color(InkPalette.PAPER_WARM)
-
-      Text('取消')
-        .fontSize(InkTypography.BODY)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(InkPalette.INK_GHOST)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .height(InkLayout.MIN_TOUCH_TARGET)
-        .alignSelf(ItemAlign.Center)
-        .onClick(() => {
-          this.isShowQQ = false
-        })
-    }
-    .width("100%")
-    .height(280)
-    .backgroundColor(InkPalette.PAPER)
-  }
 }

@@ -17,8 +17,6 @@ import {
 } from '../../../common/constants/DesignTokens'
 
 @Component
-@Entry
-@Preview
 export default struct IndexFind {
   private scrollController: Scroller = new Scroller()
   titleArray: string[] = ['小说', '漫画', '有声书']

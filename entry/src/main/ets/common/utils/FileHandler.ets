@@ -114,7 +114,7 @@ export class FileHandler {
       // 如果是 EPUB 文件，尝试提取封面图片
       if (classification.typeName === 'EPUB') {
         try {
-          const epubCover: string = await EpubParser.extractCover(dstPath);
+          const epubCover: string = await EpubParser.extractCover(dstPath, filesDir);
           if (epubCover.length > 0) {
             coverUrl = epubCover;
           }
@@ -192,7 +192,7 @@ export class FileHandler {
       // 如果是 EPUB 文件，尝试提取封面图片
       if (classification.typeName === 'EPUB') {
         try {
-          const epubCover: string = await EpubParser.extractCover(dstPath);
+          const epubCover: string = await EpubParser.extractCover(dstPath, filesDir);
           if (epubCover.length > 0) {
             coverUrl = epubCover;
           }
@@ -276,7 +276,7 @@ export class FileHandler {
     
     if (ext === '.epub') {
       try {
-        return await EpubParser.parse(readFileUrl);
+        return await EpubParser.parse(readFileUrl, getAppFilesDir());
       } catch (err) {
         console.error('EPUB 解析失败: ' + JSON.stringify(err));
         chapters.push(new chaptersItem(1, 'EPUB 解析失败', '1', '文件可能已损坏或格式不受支持。'));

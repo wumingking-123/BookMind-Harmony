@@ -14,15 +14,22 @@ import { Books } from '../../../database/entities/Books';
 import { promptAction } from '@kit.ArkUI';
 import { FileHandler } from '../../../common/utils/FileHandler';
 import { BookContentHolder } from '../../../common/utils/BookContentHolder';
-import { InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow } from '../../../common/constants/DesignTokens';
+import { InkPalette, InkTypography, InkRadius, InkSpacing, InkLayout } from '../../../common/constants/DesignTokens';
+import { ThemeStorageKey } from '../../../common/constants/Theme';
+import { ThemeItem } from '../../../common/model/Theme';
 
+interface BookmarkBookInfo {
+  key: string
+  name: string
+  count: number
+}
 
 @Entry
 @Component
 struct readStatistics {
 
   Column = new ColumnModifier()
-  @State type:number|string=(router.getParams() as dataItem).value
+  @State type: number = 0
   @State read_list:dataItem[]=[
     new dataItem("小说",12),
     new dataItem("漫画",12),
@@ -44,36 +51,57 @@ struct readStatistics {
   @State allBookmarkList: BookMark[] = []
   @State allBooksList: Books[] = []
   @State selectedBookmarkTimes: number[] = []
+  @State selectedBookKey: string = ''
+
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
   @Builder head(){
     Row(){
+      // Left back arrow with 48vp touch target
       Row(){
         Image($r("app.media.return_left"))
-          .size({width:CommonConstants.TITLE_IMG_SIZE,height:CommonConstants.TITLE_IMG_SIZE})
-          .onClick(()=>{
-            router.back()
-          })
-      }.width("33%")
+          .size({width: 24, height: 24})
+          .fillColor(InkPalette.INK)
+      }
+      .width(48)
+      .height(48)
+      .justifyContent(FlexAlign.Start)
+      .alignItems(VerticalAlign.Center)
+      .onClick(()=>{
+        router.back()
+      })
+
+      // Centered title text
+      Text(this.title_list[Number(this.type)] ? this.title_list[Number(this.type)].title : '')
+        .fontSize(InkTypography.TITLE_SMALL)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(InkPalette.INK)
+        .layoutWeight(1)
+        .textAlign(TextAlign.Center)
+
+      // Right action text
       Row(){
-        Text(this.title_list[this.type].title).fontSize(16).fontWeight(600).lineHeight(24)
-      }.width("33%")
-      .justifyContent(FlexAlign.Center)
-      Row(){
-        Text(this.delStatus?"完成":"管理")
+        Text(this.delStatus ? "完成" : "管理")
           .fontSize(14)
-          .fontWeight(500)
-          .lineHeight(22)
-          .fontColor("rgba(0, 0, 0, 0.45)")
-          .onClick(()=>{
-            this.delStatus=!this.delStatus
-            if (!this.delStatus) {
-              this.selectedBookmarkTimes = [];
-              this.bookList.forEach(item => item.status = false);
-            }
-          })
-      }.width("33%").justifyContent(FlexAlign.End)
-    }.width("100%")
-    .justifyContent(FlexAlign.SpaceBetween)
-    .padding({top:12,bottom:12})
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.delStatus ? (this.theme.mainColor || InkPalette.CINNABAR) : InkPalette.INK_LIGHT)
+      }
+      .width(48)
+      .height(48)
+      .justifyContent(FlexAlign.End)
+      .alignItems(VerticalAlign.Center)
+      .onClick(()=>{
+        this.delStatus = !this.delStatus
+        if (!this.delStatus) {
+          this.selectedBookmarkTimes = [];
+          this.bookList.forEach(item => item.status = false);
+        }
+      })
+    }
+    .width("100%")
+    .height(InkLayout.HEADER_HEIGHT)
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: InkSpacing.MD, right: InkSpacing.LG })
   }
 
   @Builder delBottom(){
@@ -106,76 +134,117 @@ struct readStatistics {
     Column(){
       Column(){
         this.head()
-        if (this.type === 2) {
-          // 书签列表
-          if (this.allBookmarkList.length === 0) {
-            Column() {
-              Image($r('app.media.find_empty'))
-                .width(100)
-                .height(100)
-                .opacity(0.6)
-                .margin({ bottom: InkSpacing.LG })
-              Text('暂无书签')
-                .fontSize(InkTypography.BODY)
-                .fontColor(InkPalette.INK_MIST)
+      if (Number(this.type) === 2) {
+        Row() {
+          Text(`共${this.getFilteredBookmarks().length}个书签`)
+            .fontSize(16)
+            .lineHeight(24)
+            .fontWeight(500)
+        }.padding({ top: 12, bottom: 4 })
+        .width("100%")
+        .justifyContent(FlexAlign.Start)
+
+        // 按书筛选 chips
+        if (this.allBookmarkList.length > 0) {
+          Scroll() {
+            Row({ space: 8 }) {
+              Text('全部')
+                .fontSize(13)
+                .fontColor(this.selectedBookKey.length === 0 ? Color.White : "rgba(0, 0, 0, 0.65)")
+                .backgroundColor(this.selectedBookKey.length === 0 ? "rgba(0, 0, 0, 0.75)" : "rgba(0, 0, 0, 0.04)")
+                .borderRadius(16)
+                .height(32)
+                .padding({ left: 14, right: 14 })
+                .onClick(() => {
+                  this.selectedBookKey = '';
+                })
+
+              ForEach(this.getBookmarkBooks(), (bookInfo: BookmarkBookInfo) => {
+                Text(`${bookInfo.name} (${bookInfo.count})`)
+                  .fontSize(13)
+                  .fontColor(this.selectedBookKey === bookInfo.key ? Color.White : "rgba(0, 0, 0, 0.65)")
+                  .backgroundColor(this.selectedBookKey === bookInfo.key ? "rgba(0, 0, 0, 0.75)" : "rgba(0, 0, 0, 0.04)")
+                  .borderRadius(16)
+                  .height(32)
+                  .padding({ left: 14, right: 14 })
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .constraintSize({ maxWidth: 160 })
+                  .onClick(() => {
+                    this.selectedBookKey = bookInfo.key;
+                  })
+              })
             }
-            .width('100%')
-            .layoutWeight(1)
-            .justifyContent(FlexAlign.Center)
-          } else {
-            List() {
-              ForEach(this.allBookmarkList, (item: BookMark, index: number) => {
-                ListItem() {
+            .padding({ left: 16, right: 16 })
+          }
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+          .width('100%')
+          .padding({ top: 4, bottom: 8 })
+        }
+
+        if (this.allBookmarkList.length === 0) {
+          Column() {
+            Image($r('app.media.find_empty'))
+              .width(100)
+              .height(100)
+              .opacity(0.6)
+            Text('暂无书签')
+              .fontSize(14)
+              .fontColor("rgba(0, 0, 0, 0.45)")
+              .margin({ top: 12 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else {
+          Scroll() {
+            Column() {
+              ForEach(this.getFilteredBookmarks(), (item: BookMark, index: number) => {
+                Row() {
                   Row() {
-                    // 1. Cover Image
                     Image(this.getBookCover(item))
                       .size({ width: 60, height: 80 })
-                      .borderRadius(InkRadius.BOOK_COVER)
-                      .margin({ right: 12 })
+                      .alt($r('app.media.icon_book_default_cover_one'))
+                      .objectFit(ImageFit.Cover)
 
-                    // 2. Middle Info
-                    Column({ space: 6 }) {
+                    Column({ space: 12 }) {
                       Text(item.bookName)
-                        .fontSize(InkTypography.BODY_LARGE)
-                        .fontWeight(FontWeight.Bold)
-                        .fontColor(InkPalette.INK)
+                        .fontSize(16)
+                        .lineHeight(24)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-                      Row() {
+                      Column() {
                         Text(item.bookAuthor || '未知作者')
-                          .fontSize(InkTypography.BODY_SMALL)
-                          .fontColor(InkPalette.INK_LIGHT)
-                        Text(' | ')
-                          .fontSize(InkTypography.BODY_SMALL)
-                          .fontColor(InkPalette.INK_MIST)
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
                         Text(item.chapterName || item.bookText || '未知章节')
-                          .fontSize(InkTypography.BODY_SMALL)
-                          .fontColor(InkPalette.CINNABAR_LIGHT)
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
-                          .layoutWeight(1)
-                      }
-                      .width('100%')
+                      }.alignItems(HorizontalAlign.Start)
 
-                      if (item.content) {
-                        Text(item.content)
-                          .fontSize(InkTypography.CAPTION)
-                          .fontColor(InkPalette.INK_MEDIUM)
-                          .lineHeight(InkTypography.CAPTION * InkTypography.LINE_HEIGHT_NORMAL)
+                      if (this.cleanBookmarkContent(item.content).length > 0) {
+                        Text(this.cleanBookmarkContent(item.content))
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
                           .maxLines(2)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
-                          .padding(6)
-                          .backgroundColor(InkPalette.PAPER_WARM)
-                          .borderRadius(InkRadius.XS)
-                          .width('100%')
                       }
                     }
-                    .layoutWeight(1)
                     .alignItems(HorizontalAlign.Start)
+                    .width("50%")
+                    .margin({ left: 12 })
 
-                    // 3. Right Status / Controls
-                    Column() {
+                    Column({ space: 30 }) {
                       if (this.delStatus) {
                         Checkbox({ name: 'bookmark_' + index })
                           .select(this.selectedBookmarkTimes.includes(item.time))
@@ -191,88 +260,229 @@ struct readStatistics {
                             }
                           })
                       } else {
-                        Text(new Date(item.time).toLocaleDateString())
-                          .fontSize(InkTypography.CAPTION)
-                          .fontColor(InkPalette.INK_MIST)
-                          .margin({ bottom: 12 })
+                        Text(this.formatDate(item.time))
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
+                      }
 
-                        Image($r('app.media.delete'))
-                          .width(16)
-                          .height(16)
-                          .fillColor(InkPalette.INK_MIST)
-                          .gesture(
-                            TapGesture()
-                              .onAction(async () => {
-                                let success = await bookMarkUtils.deleteBookMark(item.time);
-                                if (success) {
-                                  this.allBookmarkList = this.allBookmarkList.filter(b => b.time !== item.time);
-                                  this.title_list = [
-                                    new dataItem("读过", this.title_list[0].value),
-                                    new dataItem("读完", this.title_list[1].value),
-                                    new dataItem("书签", this.allBookmarkList.length),
-                                  ];
-                                }
-                              })
-                          )
+                      Row() {
+                        Text("第")
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor(Color.Black)
+                        Text((item.chapterIndex + 1).toString())
+                          .fontSize(24)
+                          .lineHeight(24)
+                          .fontWeight(600)
+                        Text("章")
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor(Color.Black)
                       }
                     }
                     .alignItems(HorizontalAlign.End)
                     .justifyContent(FlexAlign.SpaceBetween)
+                    .width("25%")
                     .height(80)
-                    .margin({ left: 8 })
-                  }
-                  .padding(12)
-                  .width('100%')
-                  .backgroundColor(InkPalette.PAPER_PURE)
-                  .borderRadius(InkRadius.CARD)
-                  .shadow(InkShadow.SUBTLE)
-                  .onClick(async () => {
-                    if (this.delStatus) {
-                      if (this.selectedBookmarkTimes.includes(item.time)) {
-                        this.selectedBookmarkTimes = this.selectedBookmarkTimes.filter(t => t !== item.time);
-                      } else {
-                        this.selectedBookmarkTimes.push(item.time);
-                      }
-                      return;
-                    }
-                    let book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim() && b.author === item.bookAuthor);
-                    if (!book) {
-                      book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim());
-                    }
-                    if (book) {
-                      promptAction.showToast({ message: '正在加载书籍...', duration: 1000 });
-                      let temp = await FileHandler.readFile(book.bookUrl || '');
-                      BookContentHolder.setChapters(temp);
-                      router.pushUrl({
-                        url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
-                          ? 'pages/view/Reader/ReaderPageKit'
-                          : 'pages/view/Reader/ReaderPage2',
-                        params: {
-                          bookData: book,
-                          clickBookChapter: item.chapterIndex
-                        }
-                      });
-                    } else {
-                      promptAction.showToast({ message: '未找到相关书籍，可能已被删除', duration: 1500 });
-                    }
-                  })
+                  }.padding(16).width("100%")
                 }
-                .padding({ bottom: 12 })
+                .width(CommonConstants.FULL_WIDTH)
+                .backgroundColor(PublicConstants.THEME_COLOR_WHITE)
+                .borderRadius(12)
+                .margin({ bottom: 16 })
+                .clip(true)
+                .onClick(async () => {
+                  if (this.delStatus) {
+                    if (this.selectedBookmarkTimes.includes(item.time)) {
+                      this.selectedBookmarkTimes = this.selectedBookmarkTimes.filter(t => t !== item.time);
+                    } else {
+                      this.selectedBookmarkTimes.push(item.time);
+                    }
+                    return;
+                  }
+                  let book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim() && b.author === item.bookAuthor);
+                  if (!book) {
+                    book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim());
+                  }
+                  if (book) {
+                    promptAction.showToast({ message: '正在加载书籍...', duration: 1000 });
+                    let temp = await FileHandler.readFile(book.bookUrl || '');
+                    BookContentHolder.setChapters(temp);
+                    router.pushUrl({
+                      url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                        ? 'pages/view/Reader/ReaderPageKit'
+                        : 'pages/view/Reader/ReaderPage2',
+                      params: {
+                        bookData: book,
+                        clickBookChapter: item.chapterIndex,
+                        clickBookPage: item.chapterPos
+                      }
+                    });
+                  } else {
+                    promptAction.showToast({ message: '未找到相关书籍，可能已被删除', duration: 1500 });
+                  }
+                })
               })
             }
-            .width('100%')
-            .layoutWeight(1)
-            .padding({ top: 8, left: InkSpacing.LG, right: InkSpacing.LG })
-          }
-        } else {
-          readTabs({
-            read_list:this.read_list
-          })
-          readStatisticsDataList({
-            dateValue:this.dateValue,
-            bookList:this.bookList
-          })
+          }.scrollable(ScrollDirection.Vertical)
+          .scrollBar(BarState.Off)
+          .friction(0.6)
+          .edgeEffect(EdgeEffect.None)
+          .size({ width: "100%", height: "80%" })
+          .padding({ bottom: 50 })
+          .align(Alignment.TopStart)
         }
+      } else {
+        // 读过 / 读完
+        Row() {
+          Text(Number(this.type) === 1 ? `共读完 ${this.getFilteredBookList().length} 本` : `共读过 ${this.getFilteredBookList().length} 本`)
+            .fontSize(16)
+            .lineHeight(24)
+            .fontWeight(500)
+        }.padding({ top: 12, bottom: 4 })
+        .width("100%")
+        .justifyContent(FlexAlign.Start)
+
+        if (this.getFilteredBookList().length === 0) {
+          Column() {
+            Image($r('app.media.find_empty'))
+              .width(100)
+              .height(100)
+              .opacity(0.6)
+            Text(Number(this.type) === 1 ? '暂无读完的书籍' : '暂无阅读记录')
+              .fontSize(14)
+              .fontColor("rgba(0, 0, 0, 0.45)")
+              .margin({ top: 12 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else {
+          Scroll() {
+            Column() {
+              ForEach(this.getFilteredBookList(), (book: readBookList, index: number) => {
+                Row() {
+                  Row() {
+                    Image(book.coverImage)
+                      .size({ width: 60, height: 80 })
+                      .alt($r('app.media.icon_book_default_cover_one'))
+                      .objectFit(ImageFit.Cover)
+
+                    Column({ space: 8 }) {
+                      Text(book.bookName)
+                        .fontSize(16)
+                        .lineHeight(24)
+                        .fontWeight(FontWeight.Medium)
+                        .maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+                      Column() {
+                        Text(book.author || '未知作者')
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
+                        Text(`累计阅读 ${book.readingDuration[0]}小时${book.readingDuration[1]}分钟`)
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
+                        if (book.bookmark > 0) {
+                          Text(`书签 ${book.bookmark} 个`)
+                            .fontSize(12)
+                            .fontWeight(400)
+                            .lineHeight(20)
+                            .fontColor("rgba(0, 0, 0, 0.45)")
+                        }
+                      }.alignItems(HorizontalAlign.Start)
+                    }
+                    .alignItems(HorizontalAlign.Start)
+                    .width("50%")
+                    .margin({ left: 12 })
+
+                    Column({ space: 12 }) {
+                      if (this.delStatus) {
+                        Checkbox({ name: 'book_' + index })
+                          .select(book.status)
+                          .selectedColor(0xed6f21)
+                          .shape(CheckBoxShape.CIRCLE)
+                          .onChange((value: boolean) => {
+                            book.status = value
+                          })
+                      } else {
+                        Text(this.formatDate(book.dateTime.getTime()))
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
+                      }
+
+                      Row() {
+                        Text(Number(this.type) === 1 ? "已读" : "读到")
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor(Color.Black)
+                        Text(book.schedule.toString())
+                          .fontSize(24)
+                          .lineHeight(24)
+                          .fontWeight(600)
+                        Text("%")
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor(Color.Black)
+                      }
+                    }
+                    .alignItems(HorizontalAlign.End)
+                    .justifyContent(FlexAlign.SpaceBetween)
+                    .width("25%")
+                    .height(80)
+                  }.padding(16).width("100%")
+                }
+                .width(CommonConstants.FULL_WIDTH)
+                .backgroundColor(PublicConstants.THEME_COLOR_WHITE)
+                .borderRadius(12)
+                .margin({ bottom: 16 })
+                .clip(true)
+                .onClick(async () => {
+                  if (this.delStatus) {
+                    book.status = !book.status
+                    return
+                  }
+                  let bookEntity = this.allBooksList.find((b: Books) => b.bookName === book.bookName)
+                  if (bookEntity) {
+                    promptAction.showToast({ message: '正在加载书籍...', duration: 1000 });
+                    let temp = await FileHandler.readFile(bookEntity.bookUrl || '');
+                    BookContentHolder.setChapters(temp);
+                    router.pushUrl({
+                      url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                        ? 'pages/view/Reader/ReaderPageKit'
+                        : 'pages/view/Reader/ReaderPage2',
+                      params: {
+                        bookData: bookEntity,
+                        clickBookChapter: 0
+                      }
+                    });
+                  } else {
+                    promptAction.showToast({ message: '未找到相关书籍，可能已被删除', duration: 1500 });
+                  }
+                })
+              })
+            }
+          }.scrollable(ScrollDirection.Vertical)
+          .scrollBar(BarState.Off)
+          .friction(0.6)
+          .edgeEffect(EdgeEffect.None)
+          .size({ width: "100%", height: "80%" })
+          .padding({ bottom: 50 })
+          .align(Alignment.TopStart)
+        }
+      }
       }.attributeModifier(this.Column)
       .height(CommonConstants.FULL_HEIGHT)
       .width(CommonConstants.FULL_WIDTH)
@@ -283,22 +493,62 @@ struct readStatistics {
 
   }
 
-  // 查找书籍封面辅助方法
+  // 按类型过滤书单：type=1 读完，type=0 读过
+  getFilteredBookList(): readBookList[] {
+    if (Number(this.type) === 1) {
+      return this.bookList.filter((b: readBookList) => b.schedule >= 100);
+    }
+    return this.bookList;
+  }
+
+  // 获取书签涉及的书本列表（去重）
+  getBookmarkBooks(): BookmarkBookInfo[] {
+    let map: Map<string, BookmarkBookInfo> = new Map();
+    for (let bm of this.allBookmarkList) {
+      let key = bm.bookName + '|' + bm.bookAuthor;
+      let existing = map.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        let info: BookmarkBookInfo = { key: key, name: bm.bookName, count: 1 };
+        map.set(key, info);
+      }
+    }
+    return Array.from(map.values());
+  }
+
+  // 按选中的书筛选书签
+  getFilteredBookmarks(): BookMark[] {
+    if (this.selectedBookKey.length === 0) {
+      return this.allBookmarkList;
+    }
+    return this.allBookmarkList.filter(bm => (bm.bookName + '|' + bm.bookAuthor) === this.selectedBookKey);
+  }
+
+  // 清理书签内容中的 [img:] 占位符
+  cleanBookmarkContent(content: string): string {
+    if (!content) return '';
+    return content.replace(/\[img:.*?\]/g, '').replace(/\n/g, ' ').trim();
+  }
+
+  // 查找书籍封面辅助方法 — 与书架 BookInfos 逻辑一致，直接用 coverUrl
   getBookCover(item: BookMark): ResourceStr {
     if (!item || !item.bookName) {
-      return $r("app.media.book_cover");
+      return $r("app.media.icon_book_default_cover_one");
     }
     let book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim() && b.author === item.bookAuthor);
     if (!book) {
       book = this.allBooksList.find(b => b.bookName && b.bookName.trim() === item.bookName.trim());
     }
-    if (book) {
-      let cover = book.coverUrl || book.cover;
-      if (cover && cover !== 'null' && cover !== 'undefined' && cover.trim() !== '') {
-        return cover;
-      }
+    if (book && book.coverUrl && book.coverUrl !== 'null' && book.coverUrl !== 'undefined' && book.coverUrl.trim() !== '') {
+      return book.coverUrl;
     }
-    return $r("app.media.book_cover");
+    return $r("app.media.icon_book_default_cover_one");
+  }
+
+  formatDate(time: number): string {
+    let date = new Date(time);
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
   }
 
   //删除列表
@@ -309,13 +559,17 @@ struct readStatistics {
     this.clearInfoDel?.close()
   }
   async onAccept(){
-    if (this.type === 2) {
+    if (Number(this.type) === 2) {
       // 批量删除书签
       for (let time of this.selectedBookmarkTimes) {
         await bookMarkUtils.deleteBookMark(time);
       }
       this.allBookmarkList = this.allBookmarkList.filter(item => !this.selectedBookmarkTimes.includes(item.time));
       this.selectedBookmarkTimes = [];
+      // 如果当前筛选的书已无书签，重置筛选
+      if (this.selectedBookKey.length > 0 && !this.allBookmarkList.some(bm => (bm.bookName + '|' + bm.bookAuthor) === this.selectedBookKey)) {
+        this.selectedBookKey = '';
+      }
       this.title_list = [
         new dataItem("读过", this.title_list[0].value),
         new dataItem("读完", this.title_list[1].value),
@@ -365,7 +619,7 @@ struct readStatistics {
     offset:{dx:0,dy:20},
     customStyle: true
   })
-  async aboutToAppear() {
+  async loadData() {
     console.log(this.type+"------")
     let allBooks = await booksDao.search();
     let records = await readRecordDao.getAllRecords();
@@ -394,7 +648,8 @@ struct readStatistics {
 
         let hrs = Math.floor(r.readTime / 3600);
         let mins = Math.floor((r.readTime % 3600) / 60);
-        let cover = book.coverUrl ? book.coverUrl : $r("app.media.book_cover");
+        let coverStr = book.coverUrl;
+        let cover = (coverStr && coverStr !== 'null' && coverStr !== 'undefined' && coverStr.trim() !== '') ? coverStr : $r("app.media.icon_book_default_cover_one");
         let bookAuthor = book.author || '未知';
 
         let schedule = 0;
@@ -417,6 +672,30 @@ struct readStatistics {
       new dataItem("读完", newList.filter(b => b.schedule >= 100).length),
       new dataItem("书签", allBookmarks.length),
     ];
+  }
+
+  onPageShow() {
+    try {
+      const params = router.getParams() as Record<string, Object>;
+      if (params && params.value !== undefined) {
+        this.type = params.value as number;
+      }
+    } catch (e) {
+      console.error('Failed to get router params in readStatistics onPageShow:', e);
+    }
+    this.loadData();
+  }
+
+  aboutToAppear() {
+    try {
+      const params = router.getParams() as Record<string, Object>;
+      if (params && params.value !== undefined) {
+        this.type = params.value as number;
+      }
+    } catch (e) {
+      console.error('Failed to get router params in readStatistics aboutToAppear:', e);
+    }
+    this.loadData();
   }
 
 }
