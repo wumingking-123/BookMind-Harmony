@@ -49,7 +49,19 @@
       "Bash(curl *)",
       "WebFetch(domain:www.fushucun.com)",
       "Bash(iconv -f gb2312 -t utf-8)",
-      "WebFetch(domain:www.yysk.net)"
+      "WebFetch(domain:www.yysk.net)",
+      "Bash(pandoc \"C:/Users/31163/Desktop/232019班移动应用开发技术大作业：鸿蒙选题及要求.docx\" -o /tmp/requirements.md)",
+      "Bash(node create-ppt.js)",
+      "Bash(node gen_ppt.js)",
+      "Bash(npm root *)",
+      "Bash(npm list *)",
+      "Bash(node gen_pptx.js)",
+      "Bash(where soffice *)",
+      "Read(//c/Program Files/LibreOffice/program/**)",
+      "Bash(node gen_pptx_v2.js)",
+      "Bash(node gen_pptx_v3.js)",
+      "Bash(node gen_pptx_final.js)",
+      "Bash(node *)"
     ]
   }
 }

@@ -176,6 +176,11 @@ export class ContentAnalysis {
    * 清理内容
    */
   private cleanContent(content: string): string {
+    // 去除网页常见的页码标记（如 "第(1/3)页", "1/3", "[1/3]" 等）
+    content = content.replace(/第?\s*\(\s*\d+\s*\/\s*\d+\s*\)\s*页?/g, '')
+    content = content.replace(/^\s*\d+\s*\/\s*\d+\s*$/gm, '')
+    content = content.replace(/^\s*\[\s*\d+\s*\/\s*\d+\s*\]\s*$/gm, '')
+
     // 去除多余空行
     content = content.replace(/\n{3,}/g, '\n\n');
 

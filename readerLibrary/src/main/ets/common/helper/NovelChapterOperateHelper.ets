@@ -6,26 +6,21 @@ export class NovelChapterOperateHelper {
       return null;
     }
     let curChapter = chapterList[chapterIndex];
-    if (!curChapter || !curChapter.chapterPageList) {
+    if (!curChapter || !curChapter.chapterPageList || curChapter.chapterPageList.length === 0) {
       return null;
     }
-    if (chapterIndex >= chapterList.length - 1) {
-      if (pageIndex >= curChapter.chapterPageList.length - 1) {
-        return null;
-      } else {
-        return [chapterIndex, pageIndex + 1];
+    if (pageIndex >= curChapter.chapterPageList.length - 1) {
+      // 当前章节最后一页 → 跳下一章首页
+      if (chapterIndex >= chapterList.length - 1) {
+        return null; // 全书最后
       }
-    } else {
-      if (pageIndex >= curChapter.chapterPageList.length - 1) {
-        let nextChapter = chapterList[chapterIndex + 1];
-        if (!nextChapter) {
-          return null;
-        }
-        return [chapterIndex + 1, 0];
-      } else {
-        return [chapterIndex, pageIndex + 1];
+      let nextChapter = chapterList[chapterIndex + 1];
+      if (!nextChapter || !nextChapter.chapterPageList || nextChapter.chapterPageList.length === 0) {
+        return null; // 下一章还没加载
       }
+      return [chapterIndex + 1, 0];
     }
+    return [chapterIndex, pageIndex + 1];
   }
 
   static prePageIndex(chapterList: ReaderChapterItem[], chapterIndex: number, pageIndex: number): number[] | null {
@@ -33,26 +28,20 @@ export class NovelChapterOperateHelper {
       return null;
     }
     let curChapter = chapterList[chapterIndex];
-    if (!curChapter || !curChapter.chapterPageList) {
+    if (!curChapter || !curChapter.chapterPageList || curChapter.chapterPageList.length === 0) {
       return null;
     }
-    if (chapterIndex <= 0) {
-      if (pageIndex <= 0) {
-        return null;
-      } else {
-        return [chapterIndex, pageIndex - 1];
+    if (pageIndex <= 0) {
+      // 当前章节第一页 → 跳上一章尾页
+      if (chapterIndex <= 0) {
+        return null; // 全书开头
       }
-    } else {
-      if (pageIndex <= 0) {
-        let preChapter = chapterList[chapterIndex - 1];
-        if (!preChapter) {
-          return null;
-        }
-        let prePageIdx = (preChapter.chapterPageList && preChapter.chapterPageList.length > 0) ? preChapter.chapterPageList.length - 1 : 0;
-        return [chapterIndex - 1, prePageIdx];
-      } else {
-        return [chapterIndex, pageIndex - 1];
+      let preChapter = chapterList[chapterIndex - 1];
+      if (!preChapter || !preChapter.chapterPageList || preChapter.chapterPageList.length === 0) {
+        return null; // 上一章还没加载
       }
+      return [chapterIndex - 1, preChapter.chapterPageList.length - 1];
     }
+    return [chapterIndex, pageIndex - 1];
   }
 }

@@ -40,12 +40,13 @@ export struct SearchBookItem {
 
         //书籍描述
         Text(this.book.intro)
-          .size({width:200,height:40})
+          .layoutWeight(1)
           .fontSize(14)
           .maxLines(2)
           .fontColor(this.fontColor)
           .textOverflow({overflow:TextOverflow.Ellipsis})
       }.alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
     }
     .onClick(()=>{
       clickUtil.preventClick(()=>{

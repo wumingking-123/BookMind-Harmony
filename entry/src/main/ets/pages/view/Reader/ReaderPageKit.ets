@@ -84,6 +84,13 @@ struct ReaderPageKit {
       console.error('BookContentHolder is empty, no chapters to display');
       return;
     }
+
+    // 注册内容解析回调——在线书籍的章节URL需要通过此回调解析为正文
+    const bookSource = BookContentHolder.getBookSource()
+    if (bookSource) {
+      BookContentHolder.resolveContent = (url: string) => BookContentHolder.resolveChapterContent(url)
+    }
+
     this.chapterList = rawFile.map((value) => {
       return new ReaderChapterItem(value.number, value.title, value.chapterTitleNumber, value.content);
     })

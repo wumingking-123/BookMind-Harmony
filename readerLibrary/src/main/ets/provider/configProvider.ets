@@ -118,7 +118,21 @@ struct ReaderSourceProvider {
       clearTimeout(this.configChangeTimeout);
     }
     this.configChangeTimeout = setTimeout(() => {
-      this.forceCalChapterContent()
+      // 只重算当前章节——前后章等用户翻到时再懒计算，避免设置变更卡顿
+      let width = this.displaySize[0];
+      let height = this.displaySize[1];
+      if (width !== 0 && height !== 0 && this.chapterList.length !== 0) {
+        // 标记前后章需要重算（清空分页数据，下次翻到时自动重算）
+        if (this.currentChapterIndex > 0 && this.chapterList[this.currentChapterIndex - 1]) {
+          this.chapterList[this.currentChapterIndex - 1].chapterPageList = []
+        }
+        if (this.currentChapterIndex < this.chapterList.length - 1 && this.chapterList[this.currentChapterIndex + 1]) {
+          this.chapterList[this.currentChapterIndex + 1].chapterPageList = []
+        }
+        // 只强制重算当前章
+        this.calContentOfTargetChapter(width, height, this.currentChapterIndex,
+          this.fontSize, this.lineHeightRatio, true, true, false);
+      }
     }, 300);
   }
 
@@ -203,11 +217,26 @@ struct ReaderSourceProvider {
             BookContentHolder.resolveContent(content).then((resolved: string) => {
               this.fetchingChapters.delete(chapterIndex)
               if (resolved && resolved.length > 0) {
+                console.log('[calContentOfTargetChapter] chapter ' + chapterIndex + ' resolved, length: ' + resolved.length)
                 this.chapterList[chapterIndex].content = resolved
-                this.chapterList[chapterIndex].paragraphList = []
+                this.chapterList[chapterIndex].paragraphList = resolved
+                  .split('\n')
+                  .map((value: string) => value.trim())
+                  .filter((value: string) => value.length > 0)
+                  .map((value: string) => value + '\n')
                 this.chapterList[chapterIndex].chapterPageList = []
                 this.forceCalChapterContent()
+                setTimeout(() => { this.forceCalChapterContent() }, 300)
+              } else {
+                console.warn('[calContentOfTargetChapter] chapter ' + chapterIndex + ' resolved but empty')
+                this.chapterList[chapterIndex].chapterPageList = []
+                this.chapterList = Array.from(this.chapterList)
               }
+            }).catch((e: Error) => {
+              this.fetchingChapters.delete(chapterIndex)
+              console.error('[calContentOfTargetChapter] chapter ' + chapterIndex + ' fetch error: ' + e.message)
+              this.chapterList[chapterIndex].chapterPageList = []
+              this.chapterList = Array.from(this.chapterList)
             })
           }
           return

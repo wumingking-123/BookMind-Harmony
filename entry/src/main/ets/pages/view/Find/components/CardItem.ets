@@ -14,7 +14,7 @@ export  struct CardItem {
 
   build() {
     Row() {
-      Image(this.item.coverUrl ?? $r('app.media.no_record'))
+      Image(this.item.coverUrl && this.item.coverUrl.length > 0 ? this.item.coverUrl : $r('app.media.no_record'))
         .alt($r('app.media.find_empty'))
         .width(63)
         .height(84)
@@ -22,10 +22,9 @@ export  struct CardItem {
         .borderRadius(4)
         .margin({ right: 12 })
 
-      Column() {
+      Column({ space: 4 }) {
         Text(this.item.name)
           .fontSize(16)
-          .height(24)
           .lineHeight(24)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -34,8 +33,18 @@ export  struct CardItem {
           Text(this.item.kind)
             .fontSize(12)
             .fontColor('#73000000')
-            .height(20)
             .lineHeight(20)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+
+        if (this.item.lastChapter) {
+          Text(this.item.lastChapter)
+            .fontSize(12)
+            .fontColor('#4D000000')
+            .lineHeight(18)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
       }
       .alignItems(HorizontalAlign.Start)
@@ -43,7 +52,8 @@ export  struct CardItem {
       .layoutWeight(1)
     }
     .width('100%')
-    .padding({ top: 40 })
+    .height(100)
+    .padding({ left: 16, right: 16 })
     .onClick(() => {
       clickUtil.preventClick(()=>{
         router.pushUrl({

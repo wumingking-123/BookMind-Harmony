@@ -831,12 +831,12 @@ struct BookDetailPage {
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Blank(4)
-
           Row({ space: InkSpacing.XS }) {
             Text(this.bookData.author ?? '未知作者')
               .fontSize(InkTypography.CAPTION)
               .fontColor('#80FFFFFF')
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
             Image($r('app.media.ic_public_right'))
               .width(14)
               .height(14)
