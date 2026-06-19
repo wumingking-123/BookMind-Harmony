@@ -9,6 +9,7 @@ import { buffer } from '@kit.ArkTS'
 import { Books } from '../../database/entities/Books';
 import booksUtil from './booksUtils';
 import { EpubParser } from './EpubParser';
+import { ComicParser } from './ComicParser';
 
 // 延迟获取沙箱路径，避免模块顶层 getContext 不可用
 function getAppFilesDir(): string {
@@ -265,8 +266,23 @@ export class FileHandler {
     
     const mangaExts = ['.cbz', '.cbr', '.cb7'];
     if (mangaExts.includes(ext)) {
-      chapters.push(new chaptersItem(1, '漫画分卷', '1', '漫画画册已载入。'));
-      return chapters;
+      if (ext === '.cbz') {
+        try {
+          return await ComicParser.parse(readFileUrl, getAppFilesDir());
+        } catch (err) {
+          console.error('CBZ 解析失败: ' + JSON.stringify(err));
+          chapters.push(new chaptersItem(1, 'CBZ 解析失败', '1', '文件可能已损坏或压缩格式不受支持。'));
+          return chapters;
+        }
+      }
+      if (ext === '.cbr') {
+        chapters.push(new chaptersItem(1, 'CBR 格式暂不支持', '1', 'CBR (RAR 压缩) 格式当前无原生解压库支持。请将 .cbr 文件重命名为 .zip 后重新导入，或使用 CBZ 格式。'));
+        return chapters;
+      }
+      if (ext === '.cb7') {
+        chapters.push(new chaptersItem(1, 'CB7 格式暂不支持', '1', 'CB7 (7z 压缩) 格式当前无原生解压库支持。请将 .cb7 文件重命名为 .zip 后重新导入，或使用 CBZ 格式。'));
+        return chapters;
+      }
     }
     
     if (ext === '.pdf') {
