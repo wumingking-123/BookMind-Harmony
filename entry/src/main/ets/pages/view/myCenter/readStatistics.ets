@@ -33,7 +33,6 @@ struct readStatistics {
   @State read_list:dataItem[]=[
     new dataItem("小说",12),
     new dataItem("漫画",12),
-    new dataItem("有声书",12),
   ]
   @State title_list:dataItem[]=[
     new dataItem("读过",12),
@@ -71,15 +70,10 @@ struct readStatistics {
         router.back()
       })
 
-      // Centered title text
-      Text(this.title_list[Number(this.type)] ? this.title_list[Number(this.type)].title : '')
-        .fontSize(InkTypography.TITLE_SMALL)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(InkPalette.INK)
-        .layoutWeight(1)
-        .textAlign(TextAlign.Center)
+       // Centered title text removed — content area already shows the title
+       Blank()
 
-      // Right action text
+       // Right action text
       Row(){
         Text(this.delStatus ? "完成" : "管理")
           .fontSize(14)

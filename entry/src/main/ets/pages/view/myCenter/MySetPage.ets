@@ -1,6 +1,5 @@
 import MySetConstants from '../../../common/constants/MySetConstants'
 import { SetList, SetGroupList } from '../../../componets/dataList/SetListGroup'
-import { SetHead } from '../../../componets/myset/SetHead'
 import { SetListView } from '../../../componets/myset/SetListView'
 import router from '@ohos.router'
 import { ThemeStorageKey } from '../../../common/constants/Theme'
@@ -8,54 +7,42 @@ import { ThemeItem } from '../../../common/model/Theme'
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
 } from '../../../common/constants/DesignTokens'
+import { window } from '@kit.ArkUI'
 
 @Entry
 @Component
 struct MySetPage {
   @State isShowPreDon: boolean = false
-  @State isShowLanguage: boolean = false
 
   @StorageLink(MySetConstants.SET_REFRESH) setRefresh: boolean = true
   @StorageLink(MySetConstants.SET_JUMP) setJump: boolean = true
   @StorageLink(MySetConstants.SET_REPLACE) setReplace: boolean = true
   @StorageLink(MySetConstants.SET_TIP) setTip: boolean = true
-  @StorageLink(MySetConstants.SET_IMG_ANTI) setImgAnti: boolean = true
-  @StorageLink(MySetConstants.SET_HEAD) setHead: boolean = true
-  @StorageLink(MySetConstants.SET_SEARCH) setSearch: boolean = true
   @StorageLink(MySetConstants.SET_PRE_DOWNLOAD) select: number = 10
-  @StorageLink(MySetConstants.SET_LANGUAGE) selectLanguage: string = '跟随系统'
-  // 主题颜色
+  @StorageLink('isNightMode') isNightMode: boolean = false
+  @StorageLink('setKeepScreenOn') setKeepScreenOn: boolean = false
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
 
   private tempNum: number = 10
   private preDow: string = '预先下载' + this.select + '章正文'
   private fruits: string[] = getRandomStringArray()
 
-  @State languageList: string[] = ['跟随系统', '简体中文', '繁体中文', '英文']
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
 
-  // 书架设置列表
-  @State bookSetList: SetList[] = [
+  // 阅读设置列表
+  @State readingSetList: SetList[] = [
+    new SetList(false, '夜间模式', this.isNightMode, '', '全局切换日间/夜间显示', 'isNightMode'),
+    new SetList(false, '阅读时屏幕常亮', this.setKeepScreenOn, '', '阅读界面保持屏幕常亮', 'setKeepScreenOn'),
     new SetList(false, '自动刷新', this.setRefresh, '', '打开软件时自动更新书籍', MySetConstants.SET_REFRESH),
     new SetList(false, '自动跳转最近阅读', this.setJump, '', '关闭将以底部弹窗形式提示', MySetConstants.SET_JUMP),
     new SetList(false, '默认启用替换净化', this.setReplace, '', '新加入书架的书是否启用替换净化', MySetConstants.SET_REPLACE),
-    new SetList(false, '返回时提示放入书架', this.setTip, '', '', MySetConstants.SET_TIP)
+    new SetList(false, '返回时提示放入书架', this.setTip, '', '', MySetConstants.SET_TIP),
   ]
 
   // 缓存下载设置列表
   @State cacheSetList: SetList[] = [
-    new SetList(true, '书籍保存位置', true, '', '打开软件时自动更新书籍', MySetConstants.SET_BOOK_SAVE),
     new SetList(true, '预下载', true, this.preDow, '', MySetConstants.SET_PRE_DOWNLOAD),
-    new SetList(true, '图片缓存', true, '当前最大缓存50MB', '', MySetConstants.SET_IMG_CACHE),
-    new SetList(false, '图片抗锯齿', this.setImgAnti, '', '', MySetConstants.SET_IMG_ANTI)
-  ]
-
-  // 其他设置列表
-  @State otherSetList: SetList[] = [
-    new SetList(false, '全程响应耳机按键', this.setHead, '', '即使退出也响应耳机按键', MySetConstants.SET_HEAD),
-    new SetList(false, '文字操作显示搜索', this.setSearch, '', '长按文字在操作菜单中显示阅读搜索', MySetConstants.SET_SEARCH),
-    new SetList(true, '语言', true, '跟随系统', '', MySetConstants.SET_LANGUAGE),
   ]
 
   // AI 阅读设置列表
@@ -65,54 +52,32 @@ struct MySetPage {
 
   // 设置分组
   @State setGroupList: SetGroupList[] = [
-    new SetGroupList('书架', this.bookSetList),
+    new SetGroupList('阅读', this.readingSetList),
     new SetGroupList('缓存下载', this.cacheSetList),
     new SetGroupList('AI 阅读', this.aiSetList),
-    new SetGroupList('其他', this.otherSetList)
   ]
 
-  // 定义分组设置头部
-  @Builder itemHead(text: string) {
-    Text(text)
-      .fontSize(InkTypography.CAPTION)
-      .fontColor(InkPalette.INK_GHOST)
-      .fontWeight(FontWeight.Medium)
-      .letterSpacing(0.5)
-      .width('100%')
-      .padding({
-        left: InkSpacing.XL + InkSpacing.LG,
-        right: InkSpacing.XL,
-        top: InkSpacing.XL,
-        bottom: InkSpacing.SM
-      })
-      .backgroundColor(InkPalette.PAPER_EMBEDDED)
-  }
-
   aboutToAppear() {
-    // 确保列表 UI 状态在页面显示时与持久化存储完美同步
-    this.bookSetList[0].toggleStatus = this.setRefresh
-    this.bookSetList[1].toggleStatus = this.setJump
-    this.bookSetList[2].toggleStatus = this.setReplace
-    this.bookSetList[3].toggleStatus = this.setTip
+    this.readingSetList[0].toggleStatus = this.isNightMode
+    this.readingSetList[1].toggleStatus = this.setKeepScreenOn
+    this.readingSetList[2].toggleStatus = this.setRefresh
+    this.readingSetList[3].toggleStatus = this.setJump
+    this.readingSetList[4].toggleStatus = this.setReplace
+    this.readingSetList[5].toggleStatus = this.setTip
 
     this.preDow = '预先下载' + this.select + '章正文'
-    this.cacheSetList[1].rightText = this.preDow
-    this.cacheSetList[3].toggleStatus = this.setImgAnti
-
-    this.otherSetList[0].toggleStatus = this.setHead
-    this.otherSetList[1].toggleStatus = this.setSearch
-    this.otherSetList[2].rightText = this.selectLanguage
+    this.cacheSetList[0].rightText = this.preDow
   }
 
   build() {
     Column() {
-      // 标题栏 — 墨韵风格
+      // 标题栏
       Row() {
         Row() {
           Image($r('app.media.ic_public_return_left'))
             .width(24)
             .height(24)
-            .fillColor(InkPalette.INK)
+            .fillColor(this.isNightMode ? '#EDE4D3' : InkPalette.INK)
         }
         .width(InkLayout.MIN_TOUCH_TARGET)
         .height(InkLayout.MIN_TOUCH_TARGET)
@@ -124,7 +89,7 @@ struct MySetPage {
         Text('设置')
           .fontSize(InkTypography.TITLE)
           .fontWeight(FontWeight.Medium)
-          .fontColor(InkPalette.INK)
+          .fontColor(this.isNightMode ? '#EDE4D3' : InkPalette.INK)
           .margin({ left: InkSpacing.SM })
       }
       .width('100%')
@@ -137,18 +102,16 @@ struct MySetPage {
         ForEach(this.setGroupList, (group: SetGroupList) => {
           ListItem() {
             Column() {
-              // 分组头部标题
               Row() {
                 Text(group.groupValue)
                   .fontSize(InkTypography.CAPTION)
-                  .fontColor(InkPalette.INK_GHOST)
+                  .fontColor(this.isNightMode ? '#8A7D71' : InkPalette.INK_GHOST)
                   .fontWeight(FontWeight.Medium)
                   .letterSpacing(0.5)
               }
               .width('100%')
               .padding({ left: InkSpacing.MD, top: InkSpacing.MD, bottom: InkSpacing.XS })
 
-              // 卡片主体
               Column() {
                 if (group.setList) {
                   ForEach(group.setList, (item: SetList, index: number) => {
@@ -170,7 +133,7 @@ struct MySetPage {
                   })
                 }
               }
-              .backgroundColor(Color.White)
+              .backgroundColor(this.isNightMode ? '#2A2826' : Color.White)
               .borderRadius(InkRadius.CARD)
               .shadow(InkShadow.SUBTLE)
               .width('100%')
@@ -186,22 +149,14 @@ struct MySetPage {
       .edgeEffect(EdgeEffect.Spring)
     }
     .padding({ bottom: this.bottomRectHeight })
-    .backgroundColor(InkPalette.PAPER_EMBEDDED)
-    // 预下载半模态
+    .backgroundColor(this.isNightMode ? '#1A1A1C' : InkPalette.PAPER_EMBEDDED)
     .bindSheet($$this.isShowPreDon, this.preDowSheet(), {
-      height: 288,
-      dragBar: false,
-      showClose: false,
-    })
-    // 语言设置半模态
-    .bindSheet($$this.isShowLanguage, this.languageSheet(), {
       height: 288,
       dragBar: false,
       showClose: false,
     })
   }
 
-  // 通过@Builder构建预下载半模态展示界面
   @Builder
   preDowSheet() {
     PreDownloadSheet({
@@ -209,8 +164,8 @@ struct MySetPage {
       onConfirm: (val: number) => {
         this.select = val
         this.preDow = '预先下载' + val + '章正文'
-        this.cacheSetList[1].rightText = this.preDow
-        this.cacheSetList = [...this.cacheSetList] // 强制触发渲染
+        this.cacheSetList[0].rightText = this.preDow
+        this.cacheSetList = [...this.cacheSetList]
         this.isShowPreDon = false
       },
       onCancel: () => {
@@ -219,78 +174,75 @@ struct MySetPage {
     })
   }
 
-  // 通过@Builder构建语言设置半模态展示界面
-  @Builder
-  languageSheet() {
-    LanguageSelectSheet({
-      selectLanguage: this.selectLanguage,
-      onSelect: (val: string) => {
-        this.selectLanguage = val
-        this.otherSetList[2].rightText = val
-        this.otherSetList = [...this.otherSetList] // 强制触发渲染
-        this.isShowLanguage = false
-      }
-    })
-  }
-
-  /**
-   * 设置列表点击事件
-   */
   itemOnclick(value: string) {
     switch (value) {
+      case 'isNightMode':
+        this.isNightMode = !this.isNightMode
+        this.readingSetList[0].toggleStatus = this.isNightMode
+        this.readingSetList = [...this.readingSetList]
+        this.applyNightMode()
+        break
+      case 'setKeepScreenOn':
+        this.setKeepScreenOn = !this.setKeepScreenOn
+        this.readingSetList[1].toggleStatus = this.setKeepScreenOn
+        this.readingSetList = [...this.readingSetList]
+        this.applyKeepScreenOn()
+        break
       case MySetConstants.SET_REFRESH:
         this.setRefresh = !this.setRefresh
-        this.bookSetList[0].toggleStatus = this.setRefresh
-        this.bookSetList = [...this.bookSetList]
+        this.readingSetList[2].toggleStatus = this.setRefresh
+        this.readingSetList = [...this.readingSetList]
         break
       case MySetConstants.SET_JUMP:
         this.setJump = !this.setJump
-        this.bookSetList[1].toggleStatus = this.setJump
-        this.bookSetList = [...this.bookSetList]
+        this.readingSetList[3].toggleStatus = this.setJump
+        this.readingSetList = [...this.readingSetList]
         break
       case MySetConstants.SET_REPLACE:
         this.setReplace = !this.setReplace
-        this.bookSetList[2].toggleStatus = this.setReplace
-        this.bookSetList = [...this.bookSetList]
+        this.readingSetList[4].toggleStatus = this.setReplace
+        this.readingSetList = [...this.readingSetList]
         break
       case MySetConstants.SET_TIP:
         this.setTip = !this.setTip
-        this.bookSetList[3].toggleStatus = this.setTip
-        this.bookSetList = [...this.bookSetList]
-        break
-      case MySetConstants.SET_IMG_ANTI:
-        this.setImgAnti = !this.setImgAnti
-        this.cacheSetList[3].toggleStatus = this.setImgAnti
-        this.cacheSetList = [...this.cacheSetList]
-        break
-      case MySetConstants.SET_HEAD:
-        this.setHead = !this.setHead
-        this.otherSetList[0].toggleStatus = this.setHead
-        this.otherSetList = [...this.otherSetList]
-        break
-      case MySetConstants.SET_SEARCH:
-        this.setSearch = !this.setSearch
-        this.otherSetList[1].toggleStatus = this.setSearch
-        this.otherSetList = [...this.otherSetList]
-        break
-      case MySetConstants.SET_BOOK_SAVE:
+        this.readingSetList[5].toggleStatus = this.setTip
+        this.readingSetList = [...this.readingSetList]
         break
       case MySetConstants.SET_PRE_DOWNLOAD:
         this.isShowPreDon = !this.isShowPreDon
-        break
-      case MySetConstants.SET_IMG_CACHE:
-        break
-      case MySetConstants.SET_LANGUAGE:
-        this.isShowLanguage = !this.isShowLanguage
         break
       case '':
         router.pushUrl({ url: 'pages/view/myCenter/AiSettingsPage' })
         break
     }
   }
+
+  applyNightMode() {
+    try {
+      window.getLastWindow(getContext(this), (err, win) => {
+        if (err.code) return
+        // 状态栏完全透明 — 让应用背景延伸到状态栏
+        win.setWindowSystemBarProperties({
+          statusBarColor: '#00000000',
+          navigationBarColor: this.isNightMode ? '#E61A1A1C' : '#E6FAF7F0',
+          statusBarContentColor: this.isNightMode ? '#EDE4D3' : '#1A1612',
+          navigationBarContentColor: this.isNightMode ? '#EDE4D3' : '#1A1612'
+        })
+        win.setWindowBackgroundColor(this.isNightMode ? '#1A1A1C' : '#FAF7F0')
+      })
+    } catch (e) {}
+  }
+
+  applyKeepScreenOn() {
+    try {
+      window.getLastWindow(getContext(this), (err, win) => {
+        if (err.code) return
+        win.setWindowKeepScreenOn(this.setKeepScreenOn)
+      })
+    } catch (e) {}
+  }
 }
 
-// 预下载选择子组件
 @Component
 struct PreDownloadSheet {
   @Prop select: number
@@ -307,7 +259,6 @@ struct PreDownloadSheet {
 
   build() {
     Column() {
-      // 拖拽指示条
       Row()
         .width(32)
         .height(4)
@@ -357,63 +308,6 @@ struct PreDownloadSheet {
       }
       .width('100%')
       .layoutWeight(1)
-    }
-    .width('100%')
-    .height(288)
-    .backgroundColor(InkPalette.PAPER)
-  }
-}
-
-// 语言选择子组件
-@Component
-struct LanguageSelectSheet {
-  @Prop selectLanguage: string
-  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
-
-  private languageList: string[] = ['跟随系统', '简体中文', '繁体中文', '英文']
-  onSelect?: (value: string) => void
-
-  build() {
-    Column() {
-      Row()
-        .width(32)
-        .height(4)
-        .borderRadius(2)
-        .backgroundColor(InkPalette.INK_MIST)
-        .margin({ top: InkSpacing.MD })
-
-      Text('语言设置')
-        .fontSize(InkTypography.TITLE_SMALL)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(InkPalette.INK)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .padding({ top: InkSpacing.LG, bottom: InkSpacing.LG })
-
-      ForEach(this.languageList, (value: string) => {
-        Row() {
-          Text(value)
-            .fontSize(InkTypography.BODY)
-            .fontColor(InkPalette.INK)
-
-          Blank()
-
-          if (value === this.selectLanguage) {
-            Image($r('app.media.ic_public_confirm'))
-              .width(18)
-              .height(18)
-              .fillColor(this.theme.mainColor || InkPalette.CINNABAR)
-          }
-        }
-        .width('100%')
-        .height(52)
-        .padding({ left: InkSpacing.XL, right: InkSpacing.XL })
-        .onClick(() => {
-          if (this.onSelect) {
-            this.onSelect(value)
-          }
-        })
-      })
     }
     .width('100%')
     .height(288)

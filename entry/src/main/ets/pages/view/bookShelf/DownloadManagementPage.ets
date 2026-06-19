@@ -17,7 +17,7 @@ struct DownloadManagementPage {
   @State IsEdit: boolean = false
   @State isShowExportSetting: boolean = false
   @StorageLink('ExportSettingList') ExportSettingList: Array<boolean> = [false, false, false, false, false]
-  @State questionsList: Array<string> = ["全部", "小说", "漫画", "有声书", "有声书", "有声书"]
+  @State questionsList: Array<string> = ["全部", "小说", "漫画"]
   @State downloadingTasks: DownloadTask[] = []
   @State completedTasks: DownloadTask[] = []
   @State exportingTaskId: string = ''

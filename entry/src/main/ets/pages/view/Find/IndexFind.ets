@@ -19,7 +19,7 @@ import {
 @Component
 export default struct IndexFind {
   private scrollController: Scroller = new Scroller()
-  titleArray: string[] = ['小说', '漫画', '有声书']
+  titleArray: string[] = ['小说', '漫画']
   @State currentIndex: number = 0
   tabsController: TabsController = new TabsController()
   @StorageLink('topRectHeight') topRectHeight: number = 0
@@ -37,24 +37,19 @@ export default struct IndexFind {
     Column() {
       // 顶部导航栏
       Row() {
-        Row({ space: InkSpacing.XS }) {
+        Row({ space: 4 }) {
           ForEach(this.titleArray, (title: string, index: number) => {
-            Column({ space: 4 }) {
+            Row() {
               Text(title)
-                .fontSize(InkTypography.BODY)
-                .fontWeight(this.currentIndex === index ? FontWeight.Medium : FontWeight.Normal)
-                .fontColor(this.currentIndex === index ? InkPalette.INK : InkPalette.INK_MIST)
+                .fontSize(this.currentIndex === index ? InkTypography.TITLE_SMALL : InkTypography.BODY)
+                .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
+                .fontColor(this.currentIndex === index ? Color.White : InkPalette.INK_LIGHT)
                 .animation({ duration: InkMotion.FAST, curve: Curve.EaseOut })
-
-              Row()
-                .width(this.currentIndex === index ? 16 : 0)
-                .height(2)
-                .borderRadius(1)
-                .backgroundColor(this.theme.mainColor)
-                .animation({ duration: InkMotion.NORMAL, curve: Curve.EaseOut })
             }
-            .padding({ left: InkSpacing.MD, right: InkSpacing.MD, top: InkSpacing.SM, bottom: InkSpacing.SM })
-            .alignItems(HorizontalAlign.Center)
+            .height(34)
+            .padding({ left: 18, right: 18 })
+            .borderRadius(17)
+            .backgroundColor(this.currentIndex === index ? this.theme.mainColor : 'rgba(0,0,0,0.05)')
             .onClick(() => {
               this.currentIndex = index
               this.tabsController.changeIndex(index)

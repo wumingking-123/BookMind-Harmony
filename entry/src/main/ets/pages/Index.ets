@@ -23,6 +23,7 @@ struct Main {
   @State isShow: boolean = true
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
+  @StorageLink('isNightMode') isNightMode: boolean = false
   @StorageProp('APP_INDEX_SCROLLABLE') APP_INDEX_SCROLLABLE: boolean = true
   @State ShowBar: boolean = true
   tabController: TabsController = new TabsController()
@@ -129,13 +130,6 @@ struct Main {
 
   build() {
     Column() {
-      // 分割线
-      if (this.ShowBar) {
-        Divider()
-          .color(InkPalette.INK_WHISPER)
-          .strokeWidth(0.5)
-      }
-
       // 主 Tab 容器
       Tabs({
         barPosition: BarPosition.End,
@@ -159,7 +153,7 @@ struct Main {
           .tabBar(this.TabBuilder(index, name))
         })
       }
-      .barBackgroundColor(InkPalette.PAPER)
+      .barBackgroundColor(this.isNightMode ? '#2A2826' : InkPalette.PAPER)
       .barHeight(this.ShowBar ? InkLayout.TAB_BAR_HEIGHT + this.bottomRectHeight : 0)
       .scrollable(!this.APP_INDEX_SCROLLABLE)
       .barMode(BarMode.Fixed)
@@ -183,7 +177,9 @@ struct Main {
           .offset({ y: -InkLayout.TAB_BAR_HEIGHT - this.bottomRectHeight - 16 })
       }
     }
+    .height('100%')
     .width('100%')
+    .backgroundColor(this.isNightMode ? '#1A1A1C' : InkPalette.PAPER)
     .height('100%')
     .backgroundColor(InkPalette.PAPER)
     .id('main')

@@ -207,7 +207,7 @@ export default struct groupTypePanel{
     .padding({left:15,right:15,top:12,bottom:20})
     .width('100%').backgroundColor(Color.White)
   }
-  @State tagLockContent:string = '长按底部tab栏书架图标可锁定分组标签栏，再次长按解锁，锁定后左右滑动将直接切换小说，漫画，有声书分组大类。'
+  @State tagLockContent:string = '长按底部tab栏书架图标可锁定分组标签栏，再次长按解锁，锁定后左右滑动将直接切换小说，漫画分组大类。'
   tagLockDialog: CustomDialogController | null = new CustomDialogController({
     builder: customizeDialogExample({
       confirm: ()=> { this.onAccept() },
