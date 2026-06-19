@@ -22,7 +22,7 @@ import searchUtil from '../../../../../common/utils/searchUtils'
 
 @Component
 export default struct SourceView {
-  titleArray: Array<string> = ['小说', '漫画', '有声书']
+  titleArray: Array<string> = ['小说', '漫画']
   index: number = 0
   @StorageProp('pathBookSource') pathBookSource: string = ''
   @StorageLink('topRectHeight') topRectHeight: number = 0

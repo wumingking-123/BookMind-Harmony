@@ -11,7 +11,7 @@ export default struct customizeDialogExample {
   confirm: () => void = () => {
   }
   @Prop title:string = '标签锁'
-  @Prop content:string = '长按底部tab栏书架图标可锁定分组标签栏，再次长按解锁，锁定后左右滑动将直接切换小说，漫画，有声书分组大类'
+  @Prop content:string = '长按底部tab栏书架图标可锁定分组标签栏，再次长按解锁，锁定后左右滑动将直接切换小说，漫画分组大类'
 
   // 主题颜色
   @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem

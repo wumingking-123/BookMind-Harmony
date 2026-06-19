@@ -9,7 +9,7 @@ export struct SearchDetails{
   @Prop SearchValue:string
   @State isRefreshing: boolean = false
   @State counter: number = 0
-  @State typeList: string[] = ["小说","漫画","有声书"]
+  @State typeList: string[] = ["小说","漫画"]
   @State typeIndex:number=0
   @Consume @Watch("refresh") SearchStatus:number
   @Consume('searchBookList') books:SearchBook[]

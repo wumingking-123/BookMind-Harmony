@@ -57,6 +57,10 @@ export class ThemeManager {
     PersistentStorage.persistProp<boolean>(MySetConstants.SET_SEARCH, true)
     PersistentStorage.persistProp<number>(MySetConstants.SET_PRE_DOWNLOAD, 10)
     PersistentStorage.persistProp<string>(MySetConstants.SET_LANGUAGE, '跟随系统')
+    PersistentStorage.persistProp<boolean>('isNightMode', false)
+    PersistentStorage.persistProp<boolean>('setKeepScreenOn', false)
+    PersistentStorage.persistProp<boolean>('setDefaultFontSize', true)
+    PersistentStorage.persistProp<number>('setReaderFontSize', 20)
   }
 
   setTheme(newTheme: ThemeItem, index: number) {

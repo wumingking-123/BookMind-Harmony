@@ -25,7 +25,7 @@ interface RouteParams {
 @Component
 @Preview
 struct AddSourcePage {
-  titleArray: string[] = ['小说', '漫画', '有声书']
+  titleArray: string[] = ['小说', '漫画']
   dialogRightData: string[] = ['搜索源码', '书籍源码', '目录源码', '正文源码', '帮助']
   @StorageProp('pathBookSource') pathBookSource: string = ''
   @State isShowHelp: boolean = false

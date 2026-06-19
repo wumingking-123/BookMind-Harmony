@@ -35,10 +35,10 @@ export class FileHandler {
   static classifyFile(fileName: string, currentTabIndex: number): FileClassification {
     const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
     
-    // 有声书格式 (MP3, WAV, FLAC, M4A, M4B, OGG, OPUS)
+    // 有声书格式 (MP3, WAV, FLAC, M4A, M4B, OGG, OPUS) — 归入小说
     const audioExts = ['.m4b', '.mp3', '.wav', '.flac', '.m4a', '.ogg', '.opus'];
     if (audioExts.includes(ext)) {
-      return { typeName: ext.substring(1).toUpperCase(), bookType: 2 } as FileClassification;
+      return { typeName: ext.substring(1).toUpperCase(), bookType: 0 } as FileClassification;
     }
     
     // 漫画格式 (CBZ, CBR, CB7)
@@ -259,7 +259,7 @@ export class FileHandler {
     // 1. 快速判定并跳过非纯文本文件的行解析，直接秒级返回默认空章节（防止解析二进制乱码导致巨量耗时卡死）
     const audioExts = ['.m4b', '.mp3', '.wav', '.flac', '.m4a', '.ogg', '.opus'];
     if (audioExts.includes(ext)) {
-      chapters.push(new chaptersItem(1, '有声书音频章节', '1', '请在播放器中播放音频内容。'));
+      chapters.push(new chaptersItem(1, '音频文件', '1', '当前不支持该音频格式的文本提取。'));
       return chapters;
     }
     

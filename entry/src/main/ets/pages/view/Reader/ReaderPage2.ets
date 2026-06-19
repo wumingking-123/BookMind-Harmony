@@ -299,6 +299,7 @@ struct ReaderPageContent {
   @State isShowCatalog: boolean = false
   @State catalogTabIndex: number = 0
   @State isBookmarked: boolean = false
+  @State bookmarkList: ReaderBookmark[] = []
   @State isShowAiDialog: boolean = false
   @State catalogSearchKey: string = ""
   @State sessionMinutes: number = 1
@@ -677,7 +678,7 @@ struct ReaderPageContent {
     let bookData = AppStorage.get<Books>('readerBookData')
     if (bookData) {
       this.isBookmarked = await bookMarkUtils.isBookMarked(
-        bookData.bookName, bookData.author, this.currentChapterIndex)
+        bookData.bookName, bookData.author, this.currentChapterIndex, this.currentPageIndex)
     }
   }
 

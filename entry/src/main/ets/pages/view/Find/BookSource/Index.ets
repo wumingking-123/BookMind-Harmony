@@ -7,18 +7,18 @@ import { FileHandler } from '../../../../common/utils/FileHandler'
 import ImportCommon from '../../../../componets/import/ImportCommon'
 import { showMessage } from '../../../../componets/common/promptShow';
 import SourceView from './components/SourceView'
-import BookMark from '../../../../componets/head/BookMark'
 import { getPasteDataSync, isNetworkUrl, sleep } from '../../../../common/utils/utils'
 import { router } from '@kit.ArkUI'
 import { BookSource } from '../../../../database/entities/BookSource'
 import { ThemeItem } from '../../../../common/model/Theme'
 import { ThemeStorageKey } from '../../../../common/constants/Theme'
+import { InkPalette, InkTypography } from '../../../../common/constants/DesignTokens'
 
 @Entry
 @Component
 @Preview
 struct BookSourcePage {
-  titleArray: Array<string> = ['小说', '漫画', '有声书']
+  titleArray: Array<string> = ['小说', '漫画']
   dialogRightData: IconTitleVo[] = [
     new IconTitleVo($r('app.media.icon_rule_paste'), '粘贴导入'),
     new IconTitleVo($r('app.media.icon_rule_export'), '本地导入'),
@@ -202,49 +202,34 @@ struct BookSourcePage {
 
   @Builder
   titleBuilder(tabsController: TabsController) {
-    List() {
-      ListItem() {
-        BookMark({
-          title: '小说',
-          index: 0,
-          currentIndex: this.currentIndex,
-          isBackground: false
-        }).onClick(() => {
-          this.currentIndex = 0
-          tabsController.changeIndex(0)
-          console.log(this.currentIndex + '')
-        })
-      }
-
-      ListItem() {
-        BookMark({
-          title: '漫画',
-          index: 1,
-          currentIndex: this.currentIndex,
-          isBackground: false
-        }).onClick(() => {
-          this.currentIndex = 1
-          tabsController.changeIndex(1)
-          console.log(this.currentIndex + '')
-        })
-      }
-
-      ListItem() {
-        BookMark({
-          title: '有声书',
-          index: 2,
-          currentIndex: this.currentIndex,
-          isBackground: false
-        }).onClick(() => {
-          this.currentIndex = 2
-          tabsController.changeIndex(2)
-          console.log(this.currentIndex + '')
-        })
-      }
+    Row({ space: 4 }) {
+      this.titleTab('小说', 0, tabsController)
+      this.titleTab('漫画', 1, tabsController)
     }
-    .height(40)
-    .scrollBar(BarState.Off)
-    .listDirection(Axis.Horizontal)
+    .height(36)
+    .padding(3)
+    .borderRadius(20)
+    .backgroundColor('rgba(0,0,0,0.04)')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  titleTab(title: string, idx: number, tabsController: TabsController) {
+    Row() {
+      Text(title)
+        .fontSize(this.currentIndex === idx ? InkTypography.TITLE_SMALL : InkTypography.BODY)
+        .fontWeight(this.currentIndex === idx ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.currentIndex === idx ? Color.White : InkPalette.INK_LIGHT)
+        .animation({ duration: 200, curve: Curve.EaseOut })
+    }
+    .height('100%')
+    .padding({ left: 20, right: 20 })
+    .backgroundColor(this.currentIndex === idx ? this.theme.mainColor : Color.Transparent)
+    .borderRadius(17)
+    .onClick(() => {
+      this.currentIndex = idx
+      tabsController.changeIndex(idx)
+    })
   }
 
   @Builder

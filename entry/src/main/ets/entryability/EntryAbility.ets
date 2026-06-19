@@ -97,13 +97,13 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate('pathBookSource', pathDir + '/bookSource.json');
     // Main window is created, set main page for this ability
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
-    // 全屏
+    // 全屏 + 沉浸式
     windowStage.getMainWindow((err, windowClass) => {
       if (err.code) {
         hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
         return
       }
-      //全屏
+      //全屏布局
       windowClass.setWindowLayoutFullScreen(true)
         .then(() => {
           console.info('Succeeded in setting the window layout to full-screen mode.');
@@ -111,6 +111,14 @@ export default class EntryAbility extends UIAbility {
         .catch((err: BusinessError) => {
           console.error('Failed to set the window layout to full-screen mode. Cause:' + JSON.stringify(err));
         });
+
+      // 扩展安全区 — 让内容延伸到状态栏和导航栏下方
+      try {
+        const safeArea = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM)
+        const navArea = windowClass.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR)
+        // 不调用 setSpecificSystemBarEnabled，保留安全区但不裁剪内容
+      } catch (e) {}
+
       //获取上下遮挡区域
       let type = window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR; //导航栏
       let avoidArea = windowClass.getWindowAvoidArea(type);
@@ -147,6 +155,22 @@ export default class EntryAbility extends UIAbility {
       }
       // 主题初始化
       themeManager.init()
+
+      // 夜间模式初始化 — 设置沉浸式系统栏（透明背景，应用内容透出来）
+      const savedNight = AppStorage.get<boolean>('isNightMode') ?? false
+      windowStage.getMainWindow((err, win) => {
+        if (err.code) return
+        // 状态栏完全透明 — 让应用内容延伸到状态栏下方
+        // navigationBar 半透明 — 应用内容可见且文字清晰
+        win.setWindowSystemBarProperties({
+          statusBarColor: '#00000000',
+          navigationBarColor: savedNight ? '#E61A1A1C' : '#E6FAF7F0',
+          statusBarContentColor: savedNight ? '#EDE4D3' : '#1A1612',
+          navigationBarContentColor: savedNight ? '#EDE4D3' : '#1A1612'
+        })
+        // 窗口背景作为兜底（应用未完全覆盖时显示）
+        win.setWindowBackgroundColor(savedNight ? '#1A1A1C' : '#FAF7F0')
+      })
       hilog.info(0x0000, 'testTag', 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '');
     });
   }

@@ -119,7 +119,7 @@ struct ReadingStatsOverview {
         dist.push(item)
       }
       if (audioCount > 0) {
-        const item: TypeDistribution = { label: '有声书', count: audioCount, color: InkPalette.CELADON }
+        const item: TypeDistribution = { label: '有声', count: audioCount, color: InkPalette.CELADON }
         dist.push(item)
       }
       this.typeDistribution = dist

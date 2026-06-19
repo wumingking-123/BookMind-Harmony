@@ -17,7 +17,7 @@ import {
 
 @Component
 export default struct BodyContent {
-  titleArray: string[] = ['小说', '漫画', '有声书']
+  titleArray: string[] = ['小说', '漫画']
   @State loading: boolean = true
   @State sourceList: BookSource[] = []
   @State currentSourceIndex: number = 0

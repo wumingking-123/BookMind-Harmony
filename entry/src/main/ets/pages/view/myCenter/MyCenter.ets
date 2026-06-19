@@ -8,6 +8,7 @@ import {
 import bookMarkUtils from '../../../common/utils/BookMarkUtils'
 import readRecordDao from '../../../database/dao/ReadRecordDao'
 import booksDao from '../../../database/dao/BooksDao'
+import { window } from '@kit.ArkUI'
 
 @Component
 export default struct MyCenter {
@@ -25,18 +26,19 @@ export default struct MyCenter {
   ]
   // 底部设置列表
   @State end_list: dataItem[] = [
-    new dataItem('关于我们', 2, $r('app.media.my_center_about_icon')),
+    new dataItem('阅读统计', 5, $r('app.media.my_center_book_icon')),
     new dataItem('清理缓存', 3, $r('app.media.my_center_clean_icon')),
     new dataItem('文件管理', 4, $r('app.media.my_center_file_icon')),
-    new dataItem('阅读统计', 5, $r('app.media.my_center_book_icon')),
+    new dataItem('设置', 6, $r('app.media.my_center_set_icon')),
+    new dataItem('关于我们', 2, $r('app.media.my_center_about_icon')),
   ]
 
   @StorageLink('topRectHeight') topRectHeight: number = 0
   // 主题颜色
   @StorageLink(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
-
   @StorageLink(ThemeStorageKey.USER_NICKNAME) nickname: string = '夏目友人'
   @StorageLink(ThemeStorageKey.USER_AVATAR) avatarUri: string = ''
+  @StorageLink('isNightMode') isNightMode: boolean = false
 
   getMainColor(): string {
     return this.theme?.mainColor || '#A89B7E';
@@ -44,6 +46,43 @@ export default struct MyCenter {
 
   getSecondColor(): string {
     return this.theme?.secondColor || '#EDE8DF';
+  }
+
+  toggleNightMode() {
+    this.isNightMode = !this.isNightMode
+    this.applyWindowMode()
+  }
+
+  applyWindowMode() {
+    try {
+      window.getLastWindow(getContext(this), (err, win) => {
+        if (err.code) return
+        // 状态栏完全透明 — 让应用背景延伸到状态栏
+        win.setWindowSystemBarProperties({
+          statusBarColor: '#00000000',
+          navigationBarColor: this.isNightMode ? '#E61A1A1C' : '#E6FAF7F0',
+          statusBarContentColor: this.isNightMode ? '#EDE4D3' : '#1A1612',
+          navigationBarContentColor: this.isNightMode ? '#EDE4D3' : '#1A1612'
+        })
+        win.setWindowBackgroundColor(this.isNightMode ? '#1A1A1C' : '#FAF7F0')
+      })
+    } catch (e) {}
+  }
+
+  getCardBg(): string {
+    return this.isNightMode ? '#2A2826' : InkPalette.PAPER
+  }
+
+  getTextColor(): string {
+    return this.isNightMode ? '#EDE4D3' : InkPalette.INK
+  }
+
+  getSubTextColor(): string {
+    return this.isNightMode ? '#A89B8C' : InkPalette.INK_LIGHT
+  }
+
+  getMistColor(): string {
+    return this.isNightMode ? '#8A7D71' : InkPalette.INK_MIST
   }
 
   async aboutToAppear() {
@@ -79,20 +118,14 @@ export default struct MyCenter {
           // ===== 顶部操作栏 =====
           Row() {
             Blank()
-            Row({ space: InkSpacing.LG }) {
-              // 夜间模式图标
-              Image($r('app.media.night_icon'))
+            Row() {
+              // 日间/夜间模式切换
+              Image(this.isNightMode ? $r('app.media.reader_moon_fill') : $r('app.media.night_icon'))
                 .width(22)
                 .height(22)
-                .fillColor(InkPalette.INK_FAINT)
-
-              // 设置图标
-              Image($r('app.media.my_center_set_icon'))
-                .width(22)
-                .height(22)
-                .fillColor(InkPalette.INK_FAINT)
+                .fillColor(this.isNightMode ? (this.theme?.mainColor || '#A89B7E') : InkPalette.INK_FAINT)
                 .onClick(() => {
-                  this.toMySetPage()
+                  this.toggleNightMode()
                 })
             }
           }
@@ -136,22 +169,22 @@ export default struct MyCenter {
 
                 // 昵称及阅读时长
                 Column({ space: InkSpacing.XS }) {
-                  Text(this.nickname)
+                    Text(this.nickname)
                     .fontSize(InkTypography.TITLE)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor(InkPalette.INK)
+                    .fontColor(this.getTextColor())
 
                   Row({ space: InkSpacing.XS }) {
                     Text('今日阅读')
                       .fontSize(InkTypography.CAPTION)
-                      .fontColor(InkPalette.INK_MIST)
+                      .fontColor(this.getMistColor())
                     Text(`${this.reading_time}`)
                       .fontSize(InkTypography.CAPTION)
                       .fontWeight(FontWeight.Medium)
                       .fontColor(this.theme?.mainColor || '#A89B7E')
                     Text('分钟')
                       .fontSize(InkTypography.CAPTION)
-                      .fontColor(InkPalette.INK_MIST)
+                      .fontColor(this.getMistColor())
                   }
                 }
                 .alignItems(HorizontalAlign.Start)
@@ -169,11 +202,11 @@ export default struct MyCenter {
                     Text(item.value.toString())
                       .fontSize(InkTypography.TITLE)
                       .fontWeight(FontWeight.Medium)
-                      .fontColor(InkPalette.INK)
+                      .fontColor(this.getTextColor())
 
                     Text(item.title)
                       .fontSize(InkTypography.MICRO)
-                      .fontColor(InkPalette.INK_MIST)
+                      .fontColor(this.getMistColor())
                   }
                   .layoutWeight(1)
                   .alignItems(HorizontalAlign.Center)
@@ -189,7 +222,7 @@ export default struct MyCenter {
             .padding(InkSpacing.XL)
           }
           .width('100%')
-          .backgroundColor(InkPalette.PAPER)
+          .backgroundColor(this.getCardBg())
           .borderRadius(InkRadius.CARD)
           .shadow(InkShadow.SOFT)
 
@@ -213,7 +246,7 @@ export default struct MyCenter {
 
                   Text(item.title)
                     .fontSize(InkTypography.CAPTION)
-                    .fontColor(InkPalette.INK_LIGHT)
+                    .fontColor(this.getSubTextColor())
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Center)
@@ -224,7 +257,7 @@ export default struct MyCenter {
             .padding(InkSpacing.LG)
           }
           .width('100%')
-          .backgroundColor(InkPalette.PAPER)
+          .backgroundColor(this.getCardBg())
           .borderRadius(InkRadius.CARD)
           .shadow(InkShadow.SOFT)
 
@@ -241,7 +274,7 @@ export default struct MyCenter {
 
                     Text(item.title)
                       .fontSize(InkTypography.BODY)
-                      .fontColor(InkPalette.INK)
+                      .fontColor(this.getTextColor())
                       .layoutWeight(1)
                       .margin({ left: InkSpacing.MD })
 
@@ -266,7 +299,7 @@ export default struct MyCenter {
             .padding({ top: InkSpacing.SM, bottom: InkSpacing.SM })
           }
           .width('100%')
-          .backgroundColor(InkPalette.PAPER)
+          .backgroundColor(this.getCardBg())
           .borderRadius(InkRadius.CARD)
           .shadow(InkShadow.SOFT)
 
@@ -286,10 +319,7 @@ export default struct MyCenter {
     }
     .width('100%')
     .height('100%')
-    .linearGradient({
-      direction: GradientDirection.Bottom, // 渐变方向
-      colors: [[this.theme?.mainColor || '#A89B7E', 0], [this.theme?.secondColor || '#EDE8DF', 0.08], [InkPalette.PAPER, 0.28]]
-    })
+    .backgroundColor(this.isNightMode ? '#1A1A1C' : InkPalette.PAPER)
   }
 
   // 读过点击事件
@@ -334,6 +364,10 @@ export default struct MyCenter {
       case 5:
         // 阅读统计
         router.pushUrl({ url: 'pages/view/myCenter/ReadingStatsOverview' })
+        break
+      case 6:
+        // 设置
+        router.pushUrl({ url: 'pages/view/myCenter/MySetPage' })
         break
     }
   }

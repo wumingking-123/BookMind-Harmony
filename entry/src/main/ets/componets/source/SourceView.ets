@@ -18,7 +18,7 @@ import { ThemeStorageKey } from '../../common/constants/Theme'
 export default struct SourceView {
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
-  titleArray: Array<string> = ['小说', '漫画', '有声书']
+  titleArray: Array<string> = ['小说', '漫画']
   index: number = 0
   type: number = 0
   @Link @Watch('getList') searchValue: string
