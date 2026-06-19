@@ -10,14 +10,6 @@
         "usedScene": {
           "when":"inuse"
         }
-      },
-      {
-        "name": "ohos.permission.READ_PASTEBOARD",
-        "reason": "$string:read_pasteboard_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
       }
     ],
     "deviceTypes": [

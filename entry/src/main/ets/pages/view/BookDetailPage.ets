@@ -487,6 +487,7 @@ struct BookDetailPage {
                       }
                       .onClick(() => {
                         // Cache chapter list to avoid serialization overhead
+                        BookContentHolder.setBookSource(this._bookSource);
                         BookContentHolder.setChapters(this.txtFiles);
                         // 跳转到阅读器
                         router.pushUrl({
@@ -575,6 +576,7 @@ struct BookDetailPage {
                         .padding({ left: InkSpacing.LG, right: InkSpacing.LG, top: 12, bottom: 12 })
                         .width('100%')
                         .onClick(async () => {
+                          BookContentHolder.setBookSource(this._bookSource);
                           BookContentHolder.setChapters(this.txtFiles);
                           router.pushUrl({
                             url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
@@ -670,6 +672,7 @@ struct BookDetailPage {
               })
             } else {
               // 小说/漫画跳转阅读器
+              BookContentHolder.setBookSource(this._bookSource);
               BookContentHolder.setChapters(this.txtFiles);
               router.pushUrl({
                 url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")

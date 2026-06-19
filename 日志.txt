@@ -1,145 +1,3 @@
- [(100000:100000:scope)] radius is not correct type
-06-17 18:17:16.220   14923-14923   A03d00/JSAPP                    com.legado.app        I     router ReaderPage2:https://www.yysk.net/134/134878/
-06-17 18:17:16.221   14923-14923   A03d00/JSAPP                    com.legado.app        I     [ReaderPage2] bookSource: 歪歪书库
-06-17 18:17:16.221   14923-14923   A03d00/JSAPP                    com.legado.app        I     [ReaderPage2] chapterList已设置, length: 10
-06-17 18:17:16.221   14923-14923   A03d00/JSAPP                    com.legado.app        I     [ReaderPage2] 开始预取章节内容: https://www.yysk.net/134/134878/131558.html
-06-17 18:17:16.221   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] 请求章节: https://www.yysk.net/134/134878/131558.html
-06-17 18:17:16.221   14923-14923   A03d00/JSAPP                    com.legado.app        I     [requestUrlHtml] 请求URL: https://www.yysk.net/134/134878/131558.html
-06-17 18:17:16.224   14923-14923   C04201/DisplayManager           com.legado.app        W     (634)GetDisplayById: update display from cache, Id: 0 
-06-17 18:17:16.226   14923-14923   C04201/DisplayManager           com.legado.app        W     (634)GetDisplayById: update display from cache, Id: 0 
-06-17 18:17:16.226   14923-14923   C04201/DisplayManager           com.legado.app        W     (634)GetDisplayById: update display from cache, Id: 0 
-06-17 18:17:16.227   14923-14923   A03d00/JSAPP                    com.legado.app        I     [CoverFlipView] aboutToAppear, chapterList.length: 10, currentChapterIndex: 2
-06-17 18:17:16.228   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: page/12894 hide
-06-17 18:17:16.228   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: page/12894 lost focus
-06-17 18:17:16.228   14923-14923   C03922/AceNavigation            com.legado.app        I     [(100000:100000:scope)] can't find inner navigation
-06-17 18:17:16.228   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: page/13684 show
-06-17 18:17:16.228   14923-14923   C03922/AceNavigation            com.legado.app        I     [(100000:100000:scope)] can't find inner navigation
-06-17 18:17:16.228   14923-14923   C03933/AceKeyboard              com.legado.app        I     [(100000:100000:scope)] StageManager FrameNode notNeedSoftKeyboard.
-06-17 18:17:16.228   14923-14923   C03933/AceKeyboard              com.legado.app        I     [(100000:100000:scope)] Container not ScenceBoardWindow.
-06-17 18:17:16.228   14923-14923   C03933/AceKeyboard              com.legado.app        I     [(100000:100000:scope)] Ime Not Shown, Ime Not Attached, No need to close keyboard
-06-17 18:17:16.228   14923-14923   C03925/AceRouter                com.legado.app        I     [(100000:100000:scope)] LoadPage Success
-06-17 18:17:16.228   14923-14923   A03d00/JSAPP                    com.legado.app        I     getListData [{"number":0,"content":"https://www.yysk.net/134/134878/131556.html","chapterTitleNumber":"第1章","title":"第1章 大隐于朝"},{"number":1,"content":"https://www.yysk.net/134/134878/131557.html","chapterTitleNumber":"第2章","title":"第2章 危峦惊魂"},{"number":2,"content":"https://www.yysk.net/134/134878/131558.html","chapterTitleNumber":"第3章","title":"第3章 西北奇遇"},{"number":3,"content":"https://www.yysk.net/134/134878/131559.html","chapterTitleNumber":"第4章","title":"第4章 迎接龙头"},{"number":4,"content":"https://www.yysk.net/134/134878/131560.html","chapterTitleNumber":"第5章","title":"第5章 三分剑术"},{"number":5,"content":"https://www.yysk.net/134/134878/131561.html","chapterTitleNumber":"第6章","title":"第6章 落难夫妻"},{"number":6,"content":"https://www.yysk.net/134/134878/131562.html","chapterTitleNumber":"第7章","title":"第7章 调虎离山"},{"number":7,"content":"https://www.yysk.net/134/134878/131563.html","chapterTitleNumber":"第8章","title":"第8章 白衣学者"},{"number":8,"content":"https://www.yysk.net/134/134878/131564.html","chapterTitleNumber":"第9章","title":"第9章 金风野店"},{"number":9,"content":"https://www.yysk.net/134/134878/131565.html","chapterTitleNumber":"第10章","title":"第10章 法尔霍庄"}]
-06-17 18:17:16.229   14923-14923   C01650/Rdb                      com.legado.app        E     NapiRdbPredicates[ParseFieldAndValue]: throw error: code = 401 , message = Parameter error. The value must be a ValueType array.
-06-17 18:17:16.229   14923-14923   A03d00/JSAPP                    com.legado.app        I     TagInfo, Error,  {"code":"401"}
-06-17 18:17:16.229   14923-14923   C01650/Rdb                      com.legado.app        E     NapiRdbPredicates[ParseFieldAndValue]: throw error: code = 401 , message = Parameter error. The value must be a ValueType array.
-06-17 18:17:16.229   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6323, pan 0 up, state: 6
-06-17 18:17:16.229   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6323, pan 0 up, state: 6
-06-17 18:17:16.229   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6323, click 0 up, state: 6
-06-17 18:17:16.229   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6323, pan 0 up, state: 6
-06-17 18:17:16.229   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] id: 0, log: {types: Click, node: List, prcd: Down, state: READY, extraInfo: ETF: 0 CFP: 0, prcd: Up, state: FAIL, extraInfo: ETF: 0 CFP: 0}{types: Click, node: ListItem, prcd: Down, state: READY, extraInfo: ETF: 0 CFP: 0, prcd: Up, state: SUCCEED, extraInfo: ETF: 0 CFP: 0}{types: Pan, node: List, prcd: Down, state: DETECTING, prcd: Up, state: FAIL, extraInfo: currentFingers: 1 fingers: 1}{types: Pan, node: Swiper, prcd: Down, state: DETECTING, prcd: Up, state: FAIL, extraInfo: currentFingers: 1 fingers: 1}{types: Click, node: SheetPage, prcd: Down, state: READY, extraInfo: ETF: 0 CFP: 0, prcd: Up, state: FAIL, extraInfo: ETF: 0 CFP: 0}{types: Pan, node: SheetPage, prcd: Down, state: DETECTING, prcd: Up, state: FAIL, extraInfo: currentFingers: 1 fingers: 1}
-06-17 18:17:16.229   14923-14923   C03919/AceInputTracking         com.legado.app        I     [(100000:100000:scope)] Consumed new event id=6323 in ace_container, lastEventInfo: id:6322
-06-17 18:17:16.229   14923-14923   C04213/InputKeyFlow             com.legado.app        I     [] ConsumePointerEventInner(872): InputId:6323,wid:66,pointId:0,srcType:2,rect:[0,0,1260,2720],notify:1
-06-17 18:17:16.231   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 2 is URL, fetching: https://www.yysk.net/134/134878/131558.html
-06-17 18:17:16.231   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 1 is URL, fetching: https://www.yysk.net/134/134878/131557.html
-06-17 18:17:16.231   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] 请求章节: https://www.yysk.net/134/134878/131557.html
-06-17 18:17:16.231   14923-14923   A03d00/JSAPP                    com.legado.app        I     [requestUrlHtml] 请求URL: https://www.yysk.net/134/134878/131557.html
-06-17 18:17:16.233   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 3 is URL, fetching: https://www.yysk.net/134/134878/131559.html
-06-17 18:17:16.233   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] 请求章节: https://www.yysk.net/134/134878/131559.html
-06-17 18:17:16.233   14923-14923   A03d00/JSAPP                    com.legado.app        I     [requestUrlHtml] 请求URL: https://www.yysk.net/134/134878/131559.html
-06-17 18:17:16.235   14923-14923   A03d00/JSAPP                    com.legado.app        I     display size, width : 1104 , height : 2373
-06-17 18:17:16.236   14923-14923   C03930/AceAnimation             com.legado.app        I     [(100000:100000:scope)] start pageTransition, from node 12894 to 13684
-06-17 18:17:16.237   14923-14923   C0391d/AceMouse                 com.legado.app        I     [(100000:100000:scope)] FlushMouseEvent: last pointer event id 6318 sourceType:2 last mouse event time:26848515311000 current time 26851159236693
-06-17 18:17:16.237   14923-14923   C03934/AceUIEvent               com.legado.app        W     [(100000:100000:scope)] page is inActive, need't do touch test
-06-17 18:17:16.237   14923-14923   C03934/AceUIEvent               com.legado.app        W     [(100000:100000:scope)] page is inActive, need't do touch test
-06-17 18:17:16.239   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 2 is URL, fetching: https://www.yysk.net/134/134878/131558.html
-06-17 18:17:16.239   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 1 is URL, fetching: https://www.yysk.net/134/134878/131557.html
-06-17 18:17:16.239   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 3 is URL, fetching: https://www.yysk.net/134/134878/131559.html
-06-17 18:17:16.240   14923-15079   C01653/NativePreferences        com.legado.app        I     WriteToDiskFile: No data to update persistent file
-06-17 18:17:16.588   14923-15083   C01406/OHOS::RS                 com.legado.app        I     RSUIDirector::ProcessMessages messageId:176, cmdCount:1, instanceId:100000
-06-17 18:17:16.589   14923-14923   C01406/OHOS::RS                 com.legado.app        I     RSUIDirector::PostTask messageId:176, cmdCount:1, instanceId:100000
-06-17 18:17:16.640   14923-15083   C01406/OHOS::RS                 com.legado.app        I     RSUIDirector::ProcessMessages messageId:177, cmdCount:4, instanceId:100000
-06-17 18:17:16.641   14923-14923   C01406/OHOS::RS                 com.legado.app        I     RSUIDirector::PostTask messageId:177, cmdCount:4, instanceId:100000
-06-17 18:17:16.641   14923-14923   C03930/AceAnimation             com.legado.app        I     [(100000:100000:scope)] pageTransition in finish, nodeId:13684
-06-17 18:17:16.641   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: page/13684 show
-06-17 18:17:16.641   14923-14923   C03930/AceAnimation             com.legado.app        I     [(100000:100000:scope)] pageTransition exit finish, nodeId:12894
-06-17 18:17:16.641   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: page/12894 hide
-06-17 18:17:16.641   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: page/12894 lost focus
-06-17 18:17:16.657   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Request focus on focus view: page/13684.
-06-17 18:17:16.657   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view has no default focus.
-06-17 18:17:16.657   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] FocusSwitch end, Column/secure_field onBlur, Row/secure_field onFocus, start: 2, end: 1, update: 2
-06-17 18:17:16.657   14923-14923   C03933/AceKeyboard              com.legado.app        I     [(100000:100000:scope)] current focus node info : (Row/13688).
-06-17 18:17:16.657   14923-14923   C03933/AceKeyboard              com.legado.app        I     [(100000:100000:scope)] FrameNode(Row/13688) notNeedSoftKeyboard.
-06-17 18:17:16.657   14923-14923   C03933/AceKeyboard              com.legado.app        I     [(100000:100000:scope)] Ime Not Shown, Ime Not Attached, No need to close keyboard
-06-17 18:17:16.657   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Request focus on view root scope: Row/13688 return: 1.
-06-17 18:17:16.657   14923-14923   C0391d/AceMouse                 com.legado.app        I     [(100000:100000:scope)] FlushMouseEvent: last pointer event id 6318 sourceType:2 last mouse event time:26848515311000 current time 26851579794895
-06-17 18:17:16.794   14923-15083   C01406/OHOS::RS                 com.legado.app        I     RSUIDirector::ProcessMessages messageId:178, cmdCount:1, instanceId:100000
-06-17 18:17:16.794   14923-14923   C01406/OHOS::RS                 com.legado.app        I     RSUIDirector::PostTask messageId:178, cmdCount:1, instanceId:100000
-06-17 18:17:16.795   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: SheetPage/12975 close
-06-17 18:17:16.795   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: SheetPage/12975 lost focus
-06-17 18:17:16.795   14923-14923   C0391c/AceFocus                 com.legado.app        I     [(100000:100000:scope)] Focus view: SheetPage/12975 has not been shown
-06-17 18:17:16.798   14923-14923   A03d00/JSAPP                    com.legado.app        I     remove listener
-06-17 18:17:17.189   14923-15050   C02805/InputKeyFlow             com.legado.app        I     [][OnPointerEvent:216] ac: down: 6324
-06-17 18:17:17.189   14923-15050   C02805/InputKeyFlow             com.legado.app        I     [P:D:6324][OnPointerEvent:541] id:6324 recv
-06-17 18:17:17.189   14923-14923   C04213/InputKeyFlow             com.legado.app        I     [] OnInputEvent(86): eid:240,InputId:6324,wid:66,ac:2
-06-17 18:17:17.190   14923-14923   C04219/WMSDecor                 com.legado.app        W     [] GetDecorHeight(2235): Get app window decor height failed
-06-17 18:17:17.190   14923-14923   C03919/AceInputTracking         com.legado.app        I     [(-2:100000:singleton)] pointdown windowId: 66
-06-17 18:17:17.191   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] InputTracking id:6324, fingerId:0, type=0, inject=0, isPrivacyMode=0
-06-17 18:17:17.191   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] InputTracking id:6324, touch test hitted node info: fingerId: 0{ tag: Row, depth: 20 };
-06-17 18:17:17.191   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] InputTracking id:6324, touch test hitted recognizer type info: recognizer type ClickRecognizer node info: { tag: Row };recognizer type PanRecognizer node info: { tag: Stack };
-06-17 18:17:17.191   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6324, exclusive 0 type: 0
-06-17 18:17:17.191   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6324, pan 0 down, state: 0
-06-17 18:17:17.191   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6324, click 0 down, ETF: 0, CTP: 0, state: 0
-06-17 18:17:17.191   14923-14923   C03919/AceInputTracking         com.legado.app        I     [(100000:100000:scope)] Consumed new event id=6324 in ace_container, lastEventInfo: id:6322
-06-17 18:17:17.191   14923-14923   C04213/InputKeyFlow             com.legado.app        I     [] ConsumePointerEventInner(872): InputId:6324,wid:66,pointId:0,srcType:2,rect:[0,0,1260,2720],notify:1
-06-17 18:17:17.293   14923-15050   C02805/InputKeyFlow             com.legado.app        I     [][OnPointerEvent:216] ac: up: 6325
-06-17 18:17:17.293   14923-15050   C02805/InputKeyFlow             com.legado.app        I     [P:U:6325][OnPointerEvent:541] id:6325 recv
-06-17 18:17:17.293   14923-14923   C04213/InputKeyFlow             com.legado.app        I     [] OnInputEvent(86): eid:241,InputId:6325,wid:66,ac:4
-06-17 18:17:17.293   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] InputTracking id:6325, fingerId:0, type=1, inject=0, isPrivacyMode=0
-06-17 18:17:17.293   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6325, exclusive 0 type: 1
-06-17 18:17:17.293   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6325, pan 0 up, state: 1
-06-17 18:17:17.294   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Id:6325, click 0 up, state: 0
-06-17 18:17:17.294   14923-14923   C0391e/AceGesture               com.legado.app        I     [(100000:100000:scope)] Click try accept
-06-17 18:17:17.294   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] Click accepted, tag: Row
-06-17 18:17:17.294   14923-14923   C03951/InputKeyFlow             com.legado.app        I     [(100000:100000:scope)] id: 0, log: {types: Pan, node: Stack, prcd: Down, state: DETECTING, prcd: Up, state: FAIL, extraInfo: currentFingers: 1 fingers: 1}{types: Click, node: Row, prcd: Down, state: READY, extraInfo: ETF: 0 CFP: 0, prcd: Up, state: SUCCEED, extraInfo: ETF: 0 CFP: 0}
-06-17 18:17:17.294   14923-14923   C03919/AceInputTracking         com.legado.app        I     [(100000:100000:scope)] Consumed new event id=6325 in ace_container, lastEventInfo: id:6322
-06-17 18:17:17.294   14923-14923   C04213/InputKeyFlow             com.legado.app        I     [] ConsumePointerEventInner(872): InputId:6325,wid:66,pointId:0,srcType:2,rect:[0,0,1260,2720],notify:1
-06-17 18:17:17.314   14923-14923   C03949/AceSheet                 com.legado.app        E     [(100000:100000:scope)] radius is not correct type
-06-17 18:17:17.315   14923-14923   C03949/AceSheet                 com.legado.app        E     [(100000:100000:scope)] radius is not correct type
-06-17 18:17:17.315   14923-14923   C03949/AceSheet                 com.legado.app        E     [(100000:100000:scope)] radius is not correct type
-06-17 18:17:17.317   14923-14923   C03949/AceSheet                 com.legado.app        E     [(100000:100000:scope)] radius is not correct type
-06-17 18:17:17.329   14923-14923   C0391d/AceMouse                 com.legado.app        I     [(100000:100000:scope)] FlushMouseEvent: last pointer event id 6318 sourceType:2 last mouse event time:26848515311000 current time 26852251579613
-06-17 18:17:17.400   14923-15147   C015b0/NETSTACK                 com.legado.app        I     [http_exec.cpp:418] taskid=-2147483579, size:5482, dns:0.000, connect:0.000, tls:0.000, firstSend:0.251, firstRecv:1163.269, total:1165.008, redirect:0.000, errCode:0, RespCode:200, httpVer:3, method:GET, osErr:0
-06-17 18:17:17.402   14923-14923   A03d00/JSAPP                    com.legado.app        I     [requestUrlHtml] 检测到编码: UTF-8
-06-17 18:17:17.402   14923-15147   C015b0/NETSTACK                 com.legado.app        I     [http_exec.cpp:418] taskid=-2147483581, size:7510, dns:0.041, connect:0.000, tls:0.000, firstSend:1.150, firstRecv:613.764, total:1178.523, redirect:0.000, errCode:0, RespCode:200, httpVer:3, method:GET, osErr:0
-06-17 18:17:17.402   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] 响应长度: 8049
-06-17 18:17:17.402   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] ruleContent: .box.single@html##<div class="row resetfontsize[\s\S]*?</div>\s*</div>|<h1[^>]*>[^<]*</h1>|<script[\s\S]*?</script>|<a [^>]*>[^<]*(上一章|下一章|目录|存书签)[^<]*</a>|<ul class="pagination[\s\S]*?</ul>|<div class="text-center[\s\S]*?</div>
-06-17 18:17:17.402   14923-14923   A03d00/JSAPP                    com.legado.app        I     [parseContent] 开始解析, body长度: 8049, rule: .box.single@html##<div class="row resetfontsize[\s\S]*?</div>\s*</div>|<h1[^>]*>[^<]*</h1>|<script[\s\S]*?</script>|<a [^>]*>[^<]*(上一章|下一章|目录|存书签)[^<]*</a>|<ul class="pagination[\s\S]*?</ul>|<div class="text-center[\s\S]*?</div>
-06-17 18:17:17.403   14923-15147   C015b0/NETSTACK                 com.legado.app        I     [http_exec.cpp:418] taskid=-2147483580, size:8517, dns:0.000, connect:0.000, tls:0.000, firstSend:0.352, firstRecv:1165.162, total:1167.303, redirect:0.000, errCode:0, RespCode:200, httpVer:3, method:GET, osErr:0
-06-17 18:17:17.404   14923-14923   A03d00/JSAPP                    com.legado.app        I     [parseContent] 解析结果长度: 68
-06-17 18:17:17.404   14923-14923   A03d00/JSAPP                    com.legado.app        I     [parseContent] 前200字符: 字体
-                                                                                                                   大
-                                                                                                                   中
-                                                                                                                   小
-06-17 18:17:17.405   14923-14923   A03d00/JSAPP                    com.legado.app        I     CSS选择器匹配成功: a, 找到 27 个元素
-06-17 18:17:17.408   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] 解析结果长度: 68
-06-17 18:17:17.408   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 2 is URL, fetching: https://www.yysk.net/134/134878/131558.html
-06-17 18:17:17.408   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 1 is URL, fetching: https://www.yysk.net/134/134878/131557.html
-06-17 18:17:17.408   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 3 splitting text, content length: 68
-06-17 18:17:17.408   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 3 paragraphList length: 4
-06-17 18:17:17.408   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 3 starting taskPool, paragraphs: 4, w:1104 h:2373 fs:19
-06-17 18:17:17.408   14923-14923   C03f01/NAPI                     com.legado.app        I     [(:591)(ExecuteTask)] taskpool:: Task Allocation: taskId : 140538050064720, priority : 1, executeState : 1
-06-17 18:17:17.408   14923-14923   A03d00/JSAPP                    com.legado.app        I     [requestUrlHtml] 检测到编码: UTF-8
-06-17 18:17:17.409   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] 响应长度: 9471
-06-17 18:17:17.409   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] ruleContent: .box.single@html##<div class="row resetfontsize[\s\S]*?</div>\s*</div>|<h1[^>]*>[^<]*</h1>|<script[\s\S]*?</script>|<a [^>]*>[^<]*(上一章|下一章|目录|存书签)[^<]*</a>|<ul class="pagination[\s\S]*?</ul>|<div class="text-center[\s\S]*?</div>
-06-17 18:17:17.409   14923-14923   A03d00/JSAPP                    com.legado.app        I     [parseContent] 开始解析, body长度: 9471, rule: .box.single@html##<div class="row resetfontsize[\s\S]*?</div>\s*</div>|<h1[^>]*>[^<]*</h1>|<script[\s\S]*?</script>|<a [^>]*>[^<]*(上一章|下一章|目录|存书签)[^<]*</a>|<ul class="pagination[\s\S]*?</ul>|<div class="text-center[\s\S]*?</div>
-06-17 18:17:17.411   14923-14923   A03d00/JSAPP                    com.legado.app        I     [parseContent] 解析结果长度: 68
-06-17 18:17:17.412   14923-14923   A03d00/JSAPP                    com.legado.app        I     [parseContent] 前200字符: 字体
-                                                                                                                   大
-                                                                                                                   中
-                                                                                                                   小
-06-17 18:17:17.412   14923-14923   A03d00/JSAPP                    com.legado.app        I     CSS选择器匹配成功: a, 找到 27 个元素
-06-17 18:17:17.414   14923-14923   A03d00/JSAPP                    com.legado.app        I     [BookContentHolder] 解析结果长度: 68
-06-17 18:17:17.414   14923-14923   A03d00/JSAPP                    com.legado.app        I     [ReaderPage2] 预取结果长度: 68
-06-17 18:17:17.414   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 2 splitting text, content length: 68
-06-17 18:17:17.414   14923-15079   C04200/WMS                      com.legado.app        I     [] GetContext(1581): name:app0, id:66
-06-17 18:17:17.414   14923-15079   C04200/WMS                      com.legado.app        I     [] GetTopWindowWithContext(3261): [GetTopWin] mainId: 66!
-06-17 18:17:17.414   14923-14923   A03d00/JSAPP                    com.legado.app        I     [calContentOfTargetChapter] chapter 2 paragraphList length: 4
-06-17 18:17:17.414   14923-16280   C01707/CONCUR                   com.legado.app        E     [Interface] task 16280 apply qos failed, errno = 4
-
-
-
-
-
 
 <!doctype html>
 <html lang="zh-CN">
@@ -154,22 +12,29 @@
     <link rel="stylesheet" href="/font/iconfont.css">
     <script src="/js/addons.js"></script>
 
-    <title>天心战道_乡间草_正文 第二章 生命源泉_歪歪书库</title>
-    <meta name="keywords" content="正文 第二章 生命源泉,乡间草,天心战道,www.yysk.net">
-    <meta name="description" content="歪歪书库提供天心战道(乡间草)正文 第二章 生命源泉在线阅读,所有小说均免费阅读,努力打造最干净的阅读环境,24小时不间断更新,请大家告诉更多的小说迷。">
+    <title>我太想重生了目录最新章节_我太想重生了全文免费阅读_歪歪书库</title>
+    <meta name="keywords" content="我太想重生了目录最新章节,我太想重生了全文免费阅读,www.yysk.net">
+    <meta name="description" content="我太想重生了目录最新章节由网友提供，《我太想重生了》情节跌宕起伏、扣人心弦，是一本情节与文笔俱佳的歪歪书库，歪歪书库免费提供我太想重生了最新清爽干净的文字章节在线阅读。">
 
     <meta name="robots" content="all">
     <meta name="googlebot" content="all">
     <meta name="baiduspider" content="all">
+    <meta property="og:type" content="novel" />
+    <meta property="og:title" content="我太想重生了最新章节" />
+    <meta property="og:description" content="林逍重生2001年，那个青涩而又狂浪的年代。面对前妻白月光：上辈子你虐我，这辈子让你叫爸爸。面对萧沫沫他说：乖，辞去工作，你就不是我老师了。面对恩人女总裁：你破产了？太好了，正愁没处报恩。赚最浪的钱，谈最骚的恋爱。" />
+    <meta property="og:image" content="//www.yysk.net/images/0/130/130s.jpg" />
+    <meta property="og:novel:category" content="其它小说" />
+    <meta property="og:novel:author" content="沉默的糕点" />
+    <meta property="og:novel:book_name" content="我太想重生了" />
+    <meta property="og:novel:read_url" content="//www.yysk.net/0/130/" />
+    <meta property="og:url" content="//www.yysk.net/0/130/" />
+    <meta property="og:novel:status" content="完本" />
+    <meta property="og:novel:author_link" content="//www.yysk.net/search.php?q=%E6%B2%89%E9%BB%98%E7%9A%84%E7%B3%95%E7%82%B9&amp;p=1" />
+    <meta property="og:novel:update_time" content="2025-08-20 17:04:40" />
+    <meta property="og:novel:latest_chapter_name" content="完本感言！" />
+    <meta property="og:novel:latest_chapter_url" content="//www.yysk.net/0/130/143650.html" />
 </head>
 <body>
-
-<div id="outer" style="display: none;">
-    <div>
-    <p>正文 第二章 生命源泉-《天心战道》</p>
-    </div>
-    <div id="inner"></div>
-</div>
 
  
 <header>
@@ -191,79 +56,425 @@
 </header>
 
 <nav class="">
-    <div class="container  nav">
+    <div class="container nav">
     <a href="/" class="act">首页</a><a href="/list1/">玄幻</a><a href="/list2/">武侠</a><a href="/list3/">都市</a><a href="/list4/">历史</a><a href="/list5/">网游</a><a href="/list6/">科幻</a><a href="/list7/">言情</a><a href="/list8/">其他</a><a href="/top/" >排行</a><a href="/full/" >完本</a>
     </div>
 </nav>
 
 <section>
     <div class="container">
-        <div class="box single">
-            <div class="row resetfontsize">
-                <div class="col-7">
-                    <a href="javascript:;">字体</a>
-                    <a id="font_max" class="active" href="javascript:;"
-                       onclick="change_font_size(this,'font_max');">大</a>
-                    <a id="font_middle" href="javascript:;" onclick="change_font_size(this,'font_middle');">中</a>
-                    <a id="font_min" href="javascript:;" onclick="change_font_size(this,'font_min');">小</a>
+        <div class="box">
+            <div class="title">
+                <a href="//www.yysk.net">
+                    <i class="icon-home"></i> 歪歪书库</a> &gt;
+                <a href="/list8/">其它小说</a> &gt; 我太想重生了
+            </div>
+            <div class="row book_info">
+                <div class="col-3 col-md-2 " style="display: flex; justify-content: center;">
+                    <img class="img-thumbnail " alt="我太想重生了"
+                         src="/images/0/130/130s.jpg" title="我太想重生了"
+                         onerror="this.src='/images/nocover.jpg';">
                 </div>
-                <div class="col-5 text-right">
-                    <a id="lrchange" href="javascript:;" onclick="lr_change(this);">换手</a>
-                <!--   <a id="fullscreenread" href="javascript:;" onclick="full_screen_read(this);"
-                       data-toggle="tooltip" data-placement="top" title="全屏阅读更方便，双击退出">全屏阅读</a> --> 
-                    <a id="light" href="javascript:;" onclick="change_light(this);">关灯</a>
+                <div class="col-9 col-md-10 pl-md-3 info">
+                    <h1>我太想重生了</h1>
+                    <div class="options">
+                        <ul class="">
+                            <li class="">作者：<a href="/search.php?q=%E6%B2%89%E9%BB%98%E7%9A%84%E7%B3%95%E7%82%B9&amp;p=1">沉默的糕点</a></li>
+                            <li class="">更新时间：2025-08-20 17:04:40</li>
+                           
+                            <li class=" d-none d-md-block"><a href="#footer">直达底部</a></li>
+                            
+                            <li class="col-12">状态：完本</li>
+                            <li class="col-12">最新章节：<a href="/0/130/143650.html">完本感言！</a></li>
+                            <li class=" d-none d-md-block"><a href="javascript:;" onclick="addMark(8,130,'','')">加入书架</a></li>
+                            <li class=" d-none d-md-block"><a href="#" onclick="readbook();">点击阅读</a></li>
+                        </ul>
+                    </div>
+                  
                 </div>
             </div>
-            <h1>正文 第二章 生命源泉-《天心战道》</h1>
-            <script>ddfirst();</script>
-            <div class="row nav-bottom">
-                <div class="col-3"><a id="prev1" href="/134/134862/129777.html"  data="/134/134862/129777.html">上一章</a></div>
-                <div class="col-3"><a href="/134/134862/" >目录</a></div>
-                <div class="col-3"><a href="javascript:;" onclick="addMark(1,134862,129778,'正文 第二章 生命源泉')">存书签</a></div>
-                <div class="col-3"><a id="next1" href="/134/134862/129778_2.html"  data="/134/134862/129778_2.html"  >下一章</a></div>
+            <div class="bt_m d-md-none row">
+                <div class="col-6"><a class="bt_o" href="javascript:;" onclick="addMark(8,130,'','')">加入书架</a></div>
+                <div class="col-6"><a class="bt_r" href="javascript:;" onclick="readbook();">点击阅读</a></div>
             </div>
+            <div id="intro_pc" class="intro d-none d-md-block" >
+                <a class="d-md-none" href="javascript:;" onclick="show_info(this);"><span class="iconfont icon-xialajiantouxiao" style=""></span></a>
+                <strong>简介：</strong>
+                <br>林逍重生2001年，那个青涩而又狂浪的年代。面对前妻白月光：上辈子你虐我，这辈子让你叫爸爸。面对萧沫沫他说：乖，辞去工作，你就不是我老师了。面对恩人女总裁：你破产了？太好了，正愁没处报恩。赚最浪的钱，谈最骚的恋爱。
+                <br>您要是觉得《<strong>我太想重生了</strong>》还不错的话请不要忘记向您QQ群和微博微信里的朋友推荐哦！
+            </div>
+            <div class="book_info">
+                <div id="intro_m" class="intro intro_m d-md-none">
+                    <div class="in"></div>
+                </div>
+            </div>
+            <div class="info_other">
+                 
+                            
+                        其它作品：<a href="/0/27/">史上最强赘婿</a>/<a href="/0/40/">史上第一密探</a>/<a href="/16/16745/">太监武帝</a>/<a href="/37/37892/">我在镇夜司打开地狱之门</a>/<a href="/54/54218/">我的阁楼通异界</a>/<a href="/76/76322/">灭世魔帝</a>/<a href="/77/77844/">机战皇</a>/<a href="/84/84846/">篡清：我初恋是慈禧</a>/<a href="/109/109335/">我在坟场画皮十五年</a>/
+                            
+                            
+            </div>
+            <div class="input_copy_txt_to_board">
+                <input readonly="readonly" id="input_copy_txt_to_board" value="我正在阅读沉默的糕点的小说《我太想重生了》内容非常精彩，推荐你来看看，打开以下网址即可: http://www.yysk.net/0/130/"><a href="javascript:;" onclick="exeCommanda()">复制分享</a>
+            </div>
+            <div class="book_info d-none d-md-block">
+                <p style="padding:10px 0 10px 10px;margin-top: 10px;border-top: 1px dashed #e5e5e5;color: #f77474;">新书推荐：   
+                    
+                    <a href="/0/131/">都重生了谁谈恋爱啊</a>、
+                    
+                    <a href="/0/132/">炮火弧线</a>、
+                    
+                    <a href="/0/133/">女侠且慢</a>、
+                    
+                    <a href="/0/134/">开局被追杀，我获得第一快剑</a>、
+                    
+                    <a href="/0/135/">我的治愈系游戏</a>、
+                    
+                    <a href="/0/129/">都市龙王赘婿</a>、
+                    
+                    <a href="/0/128/">大明第一神将</a>、
+                    
+                    <a href="/0/127/">重生之赘婿夫君</a>、
+                    
+                    <a href="/0/126/">东风第一枝</a>、
+                    
+                    <a href="/0/125/">远古第一魔神</a>、
+                    
+                    </p>
+                <div class="cr"></div>
+            </div>
+        </div>
+    </div>
+    </div>
+</section>
 
-            <article class="font_max">
-                <br>&nbsp;&nbsp;&nbsp;&nbsp;第(1/3)页<br><br>&nbsp;&nbsp;&nbsp;&nbsp;规则之眼布下的封印犹如天威，捆缚了一切。整个世界都变得灰黑一片，被枯寂和腐败占据，充满了死亡与杀戮。唯有昏黄的漩风，无休止的游荡在满目苍痍的大地上。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;只不过这一次的旋风有些不同，昏黄的旋风中出现了一道道猩红的目光。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“这些旋风有些诡异，望之不穿，我只能大概感应到有十三头异兽。”乐萱皱着眉头，有些吃力。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“乐萱妹子你已经很厉害了，这里的风可不简单，乃是风生兽王的酣睡气息所化。具有隔绝灵识之力的作用，你的通灵仙体还太弱小自然感应不到。”徐辉讨好的说道，自从知道她是林雅的师妹，徐辉这一路上可没少献殷勤。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“不对，他们不是风生兽。”幻天眼眸流转紫色光芒，很是警惕。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“根据家族历来先辈的记载，这里是风生兽蛰伏之地没错啊！难道你——能——看——穿——这——旋——风。”徐辉正回忆家族留下来的信息，却看见幻天眼眸流转紫色光芒，目不转睛的盯着旋风深处，使得他下半句话打顿。其他人亦是如此，大张嘴巴，连可爱的乐萱也是如此，惊讶的说道：“你好厉害，比感识，你是第一个超越我的同境界之人。”
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“防御战阵。”幻天忽略几人的惊讶表情，摆出几人事先说明的战斗方式，将乐萱护在了中央。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“你是如何看透风生兽王的酣睡气息的？据我了解，你们东皇家可没有这个能力，至少你这个境界还做不到。”小和尚怀疑，拿出了一个闪烁暗金光芒的金钵，护在了胸前。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“如果没有特殊本领，那几个老家伙如何能让我这个力轮第一重的子孙来到此地。”幻天随意忽悠。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“老家伙！幻兄果然也是性情中人。”徐辉重复幻天的话语，很是投机。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“不知幻兄是如何看出它们不是风声兽的。”苍岚提问。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“风生兽我也见过几只，可是我没见过长着鳞片的风生兽。”
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“管他呢！先抓它几只再说。”徐辉跃跃欲试。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“徐兄霸气，风生兽速度奇快，皮毛坚韧。只要不将其震碎，得风之，须臾之间便会复活，你确定要在这里抓取它们。”苍岚打击。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“开个玩笑，苍兄那么认真干嘛！”
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“破晓天尽。”幻天不理会几人的吵闹，施展他记忆中为数不多的幻氏秘法。双眸闪耀紫光，浩荡而去。如同穿云利箭，刺破昏黄的旋风，向着周围看去，寻找出路。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;于此同时，以此地为中心，无数的外来之人和此地异种，都被这破入云霄的紫光所惊扰。幻天如同一个药引子，引起了一场人心风暴，触动了太多居心叵测的人们。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“什么？好强的秘法，竟然能在遗落之地引发如此异象，真不知道和幻兄你在一起是福还是祸。”几人目瞪口呆，再一次被幻天的行为所惊讶。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“走，去那边。”幻天首当其冲，带动几人离开。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“幻兄，不会搞错了吧！这边风生兽最多。”
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“多就对了，如果我没有猜错，那边因该是另一只兽王的领域。而兽王领地意识极强，不想爆发兽王之战的话，这些风生兽不会追过去的。”
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“吼吼吼……”吼声如雷，充满了暴虐。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;似是发现了几人行走的方向，十几头风生兽彻底狂暴，向着几人扑击而去。其中最为强大的一头风生兽冲向了幻天，对于它们来说，幻天是特殊的，必须抢先杀死。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;看着扑击过来的风生兽，幻天震动指掌，&nbsp;一掌切出，斩向风生兽前爪的关节处。两者砰然作响，强大的力量超出了幻天的想象，幻天被撞的连连后退。一双素手伸出，轻轻的抵住了他的后背。“幻大哥，你身受重伤，还是换我来吧！”
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;幻天点头，此时不是逞强的时候。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;“变换阵型。”苍岚大喊一身。几人随之变换阵型，组成了一个常用的利箭阵。苍岚为首，徐辉和能忍小和尚分守两边，乐萱殿后。三角阵如同一柄利剑豁开风生兽的围攻，冲向幻天所指引的目的地。
-<br><br>&nbsp;&nbsp;&nbsp;&nbsp;苍岚直接舍去了手中重剑，整个人如同一头人形凶兽，每一击都是势大力沉，与之碰撞的风生兽无不翻滚飞出。左边的徐辉手持一柄利剑，被他舞动的密不透风，冲过来的风生兽，稍有迟疑便被他分解成为了一堆肉片。而右边的能忍小和尚惦着一个巨大的金钵，每颂一次佛号重击一次，手下丝毫不见仁慈之色。
-<br>&nbsp;&nbsp;&nbsp;&nbsp;第(1/3)页<br><br>
-            </article>
-            <script>ddtop();</script>
-            <div class="row nav-bottom">
-                <div class="col-3"><a id="prev" href="/134/134862/129777.html"  data="/134/134862/129777.html">上一章</a></div>
-                <div class="col-3"><a href="/134/134862/" >目录</a></div>
-                <div class="col-3"><a href="javascript:;" onclick="addMark(1,134862,129778,'正文 第二章 生命源泉')">存书签</a></div>
-                <div class="col-3"><a id="next" href="/134/134862/129778_2.html"  data="/134/134862/129778_2.html"  >下一章</a></div>
+<section>
+    <div class="container">
+        <div class="box">
+            <div class="box mt10">
+                <h2 class="title"><b><i class="icon-list"></i>章节列表，第1章~
+                    0章/共0章</b>
+                    <a class="btn" href="javascript:;" onclick="reverse_oder(this);">倒序</a>
+                </h2>
+                <div class="book_list book_list2">
+                    <ul class="row">
+                        
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143302.html">第1章:我太想重生了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143303.html">第2章:大逆不道的告白</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143304.html">第3章:他一直这样吗？</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143305.html">第4章:你真空了(狂风明月看书新盟主贺）</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143306.html">第5章:你真太无耻了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143307.html">第6章:你好骚啊！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143308.html">第7章:太坏了！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143309.html">第8章:太厉害了，高手啊！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143310.html">第9章:那么骄傲</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143311.html">第10章:被抓奸的林逍？</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143312.html">第11章:拜见岳父大人？</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143313.html">第12章:太惊艳了！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143314.html">第13章:太不可思议</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143315.html">第14章:聊骚聊骚，越聊越骚</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143316.html">第15章:雄竞！考试了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143317.html">第16章：月考so easy!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143318.html">第17章:靠，牛逼啊！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143319.html">第18章：考试结束</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143320.html">第19章:林逍的表演</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143321.html">第20章:振聋发聩，重中之重</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143322.html">第21章：公布分数！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143323.html">第22章：太夸张了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143324.html">第23章:成绩，全家振奋!（拜求追读）</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143325.html">第24章:二狗，我们太暧昧了!(求追读)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143326.html">第25章:你我约定！大钱</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143327.html">第26章:叫爸爸，法力无穷</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143328.html">第27章:美丽攻击！交手毒霸</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143329.html">第28章:太牛逼!太凶残了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143330.html">第29章:钱到手!惊艳四座</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143331.html">第30章:真是天才啊！(求追读)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143332.html">第31章:命运相托，天作之合</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143333.html">第32章:创业始,被连正发现了!(求追读)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143334.html">第33章:岳父苦心!新概念审稿</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143335.html">第34章:新概念作文惊艳全场!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143336.html">第35章:特殊表彰，关键时刻</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143337.html">第36章:全家骄傲!萧沫沫命运之夜</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143338.html">第37章:对沫沫的致命一击!(求追读)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143339.html">第38章:夜色!拯救萧沫沫!(重要)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143340.html">第39章:你是我的英雄</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143341.html">第40章:沫沫的美丽深渊</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143342.html">第41章:分手!梦想起点</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143343.html">第42章:二狗,我们谈恋爱吧!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143344.html">第43章:这就是恋爱吗!起始</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143345.html">第44章:最强不过攻心！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143346.html">第45章:林逍的魔法!太厉害了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143347.html">第46章:我真是连漪男朋友</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143348.html">第47章:报仇不过夜嘛</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143349.html">第48章:绝对高端大气上档次!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143350.html">第49章:期中分数炸裂！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143351.html">第50章:林逍，你太棒了!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143352.html">第51章:校长的期待</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143353.html">第52章:调戏连漪!金钱与权力</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143354.html">第53章:才华横溢，走捷径</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143355.html">第54章:新概念表彰信来了!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143356.html">第55章:彻底撕碎,全校表彰！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143357.html">第56章:惊艳全场!局长之夸奖</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143358.html">第57章:连书记，缘起</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143359.html">第58章:岳父的激赏</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143360.html">第59章:缘分加深了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143361.html">第60章:事成了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143362.html">第61章:出人头地！(1更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143363.html">第62章:吴远,被你害死了!(2更,上架预告)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143364.html">上架感言，你要快乐一点!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143365.html">第63章:吴远战栗!大获成功!(1更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143366.html">第64章:天才和疯子(2更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143367.html">第65章:太牛了,简直是艺术!(3更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143368.html">一万五送上，求首订,求月票!</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143369.html">第66章:东窗事发,沫沫母亲找上门!(4更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143370.html">第67章:叫老公!吴远完了!(1更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143371.html">第68章:新荣誉，新惊喜!(2更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143372.html">第69章:天塌了,情感蜕变(3更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143373.html">第70章:启发！悸动!（1更）</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143374.html">第71章:背刺！火热!(2更)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143375.html">第72章:ko，赢了（3更）</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143376.html">第73章:吴远被捕!网站上线!(2更合1)</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143377.html">第74章:一切结束,萧家狂喜</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143378.html">第75章:沫沫的报答</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143379.html">第76章:沫沫别这样</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143380.html">第77章:危险女人！危险企图</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143381.html">第78章:艳荡女人,刺激火车</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143382.html">第79章:沫沫的初吻!瞬间的高潮</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143383.html">第80章:分手！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143384.html">第81章:战役开启,以你为荣！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143385.html">第82章:这效果，牛逼！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143386.html">第83章:国外巨头的赞赏,虐李霜</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143387.html">第84章:真相大白,惊喜收入</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143388.html">第85章:大爆，高价收购我们</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143389.html">第86章:果然是天才，厉害</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143390.html">第87章:瞬间征服，成了</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143391.html">第88章:狂野之夜,李霜疯狂礼物</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143392.html">第89章:酒后社死，重大胜利</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143393.html">第90章:收割开始，太好赚了！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143394.html">第91章:抢钱啊，发了!造神运动</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143395.html">第92章:神作啊，引爆网络</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143396.html">第93章:二狗偶像，特殊人物来访</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143397.html">第94章:亲姐的震撼,李霜亲密接触</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143398.html">第95章:李霜姐我养你啊!两开花</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143399.html">第96章:巨资收购，孤注一掷</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143400.html">第97章:两月之后,重磅出击！</a></li>
+                        
+                        
+                        <li class="col-md-3"><a href="/0/130/143401.html">第98章:一炮而红,手段高明啊</a></li>
+                        
+                    </ul>
+                </div>
+                
+                <div class="book_info d-none d-md-block">
+                    <p style="padding:10px 0 10px 10px;margin-top: 10px;border-top: 1px dashed #e5e5e5;color: #f77474;">精彩推荐：
+                        
+                    </p>
+                    <div class="cr"></div>
+                </div>
             </div>
-            <script>ddnext();</script>
         </div>
     </div>
 </section>
+
 
 <div id="footer">
 <div class="container">
@@ -278,18 +489,45 @@ footer();
 
 <script src="/js/jquery-1.11.1.min.js"></script>
 <script src="/js/bootstrap.bundle.min.js"></script>
-<script>
-    $(document).bind("mobileinit",function(){
-        $.mobile.ajaxEnabled=false
-    });
-</script>
-<!-- <script src="/js/jquery.mobile-1.4.5.min.js"></script> -->
 <script src="/js/main.js"></script>
 <script src="/js/user.js"></script>
-<script src="/js/reader.js"></script>
-<script src="/js/0x1a2b3c4d.js"></script>
-<script>
-    addHit(134862)
+
+<script type="text/javascript">
+   var pagebase="/0/130/index_99999.html";
+  $("#jumppage").change(function(){
+      window.location.href=pagebase.replace("99999",$("#jumppage").val())
+  });
+    $("#intro_m .in").html($("#intro_pc").html());
+    //$.pagination('.book_list ul li', '.book_list_m ul', 1, 40);
+
+    function show_info(e){
+        var obj=$(e).find("span");
+        if(obj.hasClass("icon-xialajiantouxiao")){
+            $("#intro_m").animate({height:$("#intro_m .in").height()});
+            obj.removeClass("icon-xialajiantouxiao").addClass("icon-shouqijiantouxiao");
+            //$(e).html('隐藏简介');
+        }else{
+            $("#intro_m").animate({height:"60px"});
+            obj.removeClass("icon-shouqijiantouxiao").addClass("icon-xialajiantouxiao");
+            //$(e).html('详情简介');
+        }
+    }
+
+    function exeCommanda(e){
+        //let html ='<input  id="input_copy_txt_to_board" value="" />';//添加一个隐藏的元素
+        //var txt=window.location.href;
+        //$("#input_copy_txt_to_board").val(txt);//赋值
+       // $("#input_copy_txt_to_board").removeClass("hide");//显示
+        $("#input_copy_txt_to_board").focus();//取得焦点
+        $("#input_copy_txt_to_board").select();//选择
+        document.execCommand("Copy");
+        //$("#input_copy_txt_to_board").addClass("hide");//隐藏
+        //$(e).focus();
+        tips("已复制分享信息");
+    }
+    function readbook(){
+        window.location.href="/0/130/143302.html"
+    }
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"5fe2a5752ec04f0a8ef10dbccec02708","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>

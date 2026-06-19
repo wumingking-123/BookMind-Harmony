@@ -274,6 +274,7 @@ function createFuShuCunSource(): BookSource {
   exploreRule.name = 'a@text'
   exploreRule.author = 'a@text'
   exploreRule.bookUrl = 'a@href'
+  exploreRule.coverUrl = 'img@src'
   exploreRule.kind = 'a@text'
   source.ruleExplore = exploreRule
 
@@ -372,6 +373,7 @@ function createAiQuNovelSource(): BookSource {
   exploreRule.bookList = '@css:div.book-item'
   exploreRule.name = 'div.book-title a@title'
   exploreRule.bookUrl = 'a@href'
+  exploreRule.coverUrl = 'img@src'
   source.ruleExplore = exploreRule
 
   // 书籍信息规则

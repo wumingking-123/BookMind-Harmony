@@ -8,16 +8,21 @@ export class HtmlParser {
    */
   static matchTags(html: string, tagName: string): string[] {
     const results: string[] = [];
-    // 匹配自闭合标签 <tag ... /> 或 <tag ...>
-    const selfClosingRegex = new RegExp(`<${tagName}\\b[^>]*\\/\\s*>`, 'gi');
-    let match: RegExpExecArray | null;
-    while ((match = selfClosingRegex.exec(html)) !== null) {
-      results.push(match[0]);
-    }
     // 匹配开闭标签 <tag ...>...</tag>
     const openCloseRegex = new RegExp(`<${tagName}\\b[^>]*>[\\s\\S]*?<\\/${tagName}>`, 'gi');
+    let match: RegExpExecArray | null;
     while ((match = openCloseRegex.exec(html)) !== null) {
       results.push(match[0]);
+    }
+    // 匹配自闭合标签 <tag ... /> 或 <tag ...>（HTML5 void元素如img/br无需斜杠）
+    const selfClosingRegex = new RegExp(`<${tagName}\\b[^>]*(?:\\/\\s*)?>`, 'gi');
+    while ((match = selfClosingRegex.exec(html)) !== null) {
+      const matchedStr = match[0];
+      // 排除已被开闭标签完整匹配覆盖的开标签（如<div>被<div>content</div>覆盖）
+      const isPartOfOpenClose = results.some(oc => oc.includes(matchedStr) && oc.length > matchedStr.length);
+      if (!isPartOfOpenClose) {
+        results.push(matchedStr);
+      }
     }
     return results;
   }
@@ -34,8 +39,24 @@ export class HtmlParser {
    * 按class匹配元素
    */
   static matchByClass(html: string, className: string): string[] {
-    const regex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bclass\\s*=\\s*["'][^"']*\\b${HtmlParser.escapeRegex(className)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
-    return html.match(regex) || [];
+    const results: string[] = [];
+    // 匹配开闭标签 <tag class="xxx">...</tag>
+    const openCloseRegex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bclass\\s*=\\s*["'][^"']*\\b${HtmlParser.escapeRegex(className)}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+    let match: RegExpExecArray | null;
+    while ((match = openCloseRegex.exec(html)) !== null) {
+      results.push(match[0]);
+    }
+    // 匹配自闭合/void元素 <img class="xxx" ...> 或 <img class="xxx" .../>
+    const selfClosingRegex = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^>]*\\bclass\\s*=\\s*["'][^"']*\\b${HtmlParser.escapeRegex(className)}\\b[^"']*["'][^>]*(?:\\/\\s*)?>`, 'gi');
+    while ((match = selfClosingRegex.exec(html)) !== null) {
+      const tagName = match[1];
+      const matchedStr = match[0];
+      // 排除已被开闭标签匹配器捕获的（以<tag开头且以</tag>结尾的完整元素）
+      if (!matchedStr.match(new RegExp(`<${tagName}\\b[^>]*>[\\s\\S]*?<\\/${tagName}>`, 'i'))) {
+        results.push(matchedStr);
+      }
+    }
+    return results;
   }
 
   /**
