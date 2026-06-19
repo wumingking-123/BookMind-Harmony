@@ -7,16 +7,62 @@ import { ThemeItem } from '../../../common/model/Theme'
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
 } from '../../../common/constants/DesignTokens'
+import fs from '@ohos.file.fs';
+import { common } from '@kit.AbilityKit';
+import { showMessage } from '../../../componets/common/promptShow';
+
+function getFileSize(path: string): number {
+  try {
+    let stat = fs.statSync(path);
+    return stat.size;
+  } catch(e) {
+    return 0;
+  }
+}
+
+function getDirSize(path: string): number {
+  let size = 0;
+  try {
+    let stat = fs.statSync(path);
+    if (stat.isDirectory()) {
+      let files = fs.listFileSync(path);
+      for (let i = 0; i < files.length; i++) {
+        size += getDirSize(path + '/' + files[i]);
+      }
+    } else {
+      size += stat.size;
+    }
+  } catch(e) {}
+  return size;
+}
+
+function deleteDirContent(path: string) {
+  try {
+    let stat = fs.statSync(path);
+    if (stat.isDirectory()) {
+      let files = fs.listFileSync(path);
+      for (let i = 0; i < files.length; i++) {
+        let filePath = path + '/' + files[i];
+        let fStat = fs.statSync(filePath);
+        if (fStat.isDirectory()) {
+          deleteDirContent(filePath);
+          fs.rmdirSync(filePath);
+        } else {
+          fs.unlinkSync(filePath);
+        }
+      }
+    } else {
+      fs.unlinkSync(path);
+    }
+  } catch(e) {}
+}
 
 @Entry
 @Component
 struct clearCache {
   @State clearList: dataItem[] = [
-    new dataItem("系统缓存", 34.35),
-    new dataItem("小说缓存", 34.35),
-    new dataItem("漫画缓存", 34.35),
-    new dataItem("听书缓存", 34.35),
-    new dataItem("字体缓存", 34.35),
+    new dataItem("网络小说缓存", 0),
+    new dataItem("系统临时缓存", 0),
   ]
   @State @Watch("ClearChange") clearDialogStatus: boolean = false
   @State index: number = 0
@@ -30,6 +76,27 @@ struct clearCache {
 
   getSecondColor(): string {
     return this.theme?.secondColor || InkPalette.PAPER_WARM;
+  }
+
+  aboutToAppear() {
+    this.calculateCache();
+  }
+
+  calculateCache() {
+    let context = getContext(this) as common.UIAbilityContext;
+    let cacheDir = context.cacheDir;
+    
+    // 网络小说缓存 (temp_online_book.txt)
+    let onlineNovelSize = getFileSize(cacheDir + '/temp_online_book.txt');
+    
+    // 系统缓存 (整个 cacheDir 减去明确的网络小说缓存)
+    let totalCacheSize = getDirSize(cacheDir);
+    let systemCacheSize = totalCacheSize - onlineNovelSize;
+    if (systemCacheSize < 0) systemCacheSize = 0;
+
+    this.clearList[0].value = parseFloat((onlineNovelSize / 1024 / 1024).toFixed(2));
+    this.clearList[1].value = parseFloat((systemCacheSize / 1024 / 1024).toFixed(2));
+    this.clearList = [...this.clearList];
   }
 
   build() {
@@ -166,22 +233,28 @@ struct clearCache {
 
   // 清除方法
   clear(index: number) {
-    switch (index) {
-      case 0:
-        console.log("系统缓存");
-        break;
-      case 1:
-        console.log("小说缓存");
-        break;
-      case 2:
-        console.log("漫画缓存");
-        break;
-      case 3:
-        console.log("听书缓存");
-        break;
-      case 4:
-        console.log("字体缓存");
-        break;
+    let context = getContext(this) as common.UIAbilityContext;
+    let cacheDir = context.cacheDir;
+    
+    try {
+      if (index === 0) {
+        // 网络小说缓存
+        let filePath = cacheDir + '/temp_online_book.txt';
+        if (fs.accessSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        showMessage('网络小说缓存已清理');
+      } else if (index === 1) {
+        // 系统临时缓存
+        deleteDirContent(cacheDir);
+        showMessage('系统临时缓存已清理');
+      }
+    } catch(e) {
+      console.error("Clear cache failed: " + e);
+      showMessage('清理失败');
     }
+    
+    // 重新计算
+    this.calculateCache();
   }
 }

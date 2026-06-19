@@ -22,11 +22,9 @@ export default struct MyCenter {
   @State center_list: dataItem[] = [
     new dataItem('主题', 1, $r('app.media.my_center_book_icon')),
     new dataItem('书源', 2, $r('app.media.my_center_theme_icon')),
-    new dataItem('净化', 3, $r('app.media.my_center_purify_icon')),
   ]
   // 底部设置列表
   @State end_list: dataItem[] = [
-    new dataItem('帮助中心', 1, $r('app.media.my_center_help_icon')),
     new dataItem('关于我们', 2, $r('app.media.my_center_about_icon')),
     new dataItem('清理缓存', 3, $r('app.media.my_center_clean_icon')),
     new dataItem('文件管理', 4, $r('app.media.my_center_file_icon')),
@@ -318,13 +316,9 @@ export default struct MyCenter {
     }
   }
 
-  // 帮助中心,关于阅读,清理缓存,我的设置点击事件
+  // 关于阅读,清理缓存,我的设置点击事件
   endOnclick(value: number | string) {
     switch (value) {
-      case 1:
-        // 帮助中心
-        router.pushUrl({ url: 'pages/view/myCenter/helpCenterPage' })
-        break
       case 2:
         // 关于我们
         router.pushUrl({ url: 'pages/view/myCenter/aboutUs/aboutUsPage' })

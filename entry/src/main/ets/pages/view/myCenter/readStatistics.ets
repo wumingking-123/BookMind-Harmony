@@ -315,14 +315,152 @@ struct readStatistics {
           .align(Alignment.TopStart)
         }
       } else {
-          readTabs({
-            read_list:this.read_list
-          })
-          readStatisticsDataList({
-            dateValue:this.dateValue,
-            bookList:this.bookList
-          })
+        // 读过 / 读完
+        Row() {
+          Text(this.type === 1 ? `共读完 ${this.getFilteredBookList().length} 本` : `共读过 ${this.getFilteredBookList().length} 本`)
+            .fontSize(16)
+            .lineHeight(24)
+            .fontWeight(500)
+        }.padding({ top: 12, bottom: 4 })
+        .width("100%")
+        .justifyContent(FlexAlign.Start)
+
+        if (this.getFilteredBookList().length === 0) {
+          Column() {
+            Image($r('app.media.find_empty'))
+              .width(100)
+              .height(100)
+              .opacity(0.6)
+            Text(this.type === 1 ? '暂无读完的书籍' : '暂无阅读记录')
+              .fontSize(14)
+              .fontColor("rgba(0, 0, 0, 0.45)")
+              .margin({ top: 12 })
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        } else {
+          Scroll() {
+            Column() {
+              ForEach(this.getFilteredBookList(), (book: readBookList, index: number) => {
+                Row() {
+                  Row() {
+                    Image(book.coverImage)
+                      .size({ width: 60, height: 80 })
+                      .alt($r('app.media.icon_book_default_cover_one'))
+                      .objectFit(ImageFit.Cover)
+
+                    Column({ space: 8 }) {
+                      Text(book.bookName)
+                        .fontSize(16)
+                        .lineHeight(24)
+                        .fontWeight(FontWeight.Medium)
+                        .maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+                      Column() {
+                        Text(book.author || '未知作者')
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
+                        Text(`累计阅读 ${book.readingDuration[0]}小时${book.readingDuration[1]}分钟`)
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
+                        if (book.bookmark > 0) {
+                          Text(`书签 ${book.bookmark} 个`)
+                            .fontSize(12)
+                            .fontWeight(400)
+                            .lineHeight(20)
+                            .fontColor("rgba(0, 0, 0, 0.45)")
+                        }
+                      }.alignItems(HorizontalAlign.Start)
+                    }
+                    .alignItems(HorizontalAlign.Start)
+                    .width("50%")
+                    .margin({ left: 12 })
+
+                    Column({ space: 12 }) {
+                      if (this.delStatus) {
+                        Checkbox({ name: 'book_' + index })
+                          .select(book.status)
+                          .selectedColor(0xed6f21)
+                          .shape(CheckBoxShape.CIRCLE)
+                          .onChange((value: boolean) => {
+                            book.status = value
+                          })
+                      } else {
+                        Text(this.formatDate(book.dateTime.getTime()))
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor("rgba(0, 0, 0, 0.45)")
+                      }
+
+                      Row() {
+                        Text(this.type === 1 ? "已读" : "读到")
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor(Color.Black)
+                        Text(book.schedule.toString())
+                          .fontSize(24)
+                          .lineHeight(24)
+                          .fontWeight(600)
+                        Text("%")
+                          .fontSize(12)
+                          .fontWeight(400)
+                          .lineHeight(20)
+                          .fontColor(Color.Black)
+                      }
+                    }
+                    .alignItems(HorizontalAlign.End)
+                    .justifyContent(FlexAlign.SpaceBetween)
+                    .width("25%")
+                    .height(80)
+                  }.padding(16).width("100%")
+                }
+                .width(CommonConstants.FULL_WIDTH)
+                .backgroundColor(PublicConstants.THEME_COLOR_WHITE)
+                .borderRadius(12)
+                .margin({ bottom: 16 })
+                .clip(true)
+                .onClick(async () => {
+                  if (this.delStatus) {
+                    book.status = !book.status
+                    return
+                  }
+                  let bookEntity = this.allBooksList.find((b: Books) => b.bookName === book.bookName)
+                  if (bookEntity) {
+                    promptAction.showToast({ message: '正在加载书籍...', duration: 1000 });
+                    let temp = await FileHandler.readFile(bookEntity.bookUrl || '');
+                    BookContentHolder.setChapters(temp);
+                    router.pushUrl({
+                      url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                        ? 'pages/view/Reader/ReaderPageKit'
+                        : 'pages/view/Reader/ReaderPage2',
+                      params: {
+                        bookData: bookEntity,
+                        clickBookChapter: 0
+                      }
+                    });
+                  } else {
+                    promptAction.showToast({ message: '未找到相关书籍，可能已被删除', duration: 1500 });
+                  }
+                })
+              })
+            }
+          }.scrollable(ScrollDirection.Vertical)
+          .scrollBar(BarState.Off)
+          .friction(0.6)
+          .edgeEffect(EdgeEffect.None)
+          .size({ width: "100%", height: "80%" })
+          .padding({ bottom: 50 })
+          .align(Alignment.TopStart)
         }
+      }
       }.attributeModifier(this.Column)
       .height(CommonConstants.FULL_HEIGHT)
       .width(CommonConstants.FULL_WIDTH)
@@ -331,6 +469,14 @@ struct readStatistics {
       offset: { x: 0, y: 0 }
     })
 
+  }
+
+  // 按类型过滤书单：type=1 读完，type=0 读过
+  getFilteredBookList(): readBookList[] {
+    if (this.type === 1) {
+      return this.bookList.filter((b: readBookList) => b.schedule >= 100);
+    }
+    return this.bookList;
   }
 
   // 获取书签涉及的书本列表（去重）
@@ -480,7 +626,7 @@ struct readStatistics {
 
         let hrs = Math.floor(r.readTime / 3600);
         let mins = Math.floor((r.readTime % 3600) / 60);
-        let coverStr = book.customCoverUrl || book.coverUrl;
+        let coverStr = book.coverUrl;
         let cover = (coverStr && coverStr !== 'null' && coverStr !== 'undefined' && coverStr.trim() !== '') ? coverStr : $r("app.media.icon_book_default_cover_one");
         let bookAuthor = book.author || '未知';
 
