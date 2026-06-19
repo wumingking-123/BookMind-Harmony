@@ -1,4 +1,5 @@
-import { componentSnapshot, promptAction, router } from '@kit.ArkUI'
+import { componentSnapshot, promptAction } from '@kit.ArkUI'
+import router from '@ohos.router'
 import { image } from '@kit.ImageKit'
 import { emitter } from '@kit.BasicServicesKit'
 import { ThemeColor, ThemeStorageKey } from '../../../common/constants/Theme'

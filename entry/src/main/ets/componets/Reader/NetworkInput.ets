@@ -1,16 +1,22 @@
+import { Books } from '../../database/entities/Books'
+
 @Component
 export struct NetworkInput {
+  @Prop bookData: Books | undefined;
+
   build() {
     Row() {
       Row() {
         Image($r("app.media.ic_public_return_left"))
           .width(12)
-        Text("笔趣阁")
+        Text(this.bookData?.originName || this.bookData?.origin || "未知书源")
           .lineHeight(18)
           .font({
             size: 10,
             weight: 500
           })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .margin({
         left: 3
@@ -24,9 +30,11 @@ export struct NetworkInput {
         right: 12
       })
 
-      Text("https://www.qidian.com/book/10319406240624062")
+      Text(this.bookData?.bookUrl || "无链接")
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .maxLines(1)
+        .layoutWeight(1)
+        .margin({ left: 8, right: 8 })
     }
     .backgroundColor("rgba(0, 0, 0, 0.06)")
     .width("100%")

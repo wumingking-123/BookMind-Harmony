@@ -5,6 +5,9 @@ import { ThemeItem } from '../../../common/model/Theme'
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow, InkLayout
 } from '../../../common/constants/DesignTokens'
+import bookMarkUtils from '../../../common/utils/BookMarkUtils'
+import readRecordDao from '../../../database/dao/ReadRecordDao'
+import booksDao from '../../../database/dao/BooksDao'
 
 @Entry
 @Component
@@ -45,6 +48,33 @@ export default struct MyCenter {
 
   getSecondColor(): string {
     return this.theme?.secondColor || '#EDE8DF';
+  }
+
+  async aboutToAppear() {
+    // 加载真实统计数据
+    try {
+      let allBooks = await booksDao.search();
+      let records = await readRecordDao.getAllRecords();
+      let bookmarkCount = await bookMarkUtils.getTotalBookmarkCount();
+
+      let readCount = records.length;
+      let finishedCount = 0;
+      for (let r of records) {
+        let book = allBooks.find(b => b.bookName === r.bookName);
+        if (book && book.totalChapterNum > 0 && book.durChapterIndex >= book.totalChapterNum - 1) {
+          finishedCount++;
+        }
+      }
+
+      this.head_list = [
+        new dataItem('读过', readCount),
+        new dataItem('读完', finishedCount),
+        new dataItem('书签', bookmarkCount),
+        new dataItem('勋章', 5),
+      ];
+    } catch (e) {
+      console.error('Failed to load MyCenter stats:', e);
+    }
   }
 
   build() {

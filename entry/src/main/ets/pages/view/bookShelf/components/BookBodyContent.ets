@@ -10,6 +10,7 @@ import confirmDialogExample from '../../../../componets/common/confirmDialog'
 import BookContentRefresh from './BookContentRefresh'
 import bookHistoryUtils from '../../../../common/utils/BookHistoryUtils'
 import { showMessage } from '../../../../componets/common/promptShow'
+import { InkPalette, InkRadius, InkSpacing } from '../../../../common/constants/DesignTokens'
 
 @Component
 export default struct BookBodyContent {
@@ -48,9 +49,18 @@ export default struct BookBodyContent {
                   this.searchValue = '浏览历史'
                 })
               if (this.searchValue !== '浏览历史') {
-                this.GroupBuilder()
-                this.ExhibitBuilder()
-                Text('管理')
+                Row({ space: 10 }) {
+                  this.GroupBuilder()
+                  this.ExhibitBuilder()
+                  Row() {
+                    Image($r('app.media.batch_svg'))
+                      .width(18)
+                      .height(18)
+                      .fillColor(InkPalette.INK_LIGHT)
+                  }
+                  .padding(4)
+                  .borderRadius(InkRadius.FULL)
+                  .backgroundColor(InkPalette.OVERLAY_LIGHT)
                   .onClick(() => {
                     router.pushUrl({
                       url: 'pages/view/bookShelf/Manage/BookManagePage',
@@ -61,9 +71,7 @@ export default struct BookBodyContent {
                       }
                     })
                   })
-                  .fontColor('rgba(0,0,0,0.5)')
-                  .fontSize(15)
-                  .fontWeight(400)
+                }
               }
             }
           }
@@ -73,13 +81,19 @@ export default struct BookBodyContent {
 
         if (this.searchValue === '浏览历史') {
           Row() {
-            Text('清空')
-              .onClick(() => {
-                if (this.IndexShelf != null) {
-                  this.IndexShelf.open()
-                }
-              })
+            Image($r('app.media.ic_public_delete'))
+              .width(20)
+              .height(20)
+              .fillColor('#EF4444')
           }
+          .padding(8)
+          .borderRadius(InkRadius.FULL)
+          .backgroundColor(InkPalette.OVERLAY_LIGHT)
+          .onClick(() => {
+            if (this.IndexShelf != null) {
+              this.IndexShelf.open()
+            }
+          })
         }
       }
       .padding(15)
@@ -148,38 +162,37 @@ export default struct BookBodyContent {
 
   @Builder
   GroupBuilder() {
-    Row({ space: 10 }) {
+    Row({ space: 8 }) {
       ForEach(this.GROUP_NAMES, (item: string) => {
         if (item !== this.GROUP) {
-          IndexSearchType({ title: item, searchValue: this.searchValue })
+          Text(item)
+            .fontSize(12)
+            .fontColor(InkPalette.INK_LIGHT)
+            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+            .backgroundColor(InkPalette.PAPER_WARM)
+            .borderRadius(12)
             .onClick(() => {
               this.GROUP = item
             })
-          Divider()
-            .vertical(true)
-            .height(15)
-            .color('#989797')
-            .opacity(0.5)
-            .strokeWidth(1)
         }
       })
     }
   }
+
   @Builder
   ExhibitBuilder() {
-    Row({ space: 10 }) {
+    Row({ space: 8 }) {
       ForEach(this.EXHIBIT_NAMES, (item: string) => {
         if (item !== this.EXHIBIT) {
-          IndexSearchType({ title: item, searchValue: this.searchValue })
+          Text(item)
+            .fontSize(12)
+            .fontColor(InkPalette.INK_LIGHT)
+            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+            .backgroundColor(InkPalette.PAPER_WARM)
+            .borderRadius(12)
             .onClick(() => {
               this.EXHIBIT = item
             })
-          Divider()
-            .vertical(true)
-            .height(15)
-            .color('#989797')
-            .opacity(0.5)
-            .strokeWidth(1)
         }
       })
     }

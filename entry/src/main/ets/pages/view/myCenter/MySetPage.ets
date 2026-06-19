@@ -12,8 +12,8 @@ import {
 @Entry
 @Component
 struct MySetPage {
-  @State private isShowPreDon: boolean = false
-  @State private isShowLanguage: boolean = false
+  @State isShowPreDon: boolean = false
+  @State isShowLanguage: boolean = false
 
   @StorageLink(MySetConstants.SET_REFRESH) setRefresh: boolean = true
   @StorageLink(MySetConstants.SET_JUMP) setJump: boolean = true

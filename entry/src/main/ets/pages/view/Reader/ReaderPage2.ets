@@ -1,4 +1,5 @@
-import { display, promptAction, router, window } from '@kit.ArkUI';
+import { display, promptAction, window } from '@kit.ArkUI';
+import router from '@ohos.router';
 import { preferences } from '@kit.ArkData';
 import sourceView from './sourceView';
 import { NetworkInput } from 'ets/componets/Reader/NetworkInput';
@@ -10,6 +11,7 @@ import { MusicPlayer } from 'ets/componets/Reader/MusicPlayer';
 import { AudioPlayer } from 'ets/componets/Reader/AudioPlayer';
 import purificationView from './purificationView';
 import { Books } from '../../../database/entities/Books';
+import readRecordDao from '../../../database/dao/ReadRecordDao';
 import { BookContentHolder } from '../../../common/utils/BookContentHolder';
 import { InkPalette, InkSpacing, InkRadius, InkShadow, InkMotion, InkTypography } from '../../../common/constants/DesignTokens';
 import { CoverFlipView, } from '@ohos/readerLibrary';
@@ -29,6 +31,7 @@ import {
 import { ReaderProvider } from '@ohos/readerLibrary/src/main/ets/provider/configProvider';
 import bookMarkUtils from '../../../common/utils/BookMarkUtils';
 import { BookMark } from '../../../database/entities/BookMark';
+import { ReaderCatalog } from '../../../componets/Reader/ReaderCatalog';
 
 export interface ReaderBookmark {
   chapterIndex: number;
@@ -46,9 +49,26 @@ interface ParamsObj {
 @Entry
 @Component
 struct ReaderPage2 {
-  @State bookData: Books | undefined = undefined
+  @Provide bookData: Books | undefined = undefined
   currentChapters: number = 0
   chapterList: ReaderChapterItem[] = [];
+  private readStartTime: number = 0;
+
+  onPageShow() {
+    this.readStartTime = Date.now();
+  }
+
+  async onPageHide() {
+    if (this.readStartTime > 0 && this.bookData) {
+      let timeSpentSeconds = Math.floor((Date.now() - this.readStartTime) / 1000);
+      if (timeSpentSeconds > 0) {
+        let isFinished = this.currentChapters === (this.chapterList.length - 1);
+        await readRecordDao.updateReadRecord(this.bookData.bookName, this.bookData.bookUrl || '', timeSpentSeconds, isFinished);
+      }
+      this.readStartTime = 0;
+    }
+  }
+
   async aboutToAppear() {
     let temp = router.getParams() as ParamsObj
     this.bookData = temp.bookData
@@ -172,7 +192,7 @@ struct ReaderPage2 {
   @Builder
   contentBuilder() {
     Row() {
-      ContentContainer({ bookData: this.bookData })
+      ContentContainer()
     }
   }
 }
@@ -181,10 +201,9 @@ struct ReaderPage2 {
 // todo：研究确认一下
 @Component
 struct ContentContainer {
-  @Prop bookData: Books | undefined
   build() {
     Row() {
-      ReaderPageContent({ bookData: this.bookData })
+      ReaderPageContent()
     }
   }
 }
@@ -235,12 +254,12 @@ struct NumberAdjuster {
 
 @Component
 struct ReaderPageContent {
-  @Prop bookData: Books | undefined
+  @Consume bookData: Books | undefined
   @State isShowSetting: boolean = false
   @State isShowContentSetting: boolean = false
   @State isShowDownload: boolean = false
   @State isShowListen: boolean = false
-  @State sheetType: string = '' // 'bgColor' | 'flipMode' | 'moreLayout' | 'purification' | 'source'
+  @State sheetType: string = '' // 'moreMenu' | 'bgColor' | 'flipMode' | 'moreLayout' | 'purification' | 'source'
   @State isShowSheet: boolean = false
   @State isShowPurification: boolean = false // 保留给 purificationView 的 @Link
   @State isAutoRead: boolean = false
@@ -270,12 +289,10 @@ struct ReaderPageContent {
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @State isShowCatalog: boolean = false
+  @State catalogTabIndex: number = 0
   @State isBookmarked: boolean = false
   @State catalogSearchKey: string = ""
-  @State catalogTabIndex: number = 0
-  @State bookmarkList: ReaderBookmark[] = []
   @State sessionMinutes: number = 1
-  @State isShowMoreMenu: boolean = false
   private sessionStartTime: number = Date.now()
   private sessionTimerId: number = -1
   private catalogScroller: Scroller = new Scroller()
@@ -287,13 +304,12 @@ struct ReaderPageContent {
   @State panelLineHeightRatio: number = 1.8
 
   aboutToAppear(): void {
+    console.log("============== 当前所在界面: ReaderPage2 (新版) ==============")
     this.screenW = px2vp(display.getDefaultDisplaySync().width);
     this.screenH = px2vp(display.getDefaultDisplaySync().height - (AppStorage.get('avoidHeight') as number));
     if (this.bookData && this.bookData.bookType === 2) {
       this.isShowListen = true;
     }
-    this.checkCurrentBookMark()
-    this.loadBookMarkList()
     this.loadBrightness()
     this.changeSystemBarStatue()
     this.sliderFontSize = this.fontSize
@@ -316,13 +332,17 @@ struct ReaderPageContent {
 
   checkIsLocalBook(): boolean {
     if (!this.bookData) return false;
-    // 兼容底层SQLite返回1或true
-    if (this.bookData.isLocalBook === true || Number(this.bookData.isLocalBook) === 1) return true;
+    // 兼容底层SQLite返回1或true, 以及字符串形式
+    if (this.bookData.isLocalBook === true || Number(this.bookData.isLocalBook) === 1 || String(this.bookData.isLocalBook) === 'true' || String(this.bookData.isLocalBook) === '1') return true;
+    // 如果 bookUrl 存在且不是 http 开头，绝对是本地书
+    if (this.bookData.bookUrl && !this.bookData.bookUrl.startsWith('http')) return true;
+    // 兼容书架组(本地导入默认为4)
+    if (this.bookData.bookGroup === 4) return true;
     // 兼容各种特征标识
-    if (this.bookData.origin === 'local') return true;
+    if (this.bookData.origin === 'local' || this.bookData.origin === '未知书源') return true;
     if (this.bookData.author === '本地导入') return true;
     // 若 origin 为空，通常也判定为本地读物
-    if (!this.bookData.origin || this.bookData.origin.trim() === '') return true;
+    if (!this.bookData.origin || String(this.bookData.origin).trim() === '' || String(this.bookData.origin) === 'null' || String(this.bookData.origin) === 'undefined') return true;
     return false;
   }
 
@@ -371,27 +391,17 @@ struct ReaderPageContent {
     this.checkBookmarkState()
   }
 
-  async loadBookmarks() {
-    if (!this.bookData) return;
-    try {
-      const pref = await preferences.getPreferences(getContext(this), 'readerSettings');
-      const key = `bookmarks_list_${this.bookData.id}`;
-      const dataStr = await pref.get(key, '[]') as string;
-      this.bookmarkList = JSON.parse(dataStr) as ReaderBookmark[];
-    } catch (e) {
-      console.error('Failed to load bookmarks:', e);
-      this.bookmarkList = [];
-    }
-  }
 
   async checkBookmarkState() {
     if (!this.bookData) {
       return;
     }
     try {
-      await this.loadBookmarks();
-      this.isBookmarked = this.bookmarkList.some(b => 
-        b.chapterIndex === this.currentChapterIndex && b.pageIndex === this.currentPageIndex
+      this.isBookmarked = await bookMarkUtils.isBookMarked(
+        this.bookData.bookName, 
+        this.bookData.author, 
+        this.currentChapterIndex, 
+        this.currentPageIndex
       );
     } catch (e) {
       console.error('Failed to check bookmark state:', e);
@@ -403,16 +413,13 @@ struct ReaderPageContent {
       return;
     }
     try {
-      await this.loadBookmarks();
-      const pref = await preferences.getPreferences(getContext(this), 'readerSettings');
-      const key = `bookmarks_list_${this.bookData.id}`;
-      
-      let existingIdx = this.bookmarkList.findIndex(b => 
-        b.chapterIndex === this.currentChapterIndex && b.pageIndex === this.currentPageIndex
-      );
-
-      if (existingIdx !== -1) {
-        this.bookmarkList.splice(existingIdx, 1);
+      if (this.isBookmarked) {
+        await bookMarkUtils.deleteBookMarkByPosition(
+          this.bookData.bookName,
+          this.bookData.author,
+          this.currentChapterIndex,
+          this.currentPageIndex
+        );
         this.isBookmarked = false;
       } else {
         let snippet = "【当前页片段】";
@@ -421,22 +428,29 @@ struct ReaderPageContent {
            const lines = currentChapter.chapterPageList[this.currentPageIndex].lineContentList;
            if (lines && lines.length > 0) {
              let txt = lines.join('').replace(/\[img:.*?\]/g, '').replace(/\n/g, '').trim();
+             if (txt.length > 0) {
+               snippet = txt.substring(0, 40) + '...';
+             }
+           }
+        } else if (currentChapter && currentChapter.content) {
+           let txt = currentChapter.content.replace(/\[img:.*?\]/g, '').replace(/\n/g, '').trim();
+           if (txt.length > 0) {
              snippet = txt.substring(0, 40) + '...';
            }
         }
         
-        this.bookmarkList.unshift({
-          chapterIndex: this.currentChapterIndex,
-          chapterTitle: currentChapter?.title || '未知章节',
-          pageIndex: this.currentPageIndex,
-          snippet: snippet,
-          time: Date.now()
-        });
+        let bookmark = new BookMark();
+        bookmark.bookName = this.bookData.bookName;
+        bookmark.bookAuthor = this.bookData.author;
+        bookmark.chapterIndex = this.currentChapterIndex;
+        bookmark.chapterPos = this.currentPageIndex;
+        bookmark.chapterName = currentChapter?.title || '未知章节';
+        bookmark.bookText = currentChapter?.title || '未知章节';
+        bookmark.content = snippet;
+        
+        await bookMarkUtils.addBookMark(bookmark);
         this.isBookmarked = true;
       }
-      
-      await pref.put(key, JSON.stringify(this.bookmarkList));
-      await pref.flush();
       
       promptAction.showToast({
         message: this.isBookmarked ? '已添加书签' : '已取消书签',
@@ -497,7 +511,7 @@ struct ReaderPageContent {
           .height(20)
           .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
           .onClick(() => {
-            this.isShowMoreMenu = false;
+            this.isShowSheet = false;
           })
       }
       .width('100%')
@@ -547,34 +561,26 @@ struct ReaderPageContent {
       List() {
         ListItem() {
           this.MoreMenuRow($r('app.media.my_center_theme_icon'), '主题', () => {
-            this.isShowMoreMenu = false;
             this.sheetType = 'bgColor';
-            this.isShowSheet = true;
           })
         }
 
         ListItem() {
           this.MoreMenuRow($r('app.media.my_center_purify_icon'), '删除或替换文字', () => {
-            this.isShowMoreMenu = false;
             this.isShowPurification = true;
             this.sheetType = 'purification';
-            this.isShowSheet = true;
           })
         }
 
         ListItem() {
           this.MoreMenuRow($r('app.media.style_icon'), '更多排版设置（缩进、间距等）', () => {
-            this.isShowMoreMenu = false;
             this.sheetType = 'moreLayout';
-            this.isShowSheet = true;
           })
         }
 
         ListItem() {
           this.MoreMenuRow($r('app.media.my_center_set_icon'), '其他设置', () => {
-            this.isShowMoreMenu = false;
             this.sheetType = 'flipMode';
-            this.isShowSheet = true;
           })
         }
       }
@@ -613,167 +619,21 @@ struct ReaderPageContent {
 
   @Builder
   CatalogBuilder() {
-    Column() {
-      // 顶部 Tab 切换
-      Row() {
-        Text('目录')
-          .fontSize(16)
-          .fontWeight(this.catalogTabIndex === 0 ? FontWeight.Bold : FontWeight.Normal)
-          .fontColor(this.catalogTabIndex === 0 ? '#E07A5F' : (this.isNightMode ? '#8A7D71' : '#6B5E52'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .onClick(() => this.catalogTabIndex = 0)
-          
-        Text('书签')
-          .fontSize(16)
-          .fontWeight(this.catalogTabIndex === 1 ? FontWeight.Bold : FontWeight.Normal)
-          .fontColor(this.catalogTabIndex === 1 ? '#E07A5F' : (this.isNightMode ? '#8A7D71' : '#6B5E52'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .onClick(() => {
-            this.catalogTabIndex = 1;
-            this.loadBookmarks();
-          })
+    ReaderCatalog({
+      bookData: this.bookData,
+      catalogTabIndex: $catalogTabIndex,
+      chapterList: this.chapterList,
+      currentChapterIndex: this.currentChapterIndex,
+      isNightMode: this.isNightMode,
+      isShowCatalog: $isShowCatalog,
+      isShowSetting: $isShowSetting,
+      jumpToChapter: (chapterIndex: number, pageIndex: number) => {
+        this.currentChapterIndex = chapterIndex;
+        this.currentPageIndex = pageIndex;
+        this.isShowCatalog = false;
+        this.isShowSetting = false;
       }
-      .width('100%')
-      .height(48)
-      .border({ width: { bottom: 1 }, color: this.isNightMode ? 'rgba(255,255,255,0.05)' : '#F0F0F0' })
-
-      if (this.catalogTabIndex === 0) {
-        Row() {
-          Search({ placeholder: '搜索章节...', value: this.catalogSearchKey })
-            .width('100%')
-            .height(36)
-            .onChange((val) => {
-              this.catalogSearchKey = val;
-            })
-        }
-        .padding({ left: 16, right: 16, top: 16, bottom: 8 })
-
-        List({ scroller: this.catalogScroller }) {
-          ForEach(this.chapterList.filter(item => item.title.includes(this.catalogSearchKey) || String(item.chapterTitleNumber).includes(this.catalogSearchKey)), (item: ReaderChapterItem) => {
-            ListItem() {
-              Row() {
-                Text(`${item.chapterTitleNumber || ''} ${item.title || ''}`.replace(new RegExp('\\s{1,}', 'g'), ' '))
-                  .fontSize(14)
-                  .fontColor(this.currentChapterIndex === this.chapterList.indexOf(item)
-                    ? '#A89B7E' 
-                    : (this.isNightMode ? '#EDE4D3' : '#1F2329'))
-                  .fontWeight(this.currentChapterIndex === this.chapterList.indexOf(item)
-                    ? FontWeight.Bold 
-                    : FontWeight.Normal)
-                  .layoutWeight(1)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-                if (this.currentChapterIndex === this.chapterList.indexOf(item)) {
-                  Image($r('app.media.ic_select'))
-                    .width(16)
-                    .height(16)
-                    .fillColor('#A89B7E')
-                }
-              }
-              .width('100%')
-              .height(44)
-              .padding({ left: 16, right: 16 })
-              .onClick(() => {
-                const realIndex = this.chapterList.indexOf(item);
-                if (realIndex !== -1) {
-                  this.currentChapterIndex = realIndex;
-                  this.currentPageIndex = 0;
-                  this.isShowCatalog = false;
-                  this.isShowSetting = false;
-                }
-              })
-            }
-          })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .onAppear(() => {
-          setTimeout(() => {
-            this.catalogScroller.scrollToIndex(this.currentChapterIndex);
-          }, 100);
-        })
-      } else {
-        if (this.bookmarkList.length === 0) {
-          Column() {
-            Image($r('app.media.find_empty'))
-              .width(100)
-              .height(100)
-              .opacity(this.isNightMode ? 0.3 : 0.6)
-              .margin({ bottom: 16 })
-            Text('暂无书签，快去添加吧~')
-              .fontSize(14)
-              .fontColor(this.isNightMode ? '#555555' : '#999999')
-          }
-          .width('100%')
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
-        } else {
-          List() {
-            ForEach(this.bookmarkList, (item: ReaderBookmark, index: number) => {
-              ListItem() {
-                Row() {
-                  Column({ space: 8 }) {
-                    Row() {
-                      Text(item.chapterTitle)
-                        .fontSize(14)
-                        .fontWeight(FontWeight.Medium)
-                        .fontColor(this.isNightMode ? '#A89B7E' : '#E07A5F')
-                        .layoutWeight(1)
-                        .maxLines(1)
-                        .textOverflow({ overflow: TextOverflow.Ellipsis })
-                      
-                      Text(new Date(item.time).toLocaleDateString())
-                        .fontSize(11)
-                        .fontColor(this.isNightMode ? '#555555' : '#999999')
-                    }
-                    .width('100%')
-
-                    Text(item.snippet)
-                      .fontSize(13)
-                      .fontColor(this.isNightMode ? '#8A7D71' : '#6B5E52')
-                      .lineHeight(18)
-                      .maxLines(2)
-                      .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  }
-                  .layoutWeight(1)
-                  .alignItems(HorizontalAlign.Start)
-                  .padding({ top: 12, bottom: 12, left: 16 })
-                  .onClick(() => {
-                    this.currentChapterIndex = item.chapterIndex;
-                    this.currentPageIndex = item.pageIndex;
-                    this.isShowCatalog = false;
-                    this.isShowSetting = false;
-                  })
-
-                  Image($r('app.media.delete'))
-                    .width(20)
-                    .height(20)
-                    .fillColor(this.isNightMode ? '#555555' : '#D0D0D0')
-                    .margin({ left: 12, right: 16 })
-                    .onClick(async () => {
-                      this.bookmarkList.splice(index, 1);
-                      const pref = await preferences.getPreferences(getContext(this), 'readerSettings');
-                      const key = `bookmarks_list_${this.bookData?.id}`;
-                      await pref.put(key, JSON.stringify(this.bookmarkList));
-                      await pref.flush();
-                      this.checkBookmarkState();
-                    })
-                }
-                .width('100%')
-              }
-            })
-          }
-          .width('100%')
-          .layoutWeight(1)
-        }
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.isNightMode ? '#252527' : '#F6F5F2')
+    })
   }
 
   changeSystemBarStatue(): void {
@@ -1004,11 +864,18 @@ struct ReaderPageContent {
 
       // 2. 菜单设置层 (Z-Index 2)
       if (this.isShowSetting) {
-        // 全屏半透明遮罩，点击关闭菜单
+        // 全屏半透明遮罩 — 纯视觉，不拦截触摸
         Column()
           .width('100%')
           .height('100%')
           .backgroundColor('rgba(0, 0, 0, 0.15)')
+          .zIndex(2)
+          .enabled(false)
+
+        // 点击空白区域关闭菜单的透明层
+        Column()
+          .width('100%')
+          .height('100%')
           .zIndex(2)
           .onClick(() => {
             this.isShowSetting = false
@@ -1018,13 +885,17 @@ struct ReaderPageContent {
         Column() {
           Column() {
             Row({ space: 12 }) {
-              Image($r("app.media.ic_public_return_left"))
-                .width(24)
-                .height(24)
-                .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
-                .onClick(() => {
-                  router.back()
-                })
+              Row() {
+                Image($r("app.media.ic_public_return_left"))
+                  .width(24)
+                  .height(24)
+                  .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
+              }
+              .padding(8)
+              .onClick(() => {
+                console.log('[ReaderPage2] 点击返回')
+                router.back()
+              })
               
               Column() {
                 Text(`${this.chapterList[this.currentChapterIndex]?.chapterTitleNumber || ''} ${this.chapterList[this.currentChapterIndex]?.title || ''}`
@@ -1067,19 +938,17 @@ struct ReaderPageContent {
                     })
                 }
                 
-                Image($r("app.media.more"))
-                  .width(22)
-                  .height(22)
-                  .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
-                  .onClick(() => {
-                    this.isShowMoreMenu = true
-                  })
-                  .bindSheet($$this.isShowMoreMenu, this.MoreMenuBuilder(), {
-                    height: 380,
-                    showClose: false,
-                    dragBar: true,
-                    blurStyle: BlurStyle.COMPONENT_ULTRA_THIN,
-                  })
+                Row() {
+                  Image($r("app.media.more"))
+                    .width(22)
+                    .height(22)
+                    .fillColor(this.isNightMode ? '#E5E6EB' : '#1F2329')
+                }
+                .padding(8)
+                .onClick(() => {
+                  this.sheetType = 'moreMenu';
+                  this.isShowSheet = true;
+                })
               }
             }
             .padding({ top: this.topRectHeight + 12, left: 20, right: 20, bottom: 12 })
@@ -1088,9 +957,14 @@ struct ReaderPageContent {
             // 搜索框
             if (!this.checkIsLocalBook()) {
               Row() {
-                NetworkInput()
+                NetworkInput({ bookData: this.bookData })
               }
-              .padding({ left: 20, right: 20, bottom: 16 })
+              .padding({
+                top: 8,
+                left: 20,
+                right: 20,
+                bottom: 12
+              })
               .width("100%")
             }
           }
@@ -1104,17 +978,12 @@ struct ReaderPageContent {
             offsetY: 4
           })
           .transition(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: 300, curve: Curve.EaseOut }))
-          .onClick(() => {
-            // Consume click event to prevent bubbling
-          })
         }
         .width("100%")
         .height("100%")
         .justifyContent(FlexAlign.Start)
         .zIndex(3)
-        .onClick(() => {
-          this.isShowSetting = false
-        })
+        .hitTestBehavior(HitTestMode.Transparent)
 
         // 底部面板 (Z-Index 3)
         Column() {
@@ -1215,13 +1084,6 @@ struct ReaderPageContent {
                         message: this.followSystemBrightness ? '已跟随系统亮度' : '已切换手动调节',
                         duration: 1500
                       })
-                    })
-
-                  Text('系统亮度')
-                    .fontSize(12)
-                    .fontColor(this.isNightMode ? '#EDE4D3' : '#4A4039')
-                    .onClick(() => {
-                      this.followSystemBrightness = !this.followSystemBrightness
                     })
                 }
                 .width('100%')
@@ -1404,6 +1266,7 @@ struct ReaderPageContent {
               }
               .layoutWeight(1)
               .onClick(() => {
+                console.log('[ReaderPage2] 点击书签按钮, isBookmarked=' + this.isBookmarked)
                 this.toggleBookmark()
               })
 
@@ -1438,17 +1301,12 @@ struct ReaderPageContent {
             offsetY: -4
           })
           .transition(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 300, curve: Curve.EaseOut }))
-          .onClick(() => {
-            // Consume click event to prevent bubbling
-          })
         }
         .width("100%")
         .height("100%")
         .justifyContent(FlexAlign.End)
         .zIndex(3)
-        .onClick(() => {
-          this.isShowSetting = false
-        })
+        .hitTestBehavior(HitTestMode.Transparent)
       }
     }
     .height('100%')
@@ -1508,6 +1366,7 @@ struct ReaderPageContent {
       this.isFontChanged = false;
       this.currentPageIndex = 0;
     }
+    this.checkBookmarkState()
   }
 
 
@@ -1554,7 +1413,9 @@ struct ReaderPageContent {
   @Builder
   SheetContentBuilder() {
     Column() {
-      if (this.sheetType === 'bgColor') {
+      if (this.sheetType === 'moreMenu') {
+        this.MoreMenuBuilder()
+      } else if (this.sheetType === 'bgColor') {
         BackgroundColorDialog()
           .width("100%")
       } else if (this.sheetType === 'flipMode') {

@@ -9,7 +9,7 @@ import CommonConstants from '../../common/constants/CommonConstants'
 
 @Component
 export default struct TagIndex {
-  private tag: string = '幻想修仙';
+  tag: string = '幻想修仙';
   build() {
     Column() {
       Text(this.tag)

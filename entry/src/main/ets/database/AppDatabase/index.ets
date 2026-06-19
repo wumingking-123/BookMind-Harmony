@@ -1745,7 +1745,7 @@ export default {
       },
       {
         "tableName": "readRecord",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `readTime` INTEGER NOT NULL DEFAULT 0, `lastRead` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`deviceId`, `bookName`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `bookUrl` TEXT, `readTime` INTEGER NOT NULL DEFAULT 0, `lastRead` INTEGER NOT NULL DEFAULT 0, `readDays` INTEGER NOT NULL DEFAULT 1, `readCount` INTEGER NOT NULL DEFAULT 1, `lastReadDate` TEXT, PRIMARY KEY(`deviceId`, `bookName`))",
         "fields": [
           {
             "fieldPath": "deviceId",
@@ -1760,6 +1760,12 @@ export default {
             "notNull": true
           },
           {
+            "fieldPath": "bookUrl",
+            "columnName": "bookUrl",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
             "fieldPath": "readTime",
             "columnName": "readTime",
             "affinity": "INTEGER",
@@ -1772,6 +1778,26 @@ export default {
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "0"
+          },
+          {
+            "fieldPath": "readDays",
+            "columnName": "readDays",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "readCount",
+            "columnName": "readCount",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "lastReadDate",
+            "columnName": "lastReadDate",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {

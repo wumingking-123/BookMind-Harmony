@@ -9,6 +9,8 @@ import { Books } from '../../database/entities/Books'
 import { router } from '@kit.ArkUI'
 import clickUtil from '../../common/utils/ClickUtils'
 import { ThemeStorageKey } from '../../common/constants/Theme'
+import { FileHandler } from '../../common/utils/FileHandler'
+import { BookContentHolder } from '../../common/utils/BookContentHolder'
 import { ThemeItem } from '../../common/model/Theme'
 import {
   InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow
@@ -33,6 +35,9 @@ export default struct ReadShow {
       let bookInfo = await booksUtil.getBookByIds(this.bookHistory[0].id)
       if (bookInfo && bookInfo[0]) {
         this.book = bookInfo[0]
+      } else {
+        this.book = JSON.parse(JSON.stringify(this.bookHistory[0])) as Books
+        this.book.isJoin = false
       }
     }
   }
@@ -76,11 +81,35 @@ export default struct ReadShow {
           .borderRadius(InkRadius.BUTTON_LARGE)
           .backgroundColor(InkPalette.PAPER)
           .onClick(() => {
-            clickUtil.preventClick(() => {
-              router.pushUrl({
-                url: 'pages/view/BookDetailPage',
-                params: this.book
-              })
+            clickUtil.preventClick(async () => {
+              if (!this.book || !this.book.bookUrl) {
+                console.error('Book URL is empty, cannot continue reading');
+                return
+              }
+              let savedIndex = this.book.durChapterIndex ?? this.bookHistory[0].durChapterIndex ?? 0
+              if (this.book.bookType === 2) {
+                // 有声书直接跳转播放器
+                router.pushUrl({
+                  url: 'pages/view/Reader/ReaderPage2',
+                  params: {
+                    bookData: this.book,
+                    clickBookChapter: savedIndex
+                  }
+                })
+              } else {
+                // 小说/漫画跳转阅读器
+                let temp = await FileHandler.readFile(this.book.bookUrl || '')
+                BookContentHolder.setChapters(temp)
+                router.pushUrl({
+                  url: canIUse("SystemCapability.Reader.ReaderService.ReaderCore")
+                    ? 'pages/view/Reader/ReaderPageKit'
+                    : 'pages/view/Reader/ReaderPage2',
+                  params: {
+                    bookData: this.book,
+                    clickBookChapter: savedIndex
+                  }
+                })
+              }
             })
           })
 
