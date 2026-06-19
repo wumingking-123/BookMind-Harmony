@@ -2,6 +2,8 @@ import { router } from '@kit.ArkUI'
 import { InkPalette, InkTypography, InkSpacing, InkRadius, InkShadow } from '../../../common/constants/DesignTokens'
 import aiConfigUtils, { AiConfig, TestResult } from '../../../common/utils/AiConfigUtils'
 import { promptAction } from '@kit.ArkUI'
+import { ThemeStorageKey } from '../../../common/constants/Theme'
+import { ThemeItem } from '../../../common/model/Theme'
 
 @Entry
 @Component
@@ -20,6 +22,15 @@ struct AiSettingsPage {
   @State showKey: boolean = false
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
+
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
+  getMainColor(): string {
+    return this.theme?.mainColor || InkPalette.CINNABAR;
+  }
+  getSecondColor(): string {
+    return this.theme?.secondColor || InkPalette.PAPER_WARM;
+  }
 
   aboutToAppear(): void {
     const config: AiConfig = aiConfigUtils.getConfig()
@@ -73,12 +84,14 @@ struct AiSettingsPage {
         .textAlign(TextAlign.Center)
       Text('保存')
         .fontSize(InkTypography.BODY)
-        .fontColor(InkPalette.CINNABAR)
+        .fontColor(this.theme?.mainColor || InkPalette.CINNABAR)
         .fontWeight(FontWeight.Medium)
         .onClick(() => { this.save() })
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: this.topRectHeight + 12, bottom: 12 })
+    .height(56)
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: 16, right: 16, top: this.topRectHeight })
   }
 
   @Builder
@@ -188,6 +201,9 @@ struct AiSettingsPage {
               .fontColor(InkPalette.INK)
               .placeholderColor(InkPalette.INK_MIST)
               .backgroundColor(InkPalette.PAPER_WARM)
+              .border({ width: 1, color: InkPalette.PAPER_DEEP, radius: InkRadius.SM })
+              .caretColor(this.theme?.mainColor || InkPalette.CINNABAR)
+              .selectedBackgroundColor(this.theme?.secondColor || InkPalette.PAPER_WARM)
               .borderRadius(InkRadius.SM)
               .padding(12)
               .height(100)
@@ -209,7 +225,7 @@ struct AiSettingsPage {
             .layoutWeight(1)
 
             Toggle({ type: ToggleType.Switch, isOn: this.enableTools })
-              .selectedColor(InkPalette.CELADON)
+              .selectedColor(this.theme?.mainColor || InkPalette.CINNABAR)
               .onChange((isOn: boolean) => {
                 this.enableTools = isOn
               })
@@ -234,7 +250,7 @@ struct AiSettingsPage {
             .layoutWeight(1)
 
             Toggle({ type: ToggleType.Switch, isOn: this.disableThinking })
-              .selectedColor(InkPalette.CELADON)
+              .selectedColor(this.theme?.mainColor || InkPalette.CINNABAR)
               .onChange((isOn: boolean) => {
                 this.disableThinking = isOn
               })
@@ -245,12 +261,12 @@ struct AiSettingsPage {
           .borderRadius(InkRadius.SM)
 
           // 测试连接按钮
-          Button(this.isTesting ? '测试中...' : '测试连接', { type: ButtonType.Normal })
+          Button(this.isTesting ? '正在测试...' : '测试连接', { type: ButtonType.Normal })
             .width('100%')
             .height(44)
             .fontSize(InkTypography.BODY)
             .fontColor(Color.White)
-            .backgroundColor(this.isTesting ? InkPalette.INK_MIST : InkPalette.CELADON)
+            .backgroundColor(this.isTesting ? InkPalette.INK_MIST : (this.theme?.mainColor || InkPalette.CINNABAR))
             .borderRadius(InkRadius.BUTTON)
             .enabled(!this.isTesting)
             .onClick(() => { this.testConnection() })

@@ -1,5 +1,7 @@
 import CommonConstants from '../../common/constants/CommonConstants'
 import { dataItem } from '../dataList/dataItem'
+import { ThemeStorageKey } from '../../common/constants/Theme'
+import { ThemeItem } from '../../common/model/Theme'
 
 @Component
 export struct readTabs{
@@ -9,11 +11,15 @@ export struct readTabs{
   @State read_index:number=0
   @State translateNum:number=0
   @State translateX:number=120
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
   @Builder read_builder(){
     Row(){
       ForEach(this.read_list,(item:dataItem,index:number)=>{
         Row(){
           Text(item.title)
+            .fontColor(this.read_index === index ? (this.theme.mainColor || '#A89B7E') : "rgba(0, 0, 0, 1)")
+            .fontWeight(this.read_index === index ? FontWeight.Medium : FontWeight.Normal)
         }.backgroundColor("rgba(0, 0, 0, 0)")
         .justifyContent(FlexAlign.Center)
         .width("33%")

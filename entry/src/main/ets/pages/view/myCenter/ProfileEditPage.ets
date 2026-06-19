@@ -395,7 +395,7 @@ struct ProfileEditPage {
                 .width(28)
                 .height(28)
                 .borderRadius(InkRadius.FULL)
-                .backgroundColor(this.getThemeColor())
+                .backgroundColor(this.theme?.mainColor || InkPalette.CINNABAR)
                 .border({ width: 2, color: InkPalette.PAPER })
                 .justifyContent(FlexAlign.Center)
                 .alignItems(VerticalAlign.Center)
@@ -457,7 +457,7 @@ struct ProfileEditPage {
             ProfileRow({
               label: '昵称',
               value: this.nickname,
-              themeColor: this.getThemeColor(),
+              themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
               showDivider: true,
               onTap: () => { this.openSheet('nickname', 220) }
             })
@@ -465,7 +465,7 @@ struct ProfileEditPage {
             ProfileRow({
               label: '个性签名',
               value: this.signature,
-              themeColor: this.getThemeColor(),
+              themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
               showDivider: true,
               onTap: () => { this.openSheet('signature', 280) }
             })
@@ -473,7 +473,7 @@ struct ProfileEditPage {
             ProfileRow({
               label: '性别',
               value: this.gender,
-              themeColor: this.getThemeColor(),
+              themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
               showDivider: false,
               onTap: () => { this.openSheet('gender', 280) }
             })
@@ -501,7 +501,7 @@ struct ProfileEditPage {
             ProfileRow({
               label: '阅读偏好',
               value: '未设置',
-              themeColor: this.getThemeColor(),
+              themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
               showDivider: true,
               onTap: () => {}
             })
@@ -509,7 +509,7 @@ struct ProfileEditPage {
             ProfileRow({
               label: '书架展示',
               value: '列表模式',
-              themeColor: this.getThemeColor(),
+              themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
               showDivider: false,
               onTap: () => {}
             })
@@ -562,21 +562,21 @@ struct ProfileEditPage {
     if (this.sheetType === 'nickname') {
       NicknameEditSheet({
         nickname: $nickname,
-        themeColor: this.getThemeColor(),
+        themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
         onConfirm: () => { this.closeSheet() },
         onCancel: () => { this.closeSheet() }
       })
     } else if (this.sheetType === 'signature') {
       SignatureEditSheet({
         signature: $signature,
-        themeColor: this.getThemeColor(),
+        themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
         onConfirm: () => { this.closeSheet() },
         onCancel: () => { this.closeSheet() }
       })
     } else if (this.sheetType === 'gender') {
       GenderSelectSheet({
         gender: $gender,
-        themeColor: this.getThemeColor(),
+        themeColor: this.theme?.mainColor || InkPalette.CINNABAR,
         onConfirm: () => { this.closeSheet() }
       })
     }

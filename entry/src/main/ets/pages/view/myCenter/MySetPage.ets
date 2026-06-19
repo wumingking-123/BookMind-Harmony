@@ -353,7 +353,7 @@ struct PreDownloadSheet {
           })
           .disappearTextStyle({ color: InkPalette.INK_MIST, font: { size: 14, weight: FontWeight.Normal } })
           .textStyle({ color: InkPalette.INK_FAINT, font: { size: 14, weight: FontWeight.Normal } })
-          .selectedTextStyle({ color: InkPalette.CINNABAR, font: { size: 16, weight: FontWeight.Bold } })
+          .selectedTextStyle({ color: this.theme.mainColor || InkPalette.CINNABAR, font: { size: 16, weight: FontWeight.Bold } })
       }
       .width('100%')
       .layoutWeight(1)

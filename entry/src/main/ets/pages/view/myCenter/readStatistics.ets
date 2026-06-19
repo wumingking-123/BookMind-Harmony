@@ -14,7 +14,9 @@ import { Books } from '../../../database/entities/Books';
 import { promptAction } from '@kit.ArkUI';
 import { FileHandler } from '../../../common/utils/FileHandler';
 import { BookContentHolder } from '../../../common/utils/BookContentHolder';
-import { InkPalette, InkTypography, InkRadius } from '../../../common/constants/DesignTokens';
+import { InkPalette, InkTypography, InkRadius, InkSpacing, InkLayout } from '../../../common/constants/DesignTokens';
+import { ThemeStorageKey } from '../../../common/constants/Theme';
+import { ThemeItem } from '../../../common/model/Theme';
 
 interface BookmarkBookInfo {
   key: string
@@ -27,7 +29,7 @@ interface BookmarkBookInfo {
 struct readStatistics {
 
   Column = new ColumnModifier()
-  @State type:number|string=(router.getParams() as dataItem).value
+  @State type: number = 0
   @State read_list:dataItem[]=[
     new dataItem("小说",12),
     new dataItem("漫画",12),
@@ -50,36 +52,56 @@ struct readStatistics {
   @State allBooksList: Books[] = []
   @State selectedBookmarkTimes: number[] = []
   @State selectedBookKey: string = ''
+
+  @StorageProp(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
   @Builder head(){
     Row(){
+      // Left back arrow with 48vp touch target
       Row(){
         Image($r("app.media.return_left"))
-          .size({width:CommonConstants.TITLE_IMG_SIZE,height:CommonConstants.TITLE_IMG_SIZE})
-          .onClick(()=>{
-            router.back()
-          })
-      }.width("33%")
+          .size({width: 24, height: 24})
+          .fillColor(InkPalette.INK)
+      }
+      .width(48)
+      .height(48)
+      .justifyContent(FlexAlign.Start)
+      .alignItems(VerticalAlign.Center)
+      .onClick(()=>{
+        router.back()
+      })
+
+      // Centered title text
+      Text(this.title_list[Number(this.type)] ? this.title_list[Number(this.type)].title : '')
+        .fontSize(InkTypography.TITLE_SMALL)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(InkPalette.INK)
+        .layoutWeight(1)
+        .textAlign(TextAlign.Center)
+
+      // Right action text
       Row(){
-        Text(this.title_list[this.type].title).fontSize(16).fontWeight(600).lineHeight(24)
-      }.width("33%")
-      .justifyContent(FlexAlign.Center)
-      Row(){
-        Text(this.delStatus?"完成":"管理")
+        Text(this.delStatus ? "完成" : "管理")
           .fontSize(14)
-          .fontWeight(500)
-          .lineHeight(22)
-          .fontColor("rgba(0, 0, 0, 0.45)")
-          .onClick(()=>{
-            this.delStatus=!this.delStatus
-            if (!this.delStatus) {
-              this.selectedBookmarkTimes = [];
-              this.bookList.forEach(item => item.status = false);
-            }
-          })
-      }.width("33%").justifyContent(FlexAlign.End)
-    }.width("100%")
-    .justifyContent(FlexAlign.SpaceBetween)
-    .padding({top:12,bottom:12})
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.delStatus ? (this.theme.mainColor || InkPalette.CINNABAR) : InkPalette.INK_LIGHT)
+      }
+      .width(48)
+      .height(48)
+      .justifyContent(FlexAlign.End)
+      .alignItems(VerticalAlign.Center)
+      .onClick(()=>{
+        this.delStatus = !this.delStatus
+        if (!this.delStatus) {
+          this.selectedBookmarkTimes = [];
+          this.bookList.forEach(item => item.status = false);
+        }
+      })
+    }
+    .width("100%")
+    .height(InkLayout.HEADER_HEIGHT)
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: InkSpacing.MD, right: InkSpacing.LG })
   }
 
   @Builder delBottom(){
@@ -112,7 +134,7 @@ struct readStatistics {
     Column(){
       Column(){
         this.head()
-      if (this.type === 2) {
+      if (Number(this.type) === 2) {
         Row() {
           Text(`共${this.getFilteredBookmarks().length}个书签`)
             .fontSize(16)
@@ -317,7 +339,7 @@ struct readStatistics {
       } else {
         // 读过 / 读完
         Row() {
-          Text(this.type === 1 ? `共读完 ${this.getFilteredBookList().length} 本` : `共读过 ${this.getFilteredBookList().length} 本`)
+          Text(Number(this.type) === 1 ? `共读完 ${this.getFilteredBookList().length} 本` : `共读过 ${this.getFilteredBookList().length} 本`)
             .fontSize(16)
             .lineHeight(24)
             .fontWeight(500)
@@ -331,7 +353,7 @@ struct readStatistics {
               .width(100)
               .height(100)
               .opacity(0.6)
-            Text(this.type === 1 ? '暂无读完的书籍' : '暂无阅读记录')
+            Text(Number(this.type) === 1 ? '暂无读完的书籍' : '暂无阅读记录')
               .fontSize(14)
               .fontColor("rgba(0, 0, 0, 0.45)")
               .margin({ top: 12 })
@@ -400,7 +422,7 @@ struct readStatistics {
                       }
 
                       Row() {
-                        Text(this.type === 1 ? "已读" : "读到")
+                        Text(Number(this.type) === 1 ? "已读" : "读到")
                           .fontSize(12)
                           .fontWeight(400)
                           .lineHeight(20)
@@ -473,7 +495,7 @@ struct readStatistics {
 
   // 按类型过滤书单：type=1 读完，type=0 读过
   getFilteredBookList(): readBookList[] {
-    if (this.type === 1) {
+    if (Number(this.type) === 1) {
       return this.bookList.filter((b: readBookList) => b.schedule >= 100);
     }
     return this.bookList;
@@ -537,7 +559,7 @@ struct readStatistics {
     this.clearInfoDel?.close()
   }
   async onAccept(){
-    if (this.type === 2) {
+    if (Number(this.type) === 2) {
       // 批量删除书签
       for (let time of this.selectedBookmarkTimes) {
         await bookMarkUtils.deleteBookMark(time);
@@ -653,10 +675,26 @@ struct readStatistics {
   }
 
   onPageShow() {
+    try {
+      const params = router.getParams() as Record<string, Object>;
+      if (params && params.value !== undefined) {
+        this.type = params.value as number;
+      }
+    } catch (e) {
+      console.error('Failed to get router params in readStatistics onPageShow:', e);
+    }
     this.loadData();
   }
 
   aboutToAppear() {
+    try {
+      const params = router.getParams() as Record<string, Object>;
+      if (params && params.value !== undefined) {
+        this.type = params.value as number;
+      }
+    } catch (e) {
+      console.error('Failed to get router params in readStatistics aboutToAppear:', e);
+    }
     this.loadData();
   }
 

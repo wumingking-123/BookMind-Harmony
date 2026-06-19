@@ -5,6 +5,8 @@ import booksDao from '../../../database/dao/BooksDao'
 import bookMarkUtils from '../../../common/utils/BookMarkUtils'
 import { ReadRecord } from '../../../database/entities/ReadRecord'
 import { Books } from '../../../database/entities/Books'
+import { ThemeStorageKey } from '../../../common/constants/Theme'
+import { ThemeItem } from '../../../common/model/Theme'
 
 interface BookStat {
   bookName: string
@@ -39,6 +41,15 @@ struct ReadingStatsOverview {
   @State weekActivity: number[] = [0, 0, 0, 0, 0, 0, 0]
   @StorageLink('topRectHeight') topRectHeight: number = 0
   @StorageLink('bottomRectHeight') bottomRectHeight: number = 0
+
+  @StorageLink(ThemeStorageKey.THEME) theme: ThemeItem = {} as ThemeItem
+
+  getMainColor(): string {
+    return this.theme?.mainColor || InkPalette.CINNABAR;
+  }
+  getSecondColor(): string {
+    return this.theme?.secondColor || InkPalette.PAPER_WARM;
+  }
 
   aboutToAppear(): void {
     this.loadData()
@@ -100,11 +111,11 @@ struct ReadingStatsOverview {
       const audioCount = stats.filter(s => s.bookType === 2).length
       const dist: TypeDistribution[] = new Array()
       if (novelCount > 0) {
-        const item: TypeDistribution = { label: '小说', count: novelCount, color: InkPalette.INDIGO }
+        const item: TypeDistribution = { label: '小说', count: novelCount, color: this.theme?.mainColor || InkPalette.CINNABAR }
         dist.push(item)
       }
       if (mangaCount > 0) {
-        const item: TypeDistribution = { label: '漫画', count: mangaCount, color: InkPalette.CINNABAR_LIGHT }
+        const item: TypeDistribution = { label: '漫画', count: mangaCount, color: this.theme?.secondColor || InkPalette.PAPER_WARM }
         dist.push(item)
       }
       if (audioCount > 0) {
@@ -168,7 +179,7 @@ struct ReadingStatsOverview {
   @Builder
   Header() {
     Row() {
-      Image($r('app.media.return_left'))
+      Image($r('app.media.ic_public_return_left'))
         .width(24).height(24)
         .fillColor(InkPalette.INK)
         .onClick(() => { router.back() })
@@ -198,7 +209,7 @@ struct ReadingStatsOverview {
           Text(this.formatReadTime(this.totalReadTime))
             .fontSize(InkTypography.TITLE_LARGE)
             .fontWeight(FontWeight.Bold)
-            .fontColor(InkPalette.CINNABAR)
+            .fontColor(this.theme.mainColor || InkPalette.CINNABAR)
           Text('累计时长')
             .fontSize(InkTypography.MICRO)
             .fontColor(InkPalette.INK_MIST)
@@ -210,7 +221,7 @@ struct ReadingStatsOverview {
           Text(this.totalReadDays.toString())
             .fontSize(InkTypography.TITLE_LARGE)
             .fontWeight(FontWeight.Bold)
-            .fontColor(InkPalette.INDIGO)
+            .fontColor(this.theme.secondColor || InkPalette.PAPER_WARM)
           Text('阅读天数')
             .fontSize(InkTypography.MICRO)
             .fontColor(InkPalette.INK_MIST)
@@ -234,7 +245,7 @@ struct ReadingStatsOverview {
           Text(this.totalFinishedCount.toString())
             .fontSize(InkTypography.TITLE_LARGE)
             .fontWeight(FontWeight.Bold)
-            .fontColor(InkPalette.AMBER)
+            .fontColor(this.theme.mainColor || InkPalette.CINNABAR)
           Text('读完')
             .fontSize(InkTypography.MICRO)
             .fontColor(InkPalette.INK_MIST)
