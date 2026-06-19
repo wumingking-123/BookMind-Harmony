@@ -332,18 +332,38 @@ struct ReaderPageContent {
     try {
       let context = getContext(this) as common.UIAbilityContext;
       await this.readerComponentController.init(context);
-      
+
       let filePath = this.bookData.bookUrl;
       if (!this.bookData.isLocalBook) {
+        // 注册内容解析回调
+        const bookSource = BookContentHolder.getBookSource()
+        if (bookSource) {
+          BookContentHolder.resolveContent = (url: string) => BookContentHolder.resolveChapterContent(url)
+        }
+
         let tempPath = context.cacheDir + '/temp_online_book.txt';
         let lines: string[] = [];
-        this.chapterList.forEach((ch) => {
+
+        // 解析在线章节URL为正文内容
+        for (let i = 0; i < this.chapterList.length; i++) {
+          const ch = this.chapterList[i];
           lines.push(`第${ch.number}章 ${ch.title}`);
-          lines.push(ch.content);
+          if (ch.content && ch.content.startsWith('http')) {
+            try {
+              const resolved = await BookContentHolder.resolveChapterContent(ch.content)
+              lines.push(resolved && resolved.length > 0 ? resolved : '（内容加载失败）');
+            } catch (e) {
+              console.log('[ReaderKit] 章节' + i + '内容解析失败: ' + (e as Error).message)
+              lines.push('（内容加载失败）');
+            }
+          } else {
+            lines.push(ch.content);
+          }
           lines.push('\n');
-        });
+        }
+
         let textContent = lines.join('\n');
-        
+
         let file = fs.openSync(tempPath, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
         fs.writeSync(file.fd, textContent);
         fs.closeSync(file);

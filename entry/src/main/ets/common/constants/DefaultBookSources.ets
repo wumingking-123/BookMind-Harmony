@@ -471,15 +471,16 @@ function createYYSKSource(): BookSource {
 
   // 目录规则
   const tocRule = new TocRule()
-  tocRule.chapterList = 'ul.row li.col-md-3'
+  tocRule.chapterList = '.book_list2 ul.row li.col-md-3'
   tocRule.chapterName = 'tag.a@text'
   tocRule.chapterUrl = 'tag.a@href'
+  tocRule.nextTocUrl = 'class.pagination@class.page-item.2@class.page-link.0@href'
   source.ruleToc = tocRule
 
   // 正文规则
   const contentRule = new ContentRule()
   contentRule.content = 'article@text'
-  contentRule.nextContentUrl = 'a@text.下一章@href'
+  contentRule.nextContentUrl = 'id.next1@href'
   source.ruleContent = contentRule
 
   return source

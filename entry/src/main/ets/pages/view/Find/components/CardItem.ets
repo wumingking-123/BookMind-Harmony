@@ -48,7 +48,7 @@ export  struct CardItem {
         }
       }
       .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.Center)
+      .justifyContent(FlexAlign.Start)
       .layoutWeight(1)
     }
     .width('100%')

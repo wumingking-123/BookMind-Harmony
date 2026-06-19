@@ -61,6 +61,9 @@
       "Bash(node gen_pptx_v2.js)",
       "Bash(node gen_pptx_v3.js)",
       "Bash(node gen_pptx_final.js)",
+      "Bash(npm install *)",
+      "Bash(node generate_report.js)",
+      "Bash(npm init *)",
       "Bash(node *)"
     ]
   }

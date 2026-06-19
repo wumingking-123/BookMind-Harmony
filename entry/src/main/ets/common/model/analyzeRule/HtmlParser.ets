@@ -100,6 +100,7 @@ export class HtmlParser {
     let text = html
     // 块级标签 → 换行
     text = text.replace(/<br\s*\/?>/gi, '\n')
+    text = text.replace(/<p\b[^>]*>/gi, '\n')
     text = text.replace(/<\/p>/gi, '\n')
     text = text.replace(/<\/div>/gi, '\n')
     text = text.replace(/<\/li>/gi, '\n')

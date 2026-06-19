@@ -1,5 +1,25 @@
 {
+  "name": "bookmind-harmony",
+  "version": "1.0.0",
+  "description": "",
+  "main": "generate_report.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wumingking-123/BookMind-Harmony.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/wumingking-123/BookMind-Harmony/issues"
+  },
+  "homepage": "https://github.com/wumingking-123/BookMind-Harmony#readme",
   "dependencies": {
+    "docx": "^9.7.1",
     "pptxgenjs": "^4.0.1"
   }
 }

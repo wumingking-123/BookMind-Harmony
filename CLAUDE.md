@@ -11,11 +11,21 @@ BookMind is a HarmonyOS 6.0 e-book reader application (bundle: `com.legado.app`)
 This is a **DevEco Studio** project. Building and running is done through the IDE, not CLI.
 
 - **Build tool**: hvigor (config in `hvigorfile.ts` at root and module levels)
-- **Target SDK**: HarmonyOS 6.0.2 (API 22)
+- **Target SDK**: HarmonyOS 5.0.0(12) / API 12
 - **Device targets**: phone, tablet
 - **Package manager**: ohpm (dependencies in `oh-package.json5`)
 - **Run tests**: `ohpm run test` or through DevEco Studio's test runner (Hypium framework)
 - **Note**: Tests are currently scaffold only — no meaningful test coverage exists.
+
+### Embedded Web App (`entry/web/`)
+
+A Vue 3 SPA embedded in the app via WebView for bookshelf management and book source editing. Built with Vite, Element Plus, Pinia, and Vue Router. Has its own build system:
+
+- `cd entry/web && pnpm dev` — dev server
+- `pnpm build` — production build + sync to native assets
+- `pnpm lint:fix` — ESLint fix
+
+Multi-page setup: bookshelf and source editor are separate Vite entry points.
 
 ## Architecture
 
@@ -34,7 +44,7 @@ Module dependencies are declared in each module's `oh-package.json5` using `file
 | Directory | Purpose |
 |-----------|---------|
 | `entryability/` | `EntryAbility` - app lifecycle, DB init, window setup |
-| `pages/` | Route pages registered in `main_pages.json` (28 routes) |
+| `pages/` | Route pages registered in `main_pages.json` (30 routes) |
 | `pages/view/` | Feature views: BookShelf, Find, Reader, Subscription, MyCenter |
 | `componets/` | Reusable UI components (note: intentional spelling, not "components") |
 | `database/` | RDB entities, DAOs, and `DataBase.initAllTable()` |
@@ -102,7 +112,7 @@ Rule entities are in `entry/src/main/ets/database/entities/rule/`: `SearchRule`,
 
 1. `onCreate()`: Initialize WebView engine
 2. `onWindowStageCreate()`:
-   - Init SQLite via `DbUtil.initDB()` → `DataBase.initAllTable()` (20 tables)
+   - Init SQLite via `DbUtil.initDB()` → `DataBase.initAllTable()` (12 tables)
    - Auto-load default book sources (5 built-in sources in `DefaultBookSources.ets`): insert missing, update if rules differ
    - Store file paths and display metrics in `AppStorage`
    - Set full-screen layout, calculate system avoid areas
@@ -110,7 +120,7 @@ Rule entities are in `entry/src/main/ets/database/entities/rule/`: `SearchRule`,
 
 ### Database Tables
 
-20 tables total. Key ones: `books`, `book_sources`, `chapters` (FK to books, CASCADE delete), `searchBooks` (FK to book_sources, CASCADE delete), `book_groups`, `bookmarks`, `rssSources`, `rssArticles`, `replace_rules`, `search_keywords`, `caches` (key-value with TTL), `readRecord`, `txtTocRules`, `ruleSubs`. All DAOs are in `entry/src/main/ets/database/dao/`.
+12 tables total, initialized in `database/index.ets`: `book_sources`, `rssSourcesHistory`, `subscriptions`, `books`, `book_groups`, `worksLists`, `bookHistory`, `rssSourceGroups`, `bookmarks`, `chapters`, `searchKeywords`, `readRecord`. All DAOs are in `entry/src/main/ets/database/dao/`.
 
 ### Global State Keys (AppStorage)
 
