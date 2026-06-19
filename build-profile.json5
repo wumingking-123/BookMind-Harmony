@@ -7,6 +7,21 @@
         "runtimeOS": "HarmonyOS",
         "targetSdkVersion": "5.0.0(12)"
       }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\a1957\\.ohos\\config\\default_BookMind-Harmony_n46z4ce2WSNcpSADwNijLoVNEmSLo-QmfVUcsb0HAWA=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B5A60A28754FF0B13AD12BD2066ED5218E5D00CAC86BA97CFAA1044FBB0B64B6ED0701B7C1359CB",
+          "profile": "C:\\Users\\a1957\\.ohos\\config\\default_BookMind-Harmony_n46z4ce2WSNcpSADwNijLoVNEmSLo-QmfVUcsb0HAWA=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\a1957\\.ohos\\config\\default_BookMind-Harmony_n46z4ce2WSNcpSADwNijLoVNEmSLo-QmfVUcsb0HAWA=.p12",
+          "storePassword": "0000001BD266ED71106B5AFB30DCA6703988488C1EA884B39E532206DAB58401A4F1DDEA1961718A2E95A7"
+        }
+      }
     ]
   },
   "modules": [

@@ -742,6 +742,7 @@ struct ReaderPageContent {
     this.checkCurrentBookMark()
   }
 
+
   get totalChapter(): number {
     return this.chapterList.length;
   }

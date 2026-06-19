@@ -195,7 +195,7 @@ export class RuleAnalyzer {
     const allParts = baseRule.split('@')
 
     // 识别提取方法（最后一个部分如果是已知提取方法）
-    const extractionMethods = ['text', 'href', 'src', 'html', 'content']
+    const extractionMethods = ['text', 'href', 'src', 'html', 'content', 'data-original', 'data-src', 'data-lazy', 'data-echo']
     let selectorParts: string[] = []
     let extractionMethod = ''
 
