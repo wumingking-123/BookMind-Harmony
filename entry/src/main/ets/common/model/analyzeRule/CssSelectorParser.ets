@@ -220,18 +220,30 @@ export class CssSelectorParser {
 
   /**
    * 应用选择器匹配HTML
+   * 支持复合选择器（如 ul.row, li.col-md-3）在同一元素上匹配
    */
   static applySelector(html: string, selector: string): string[] {
     const parts = CssSelectorParser.parseSelector(selector);
     if (parts.length === 0) return [];
 
     let results: string[] = [html];
+    let i = 0;
 
-    for (const part of parts) {
+    while (i < parts.length) {
+      const part = parts[i];
+
+      // 合并同一层级的复合选择器（如 ul + .row → ul.row）
+      const compoundParts: SelectorPart[] = [part];
+      let j = i + 1;
+      while (j < parts.length && parts[j].combinator === 'descendant' &&
+        CssSelectorParser.isCompoundWithPrevious(part, parts[j])) {
+        compoundParts.push(parts[j]);
+        j++;
+      }
+
       const newResults: string[] = [];
-
       for (const htmlFragment of results) {
-        const matched = CssSelectorParser.matchPart(htmlFragment, part);
+        const matched = CssSelectorParser.matchCompound(htmlFragment, compoundParts);
         newResults.push(...matched);
       }
 
@@ -240,6 +252,8 @@ export class CssSelectorParser {
         console.log('CSS选择器匹配失败: ' + selector + ', 在步骤: ' + part.type + '=' + part.value)
         break;
       }
+
+      i = j;
     }
 
     if (results.length > 0) {
@@ -247,6 +261,70 @@ export class CssSelectorParser {
     }
 
     return results;
+  }
+
+  /**
+   * 判断两个连续的选择器部分是否构成复合选择器（匹配同一元素）
+   * 例如: tag + class (ul.row), tag + id (div#main)
+   */
+  private static isCompoundWithPrevious(prev: SelectorPart, current: SelectorPart): boolean {
+    // tag + class/id/attribute 构成复合选择器
+    if (prev.type === 'tag' && (current.type === 'class' || current.type === 'id' || current.type === 'attribute')) {
+      return true;
+    }
+    // class + class 构成复合选择器（如 .foo.bar）
+    if (prev.type === 'class' && current.type === 'class') {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 匹配复合选择器（同一元素上需要同时满足多个条件）
+   */
+  private static matchCompound(html: string, parts: SelectorPart[]): string[] {
+    if (parts.length === 1) {
+      return CssSelectorParser.matchPart(html, parts[0]);
+    }
+
+    // 复合选择器：先按第一个部分匹配，再过滤后续条件
+    let results = CssSelectorParser.matchPart(html, parts[0]);
+
+    for (let k = 1; k < parts.length; k++) {
+      const filterPart = parts[k];
+      const filtered: string[] = [];
+      for (const el of results) {
+        const tagEnd = el.indexOf('>');
+        const openTag = tagEnd >= 0 ? el.substring(0, tagEnd + 1) : el;
+        if (CssSelectorParser.matchesFilter(openTag, filterPart)) {
+          filtered.push(el);
+        }
+      }
+      results = filtered;
+    }
+
+    return results;
+  }
+
+  /**
+   * 检查开标签是否满足过滤条件（class/id/attribute）
+   */
+  private static matchesFilter(openTag: string, part: SelectorPart): boolean {
+    if (part.type === 'class') {
+      const classRegex = new RegExp(`\\bclass\\s*=\\s*["'][^"']*\\b${HtmlParser.escapeRegex(part.value)}\\b`, 'i');
+      return classRegex.test(openTag);
+    }
+    if (part.type === 'id') {
+      const idRegex = new RegExp(`\\bid\\s*=\\s*["']${HtmlParser.escapeRegex(part.value)}["']`, 'i');
+      return idRegex.test(openTag);
+    }
+    if (part.type === 'attribute') {
+      const match = part.value.match(/^\[([a-zA-Z]+)([~|^$*]?=)(["']?)(.+?)\3\]$/);
+      if (!match) return false;
+      const attrRegex = new RegExp(`\\b${match[1]}\\s*=\\s*["']${HtmlParser.escapeRegex(match[4])}["']`, 'i');
+      return attrRegex.test(openTag);
+    }
+    return false;
   }
 
   /**

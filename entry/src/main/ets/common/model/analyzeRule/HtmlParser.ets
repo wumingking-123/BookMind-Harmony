@@ -99,9 +99,20 @@ export class HtmlParser {
 
   /**
    * 去除HTML标签
+   * 将 <br> 转为换行，<p> 前后加换行，再去掉其他标签
    */
   static stripTags(html: string): string {
-    return html.replace(/<[^>]+>/g, '').trim();
+    let result = html;
+    // <br> → 换行
+    result = result.replace(/<br\s*\/?>/gi, '\n');
+    // <p> 前后加换行
+    result = result.replace(/<p\b[^>]*>/gi, '\n');
+    result = result.replace(/<\/p>/gi, '\n');
+    // 移除其余标签
+    result = result.replace(/<[^>]+>/g, '');
+    // 合并连续换行
+    result = result.replace(/\n{3,}/g, '\n\n');
+    return result.trim();
   }
 
   /**

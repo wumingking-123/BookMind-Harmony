@@ -39,10 +39,11 @@ export  struct CardItem {
         }
       }
       .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.Center)
+      .justifyContent(FlexAlign.Start)
       .layoutWeight(1)
     }
     .width('100%')
+    .alignItems(VerticalAlign.Top)
     .padding({ top: 40 })
     .onClick(() => {
       clickUtil.preventClick(()=>{

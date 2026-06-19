@@ -51,6 +51,7 @@ export class ContentAnalysis {
    */
   async getContent(): Promise<ContentResult> {
     if (!this.contentData.bookSource?.ruleContent || !this.contentData.body) {
+      console.log('[ContentAnalysis] 缺少ruleContent或body')
       return { title: '', content: '' };
     }
 
@@ -59,9 +60,14 @@ export class ContentAnalysis {
     let title = '';
     let content = '';
     let pageCount = 0;
+    const initialChapterBase = this.extractChapterBase(this.contentData.chapterUrl);
+
+    console.log('[ContentAnalysis] 开始解析, body长度: ' + currentBody.length + ', nextContentUrl: ' + (rule.nextContentUrl || '无') + ', chapterBase: ' + initialChapterBase)
 
     while (currentBody && pageCount < this.maxPages) {
+      console.log('[ContentAnalysis] 解析第' + (pageCount + 1) + '页, body长度: ' + currentBody.length)
       const result = this.parseContent(currentBody, rule);
+      console.log('[ContentAnalysis] 第' + (pageCount + 1) + '页提取内容长度: ' + (result.content ? result.content.length : 0))
 
       if (pageCount === 0) {
         title = result.title;
@@ -71,22 +77,33 @@ export class ContentAnalysis {
       // 检查是否有下一页
       if (rule.nextContentUrl) {
         const nextUrl = this.getNextPageUrl(currentBody, rule.nextContentUrl);
+        console.log('[ContentAnalysis] 下一页URL: ' + (nextUrl || '无'))
         if (nextUrl && nextUrl !== '') {
+          // 检查是否跨章节（防止分页链接跳到下一章）
+          if (initialChapterBase && !this.isSameChapter(initialChapterBase, nextUrl)) {
+            console.log('[ContentAnalysis] 检测到跨章节, 停止分页')
+            break;
+          }
           try {
             currentBody = await requestUtil.requestUrlHtml(nextUrl, this.contentData.bookSource?.charset);
+            console.log('[ContentAnalysis] 下一页响应长度: ' + (currentBody ? currentBody.length : 0))
           } catch (e) {
-            console.log('获取下一页内容失败: ' + e);
+            console.log('[ContentAnalysis] 获取下一页内容失败: ' + (e as Error).message);
             break;
           }
         } else {
+          console.log('[ContentAnalysis] 无下一页URL, 停止')
           break;
         }
       } else {
+        console.log('[ContentAnalysis] 无nextContentUrl规则, 停止')
         break;
       }
 
       pageCount++;
     }
+
+    console.log('[ContentAnalysis] 解析完成, 总页数: ' + (pageCount + 1) + ', 总内容长度: ' + content.length)
 
     // 应用替换规则
     if (rule.replaceRegex) {
@@ -141,9 +158,12 @@ export class ContentAnalysis {
     }));
 
     const nextUrl = analyzer.extractAttribute(body, nextContentUrlRule);
+    console.log('[getNextPageUrl] 规则: ' + nextContentUrlRule + ', 提取结果: ' + (nextUrl || '空'))
 
     if (nextUrl && !isNetworkUrl(nextUrl)) {
-      return this.contentData.bookSource?.bookSourceUrl + nextUrl;
+      const fullUrl = (this.contentData.bookSource?.bookSourceUrl || '') + nextUrl;
+      console.log('[getNextPageUrl] 拼接完整URL: ' + fullUrl)
+      return fullUrl;
     }
 
     return nextUrl;
@@ -176,6 +196,10 @@ export class ContentAnalysis {
    * 清理内容
    */
   private cleanContent(content: string): string {
+    // 去除网页分页标记（如 第(1/3)页、第 1/3 页）
+    content = content.replace(/第\s*\(\s*\d+\s*\/\s*\d+\s*\)\s*页/g, '');
+    content = content.replace(/第\s*\d+\s*\/\s*\d+\s*页/g, '');
+
     // 去除多余空行
     content = content.replace(/\n{3,}/g, '\n\n');
 
@@ -186,5 +210,39 @@ export class ContentAnalysis {
     content = HtmlParser.decodeHtmlEntities(content);
 
     return content;
+  }
+
+  /**
+   * 从URL中提取章节基础标识（用于跨章节检测）
+   * 例如: /0/130/143302.html → 143302, /0/130/143302_2.html → 143302
+   */
+  private extractChapterBase(url: string): string {
+    try {
+      const urlPath = url.split('?')[0];
+      const segments = urlPath.split('/');
+      const lastSeg = segments[segments.length - 1];
+      const match = lastSeg.match(/(\d+)(?:_\d+)?\.html?$/);
+      if (match) {
+        return match[1];
+      }
+      const anyNum = lastSeg.match(/(\d+)/);
+      if (anyNum) {
+        return anyNum[1];
+      }
+    } catch (e) {
+      // ignore
+    }
+    return '';
+  }
+
+  /**
+   * 检查nextUrl是否与当前章节属于同一章节
+   */
+  private isSameChapter(chapterBase: string, nextUrl: string): boolean {
+    const nextBase = this.extractChapterBase(nextUrl);
+    if (!nextBase) {
+      return true;
+    }
+    return nextBase === chapterBase;
   }
 }
